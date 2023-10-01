@@ -167,7 +167,7 @@ class SSX2_OP_AddSplineNURBS(bpy.types.Operator):
 
 class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImportExportProps
 	importPath: bpy.props.StringProperty(name="", maxlen=1024, subtype='DIR_PATH', 
-		default="F:/Modding/SSX/Tools/Archy/IceSaw Multitool Projects/Trick/",#"G:/Emulated/Xbox/Games/SSX 2 Tricky.xiso/data/models/",
+		default="",
 		description="Folder that contains the world files")
 	worldChoice: bpy.props.EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
 	worldChoiceCustom: bpy.props.StringProperty(name="", default="gari", maxlen=8, subtype='NONE',
