@@ -350,7 +350,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				props = obj.ssx2_SplineProps
 				m = obj.matrix_world
 
-				print("			", obj.name)
+				print("    ", obj.name)
 
 				all_points = []
 				segments = [] # from all_points to segments of 4
@@ -404,6 +404,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						get_name = True
 					else:
 						print(f"No points in {obj.name} spline {i}")
+
 				if get_name:
 					names.append(obj.name)
 
@@ -437,11 +438,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				final_splines.append(spline_json_obj)
 
 
-
 			new_json = {}
 			if io.exportSplinesOverride:
 
-				override_indices = []
+				overriden_indices = []
 
 				with open(json_export_path, 'r') as f:
 					new_json = json.load(f)
@@ -451,8 +451,16 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						try:
 							index = names.index(spline['SplineName'])
 							spline['Segments'] = final_splines[index]['Segments']
+							overriden_indices.append(index)
 						except:
 							print(f"{spline['SplineName']} is missing in Blender. Skipping.")
+
+					for i, spline in enumerate(final_splines):
+
+						if i not in overriden_indices:
+							print(i, final_splines[i]['SplineName'])
+							new_json['Splines'].append(final_splines[i])
+
 
 				with open(json_export_path, 'w') as f:
 					json.dump(new_json, f, indent=2)
@@ -466,8 +474,6 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						new_json['Splines'].append(spline)
 
 					json.dump(new_json, f, indent=2)
-
-			return {'CANCELLED'}
 
 
 		if io_props.exportPatches: # PATCHES
@@ -581,7 +587,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 				json.dump(testing, f)#, indent=2)
 
-		self.report({'INFO'}, "Finished")
+		self.report({'INFO'}, "Exported")
 		return {'FINISHED'}
 
 class SSX2_OP_WorldImport(bpy.types.Operator):
@@ -913,6 +919,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			project_mode = "JSON"
 
 			test = self.import_icesaw()
+
+			self.report({'INFO'}, "Imported")
 
 		return {'FINISHED'}
 
