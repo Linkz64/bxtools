@@ -320,145 +320,149 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 
 	def toggle_to_control_grid(self, context, objects_to_convert):
 		# to_reselect = []
-		for obj in objects_to_convert:
-			if obj.type != 'SURFACE':
-				print("NOT SURFACE", obj.name)
-				#obj.select_set(True)
-				continue # skip
 
-			# print(obj.name)
+		def temp_function():
+			for obj in objects_to_convert:
+				if obj.type != 'SURFACE':
+					print("NOT SURFACE", obj.name)#obj.select_set(False)
+					continue
 
-			collection = obj.users_collection[0]
+				# print(obj.name)
+				collection = obj.users_collection[0]
+				patch_name = obj.name
+				patch_matrix = Matrix(obj.matrix_world) # should work
+				patch_points = []
+				patch_uvs = []
+				patch_material = obj.data.materials[0]
+				props = obj.ssx2_PatchProps
+				patch_type = props.type
+				patch_showoff_only = props.showoffOnly
 
-			patch_name = obj.name
-			patch_matrix = Matrix(obj.matrix_world) # should work
-			patch_points = []
-			patch_uvs = []
-			patch_material = obj.data.materials[0]
-			props = obj.ssx2_PatchProps
-			patch_type = props.type
-			patch_showoff_only = props.showoffOnly
+				for spline in obj.data.splines:
+					for p in spline.points:
+						x, y, z, w = p.co# * context.scene.bx_WorldScale
+						patch_points.append((x, y, z))
 
-			for spline in obj.data.splines:
-				for p in spline.points:
-					x, y, z, w = p.co# * context.scene.bx_WorldScale
-					patch_points.append((x, y, z))
+				if not props.useManualUV:
+					patch_uvs = patch_known_uvs_blender[patch_tex_map_equiv_uvs[int(props.texMapPreset)]]
+				else:
+					patch_uvs = [
+						props.manualUV0.to_tuple(),
+						props.manualUV1.to_tuple(),
+						props.manualUV2.to_tuple(),
+						props.manualUV3.to_tuple(),
+					]
+					patch_uvs = [(uv[0], -uv[1]) for uv in patch_uvs]
 
-			if not props.useManualUV:
-				patch_uvs = patch_known_uvs_blender[patch_tex_map_equiv_uvs[int(props.texMapPreset)]]
-			else:
-				patch_uvs = [
-					props.manualUV0.to_tuple(),
-					props.manualUV1.to_tuple(),
-					props.manualUV2.to_tuple(),
-					props.manualUV3.to_tuple(),
-				]
-				patch_uvs = [(uv[0], -uv[1]) for uv in patch_uvs]
+				# delete method
+				bpy.data.objects.remove(obj, do_unlink=True) # delete object
 
-			# delete method
-			bpy.data.objects.remove(obj, do_unlink=True) # delete object
+				new_grid = bpy.data.objects.get(patch_name)
+				if new_grid is None or new_grid.type != 'MESH':
+					mesh = bpy.data.meshes.new(patch_name)
+					new_grid = bpy.data.objects.new(patch_name, mesh)
 
-			new_grid = bpy.data.objects.get(patch_name)
-			if new_grid is None or new_grid.type != 'MESH':
-				mesh = bpy.data.meshes.new(patch_name)
-				new_grid = bpy.data.objects.new(patch_name, mesh)
+				new_grid.data = set_patch_control_grid(mesh, patch_points, patch_uvs)
+				new_grid.data.materials.append(patch_material)
+				new_grid.ssx2_PatchProps.type = patch_type
+				new_grid.ssx2_PatchProps.showoffOnly = patch_showoff_only
+				new_grid.ssx2_PatchProps.isControlGrid = True
 
-			new_grid.data = set_patch_control_grid(mesh, patch_points, patch_uvs)
-			new_grid.data.materials.append(patch_material)
-			new_grid.ssx2_PatchProps.type = patch_type
-			new_grid.ssx2_PatchProps.showoffOnly = patch_showoff_only
-			new_grid.ssx2_PatchProps.isControlGrid = True
+				collection.objects.link(new_grid)
 
-			collection.objects.link(new_grid)
+				new_grid.matrix_world = patch_matrix
 
-			new_grid.matrix_world = patch_matrix
+				# convert method
+				# obj.select_set(True)
 
-			# convert method
-			# obj.select_set(True)
+				# bpy.ops.object.mode_set(mode = "EDIT")
+				# bpy.ops.curve.select_all(action='SELECT')
+				# bpy.ops.curve.delete(type='VERT')
+				# bpy.ops.object.mode_set(mode = "OBJECT")
+				# #bpy.ops.curve.select_all(action='DESELECT')
+				# bpy.ops.object.convert(target='MESH')#, keep_original=False)
+				# bpy.ops.object.mode_set(mode = "OBJECT")
+				# bpy.ops.object.select_all(action = "DESELECT")
 
-			# bpy.ops.object.mode_set(mode = "EDIT")
-			# bpy.ops.curve.select_all(action='SELECT')
-			# bpy.ops.curve.delete(type='VERT')
-			# bpy.ops.object.mode_set(mode = "OBJECT")
-			# #bpy.ops.curve.select_all(action='DESELECT')
-			# bpy.ops.object.convert(target='MESH')#, keep_original=False)
-			# bpy.ops.object.mode_set(mode = "OBJECT")
-			# bpy.ops.object.select_all(action = "DESELECT")
+				# obj.ssx2_PatchProps.type = patch_type
+				# obj.ssx2_PatchProps.showoffOnly = patch_showoff_only
+				# obj.ssx2_PatchProps.isControlGrid = True
+				
+				# mesh = obj.data
 
-			# obj.ssx2_PatchProps.type = patch_type
-			# obj.ssx2_PatchProps.showoffOnly = patch_showoff_only
-			# obj.ssx2_PatchProps.isControlGrid = True
-			
-			# mesh = obj.data
+				# set_patch_control_grid(mesh, patch_points, patch_uvs)
+				# break
+				# mesh.materials.append(patch_material)
+				# obj.select_set(False)
 
-			# set_patch_control_grid(mesh, patch_points, patch_uvs)
-			# break
-			# mesh.materials.append(patch_material)
-			# obj.select_set(False)
-
-			self.number_of_objects_toggled += 1
-			new_grid.select_set(True)
-		# 	to_reselect.append(new_grid)
-		# for obj in to_reselect:
-		# 	obj.select_set(True)
+				self.number_of_objects_toggled += 1
+				new_grid.select_set(True)
+			# 	to_reselect.append(new_grid)
+			# for obj in to_reselect:
+			# 	obj.select_set(True)
+		
+		run_without_update(temp_function)
 
 	def toggle_to_patch(self, context, objects_to_convert):
 		to_reselect = []
-		for obj in objects_to_convert:
-			if len(obj.data.vertices) != 16:
-				print(obj.name, "does not have 16 vertices.")
-				continue
 
-			#print(obj.name)
+		def temp_function():
+			for obj in objects_to_convert:
+				if len(obj.data.vertices) != 16:
+					print(obj.name, "does not have 16 vertices.")
+					continue
 
-			collection = obj.users_collection[0]
-			props = obj.ssx2_PatchProps
+				#print(obj.name)
 
-			grid_name = obj.name
-			grid_matrix = Matrix(obj.matrix_world)
-			grid_points = []
-			grid_uvs = [(uv[0], -uv[1] ) for uv in get_uvs_per_verts(obj)]
+				collection = obj.users_collection[0]
+				props = obj.ssx2_PatchProps
 
-			if len(obj.data.materials) > 0:
-				grid_material = obj.data.materials[0]
-			else:
-				grid_material = None
-			grid_type = props.type
-			grid_showoff_only = props.showoffOnly
-			
-			grid_uv_square = [grid_uvs[0], grid_uvs[12], grid_uvs[3], grid_uvs[15]] # 0 12 3 15
+				grid_name = obj.name
+				grid_matrix = Matrix(obj.matrix_world)
+				grid_points = []
+				grid_uvs = [(uv[0], -uv[1] ) for uv in get_uvs_per_verts(obj)]
 
-			for vtx in obj.data.vertices:
-				grid_points.append((vtx.co.x, vtx.co.y, vtx.co.z, 1.0))
+				if len(obj.data.materials) > 0:
+					grid_material = obj.data.materials[0]
+				else:
+					grid_material = None
+				grid_type = props.type
+				grid_showoff_only = props.showoffOnly
+				
+				grid_uv_square = [grid_uvs[0], grid_uvs[12], grid_uvs[3], grid_uvs[15]] # 0 12 3 15
 
-			bpy.data.objects.remove(obj, do_unlink=True) # delete object
+				for vtx in obj.data.vertices:
+					grid_points.append((vtx.co.x, vtx.co.y, vtx.co.z, 1.0))
 
-			new_patch = set_patch_object(grid_points, grid_name, collection=collection.name)
-			new_patch.matrix_world = grid_matrix
-			if grid_material is not None:
-				new_patch.data.materials.append(grid_material)
+				bpy.data.objects.remove(obj, do_unlink=True) # delete object
 
-			existing_patch_uv_idx = existing_patch_uvs(grid_uv_square) # problem causer 1
+				new_patch = set_patch_object(grid_points, grid_name, collection=collection.name)
+				new_patch.matrix_world = grid_matrix
+				if grid_material is not None:
+					new_patch.data.materials.append(grid_material)
 
-			if existing_patch_uv_idx is None: # problem causer 2
-				new_patch.ssx2_PatchProps.useManualUV = True
-				new_patch.color = (0.76, 0.258, 0.96, 1.0) # light purple
-			else:
-				new_patch.ssx2_PatchProps.useManualUV = False
-				new_patch.ssx2_PatchProps.texMapPreset = str(existing_patch_uv_idx)
+				existing_patch_uv_idx = existing_patch_uvs(grid_uv_square) # problem causer 1
 
-			new_patch.ssx2_PatchProps.type = grid_type
-			new_patch.ssx2_PatchProps.showoffOnly = grid_showoff_only
-			new_patch.ssx2_PatchProps.manualUV0 = grid_uvs[0]
-			new_patch.ssx2_PatchProps.manualUV1 = grid_uvs[12]
-			new_patch.ssx2_PatchProps.manualUV2 = grid_uvs[3]
-			new_patch.ssx2_PatchProps.manualUV3 = grid_uvs[15]
+				if existing_patch_uv_idx is None: # problem causer 2
+					new_patch.ssx2_PatchProps.useManualUV = True
+					new_patch.color = (0.76, 0.258, 0.96, 1.0) # light purple
+				else:
+					new_patch.ssx2_PatchProps.useManualUV = False
+					new_patch.ssx2_PatchProps.texMapPreset = str(existing_patch_uv_idx)
 
-			self.number_of_objects_toggled += 1
-			to_reselect.append(new_patch)
+				new_patch.ssx2_PatchProps.type = grid_type
+				new_patch.ssx2_PatchProps.showoffOnly = grid_showoff_only
+				new_patch.ssx2_PatchProps.manualUV0 = grid_uvs[0]
+				new_patch.ssx2_PatchProps.manualUV1 = grid_uvs[12]
+				new_patch.ssx2_PatchProps.manualUV2 = grid_uvs[3]
+				new_patch.ssx2_PatchProps.manualUV3 = grid_uvs[15]
 
-		for obj in to_reselect:
-			obj.select_set(True)
+				self.number_of_objects_toggled += 1
+				to_reselect.append(new_patch)
+
+			for obj in to_reselect:
+				obj.select_set(True)
+		run_without_update(temp_function)
 
 	def execute(self, context):
 		selected_objects = context.selected_objects
