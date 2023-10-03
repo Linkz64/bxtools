@@ -131,12 +131,20 @@ def get_tangent_normals(obj):
             tangent_normals[loop.vertex_index] = (loop.tangent[0], loop.tangent[1], loop.tangent[2])
     return tangent_normals
 
-def get_uvs(obj):
+def get_uvs(obj): # RENAME THIS.
     uv_list = [(0.0, 0.0)] * len(obj.data.uv_layers[0].data)
     for poly in obj.data.polygons:
         for vert_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
             uv_coords = obj.data.uv_layers[0].data[loop_idx].uv
             uv_list[vert_idx] = (uv_coords[0], -uv_coords[1] + 1.0) # add to list in order of vertex index
+    return uv_list
+
+def get_uvs_per_verts(obj):
+    uv_list = [(0.0, 0.0)] * len(obj.data.uv_layers[0].data)
+    for poly in obj.data.polygons:
+        for vert_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+            uv_coords = obj.data.uv_layers[0].data[loop_idx].uv
+            uv_list[vert_idx] = (uv_coords[0], uv_coords[1]) # add to list in order of vertex index
     return uv_list
 
 def get_skeleton(obj):

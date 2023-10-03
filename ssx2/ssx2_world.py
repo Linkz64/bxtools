@@ -323,6 +323,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		io = bpy.context.scene.ssx2_WorldImportExportProps
 		scale = bpy.context.scene.bx_WorldScale
 
+		if context.mode != "OBJECT":
+			bpy.ops.object.mode_set(mode = "OBJECT")
+		bpy.ops.object.select_all(action = "DESELECT")
+
 		if io.exportSplines:
 
 			spline_collection = bpy.data.collections.get("Splines")
@@ -511,7 +515,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 							x, y, z = vtx.co * scale
 							grid_points.append((x, y, z, 1.0))
 
-						grid_uvs = [(uv[0], -uv[1]) for uv in get_uvs(obj)]
+						grid_uvs = [(uv[0], -uv[1]) for uv in get_uvs_per_verts(obj)]
 						grid_uv_square = [grid_uvs[12], grid_uvs[0], grid_uvs[15], grid_uvs[3]]
 
 						if len(obj.material_slots) != 0:
@@ -623,7 +627,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				mesh = bpy.data.meshes.new(name)
 				patch = bpy.data.objects.new(name, mesh)
 
-				set_patch_control_grid(mesh, json_patch.points, json_patch.uvs)
+				uvs = [(uv[0], -uv[1]) for uv in json_patch.uvs]
+				set_patch_control_grid(mesh, json_patch.points, uvs)#json_patch.uvs)
 				
 				short_texture_name = os.path.splitext(os.path.basename(json_patch.texture_path))[0] # no path no ext
 

@@ -3,7 +3,7 @@ from bpy.utils import register_class, unregister_class
 from mathutils import Vector, Matrix
 
 from ..external.ex_utils import prop_split
-from ..general.blender_get_data import get_uvs
+from ..general.blender_get_data import get_uvs_per_verts#get_uvs
 from ..general.blender_set_data import set_patch_material, set_patch_object, set_patch_control_grid
 from ..general.bx_utils import *
 
@@ -19,6 +19,7 @@ from .ssx2_constants import (
 	enum_ssx2_patch_group,
 	enum_ssx2_patch_uv_preset,
 	patch_known_uvs,
+	patch_known_uvs_blender,
 	patch_tex_maps,
 	patch_uv_equiv_tex_maps,
 	patch_tex_map_equiv_uvs,
@@ -101,7 +102,7 @@ def create_imported_patches(self, context, path, images, map_info=None):
 				mesh = bpy.data.meshes.new(name)
 				patch = bpy.data.objects.new(name, mesh)
 
-				set_patch_control_grid(mesh, patch_points, pch_data[1])
+				set_patch_control_grid(mesh, patch_points, pch_data[1]) # uv Y axis needs to be flipped beforehand
 
 				if import_textures and len(images) != 0:
 					pch_mat_name = f"pch.{pch_data[3]}"
@@ -219,10 +220,10 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 		props.type = bpy.context.scene.ssx2_WorldUIProps.patchTypeChoice #'1'
 		props.isControlGrid = True
 		props.useManualUV = True
-		props.manualUV0 = (0.0, 0.0)
-		props.manualUV1 = (0.0, 0.0)
-		props.manualUV2 = (0.0, 0.0)
-		props.manualUV3 = (0.0, 0.0)
+		# props.manualUV0 = (0.0, 0.0) # doesn't need to be set. update when toggling
+		# props.manualUV1 = (0.0, 0.0)
+		# props.manualUV2 = (0.0, 0.0)
+		# props.manualUV3 = (0.0, 0.0)
 
 		mat = bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice
 		if mat is not None:
@@ -314,7 +315,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 	def poll(self, context):
 		#context.active_object # context.object
 		active_object = context.active_object
-		return active_object is not None and \
+		return (len(bpy.context.selected_objects) != 0) and (active_object is not None) and \
 		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid)
 
 	def toggle_to_control_grid(self, context, objects_to_convert):
@@ -344,7 +345,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 					patch_points.append((x, y, z))
 
 			if not props.useManualUV:
-				patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]]
+				patch_uvs = patch_known_uvs_blender[patch_tex_map_equiv_uvs[int(props.texMapPreset)]]
 			else:
 				patch_uvs = [
 					props.manualUV0.to_tuple(),
@@ -352,6 +353,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 					props.manualUV2.to_tuple(),
 					props.manualUV3.to_tuple(),
 				]
+				patch_uvs = [(uv[0], -uv[1]) for uv in patch_uvs]
 
 			# delete method
 			bpy.data.objects.remove(obj, do_unlink=True) # delete object
@@ -394,6 +396,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 			# mesh.materials.append(patch_material)
 			# obj.select_set(False)
 
+			self.number_of_objects_toggled += 1
 			new_grid.select_set(True)
 		# 	to_reselect.append(new_grid)
 		# for obj in to_reselect:
@@ -414,24 +417,22 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 			grid_name = obj.name
 			grid_matrix = Matrix(obj.matrix_world)
 			grid_points = []
-			grid_uvs = [(uv[0], -uv[1]) for uv in get_uvs(obj)]
+			grid_uvs = [(uv[0], -uv[1] ) for uv in get_uvs_per_verts(obj)]
+
 			if len(obj.data.materials) > 0:
 				grid_material = obj.data.materials[0]
 			else:
 				grid_material = None
 			grid_type = props.type
 			grid_showoff_only = props.showoffOnly
-
-			grid_uv_square = [grid_uvs[12], grid_uvs[0], grid_uvs[15], grid_uvs[3]]
-			print(grid_uv_square)
+			
+			grid_uv_square = [grid_uvs[0], grid_uvs[12], grid_uvs[3], grid_uvs[15]] # 0 12 3 15
 
 			for vtx in obj.data.vertices:
 				grid_points.append((vtx.co.x, vtx.co.y, vtx.co.z, 1.0))
 
 			bpy.data.objects.remove(obj, do_unlink=True) # delete object
 
-
-			print(collection.name)
 			new_patch = set_patch_object(grid_points, grid_name, collection=collection.name)
 			new_patch.matrix_world = grid_matrix
 			if grid_material is not None:
@@ -449,12 +450,13 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 			new_patch.ssx2_PatchProps.type = grid_type
 			new_patch.ssx2_PatchProps.showoffOnly = grid_showoff_only
 			new_patch.ssx2_PatchProps.manualUV0 = grid_uvs[0]
-			new_patch.ssx2_PatchProps.manualUV1 = grid_uvs[1]
-			new_patch.ssx2_PatchProps.manualUV2 = grid_uvs[2]
-			new_patch.ssx2_PatchProps.manualUV3 = grid_uvs[3]
+			new_patch.ssx2_PatchProps.manualUV1 = grid_uvs[12]
+			new_patch.ssx2_PatchProps.manualUV2 = grid_uvs[3]
+			new_patch.ssx2_PatchProps.manualUV3 = grid_uvs[15]
 
-			# new_patch.select_set(True)
+			self.number_of_objects_toggled += 1
 			to_reselect.append(new_patch)
+
 		for obj in to_reselect:
 			obj.select_set(True)
 
@@ -467,6 +469,8 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 		if context.mode != "OBJECT":
 			bpy.ops.object.mode_set(mode = "OBJECT")
 		bpy.ops.object.select_all(action = "DESELECT")
+
+		self.number_of_objects_toggled = 0
 
 		if active_object.type == 'SURFACE':
 			print("SURFACE -> CONTROL GRID\n")
@@ -497,6 +501,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 		bpy.context.view_layer.objects.active = bpy.data.objects.get(active_object_name) # set active object again
 
 		print("\nFinished")
+		self.report({'INFO'}, f"Toggled {self.number_of_objects_toggled} objects")
 		return {"FINISHED"}
 
 

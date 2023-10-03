@@ -113,26 +113,18 @@ def set_mesh_data(obj_name, mdl_data, textures_path='', collection=None):
 
 def set_patch_object(patch_points, name, collection='Patches'):
     """
-    patch_points: of xyzw values
+    patch_points: 16 xyzw values
     name: of patch object
     """
     surface_data = bpy.data.curves.new(name, 'SURFACE')
     if surface_data is None:
         surface_data = bpy.data.curves.new(name, 'SURFACE')
-    
-    # set points per spline segments #
-    surface_data.dimensions = '3D'
-    zero_point = (0.0, 0.0, 0.0, 1.0)
-    for i in range(0, 16, 4): # from 0 to 16, goes up in 4s (0, 4, 8, 12) # change to i in range 16?
-        spline = surface_data.splines.new(type='NURBS')
-        spline.points.add(3)  # add more points (3 because it already has one)
-        # spline.use_endpoint_u = True
-        # spline.use_endpoint_v = True
-        # spline.use_bezier_u = True
-        # spline.use_bezier_v = True
 
+    surface_data.dimensions = '3D'
+    for i in range(4):
+        spline = surface_data.splines.new(type='NURBS')
+        spline.points.add(3) # one point already exists, added 3 more
         for point in spline.points:
-            point.co = zero_point
             point.select = True
 
     surface_data.resolution_u = 2
@@ -152,19 +144,20 @@ def set_patch_object(patch_points, name, collection='Patches'):
     splines[0].use_endpoint_v = True
     splines[0].use_bezier_u = True
     splines[0].use_bezier_v = True
-    #i=0
+
     for s in splines:
         for i, p in enumerate(s.points):
             p.co = patch_points[i]
-            #i += 1
+
     bpy.ops.object.mode_set(mode = 'OBJECT')
     bpy.context.active_object.select_set(False)
     return surface_object
 
 def set_patch_control_grid(mesh, patch_points, patch_uvs):
     """Creates control grid mesh data to be used by an object"""
-    uv_square = [(uv[0], -uv[1]) for uv in patch_uvs]
-    uv_grid = interpolate_patch_uvs(uv_square, 4)
+    
+    #uv_square = [(uv[0], -uv[1]) for uv in patch_uvs]
+    uv_grid = interpolate_patch_uvs(patch_uvs, 4)
     
     bm = bmesh.new()
     bm.from_mesh(mesh)
