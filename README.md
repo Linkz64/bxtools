@@ -24,7 +24,5 @@ What you can do:
 	- Limited Tricky model editing for Xbox format
 
 Avoid these:
-- Patch UV editing
-	- Toggling between patch and control grid breaks UV data
 - Editing Control Grid topology (Extruding, deleting, decimating, etc)
 	- Only change geometry (location of vertices) if you intend to convert to patch
