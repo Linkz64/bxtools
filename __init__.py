@@ -150,9 +150,9 @@ def register():
 
     # soft min/max allows the user to input custom manual scale
     bpy.types.Scene.bx_WorldScale = bpy.props.FloatProperty(name="World Scale", default=100.0, soft_min=1.0, soft_max=1000.0,
-        description="Test")
+        description="World Scale\nDefault: 100.0")
     bpy.types.Scene.bx_ModelScale = bpy.props.FloatProperty(name="Model Scale", default=100.0, soft_min=1.0, soft_max=1000.0,
-        description="Test")
+        description="Model Scale\nDefault: 100.0")
 
 def unregister():
     ssx2_unregister()

@@ -83,15 +83,26 @@ enum_ssx2_patch_group = (
 )
 
 enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices
-	('0', "Flip Y"           , "Flip Y"           ),
-	('7', "Flip X"           , "Flip X"           ),
-	('1', "Rot 180"          , "Rot 180"          ),
-	('2', "Default"          , "Default"          ), # Y+ ?
-	('3', "Rot Left"         , "Rot Left"         ), # ! might be actual default (most patches have 0, 1, 2, 3 going forward)
-	('4', "Rot Right"        , "Rot Right"        ),
-	('5', "Rot Right, Flip X", "Rot Right, Flip X"),
-	('6', "Rot Right, Flip Y", "Rot Right, Flip Y"),
+	('3', "Default"            , "Default"            ),
+	('1', "Rot Left"           , "Rot Left"           ),
+	('2', "Rot Right"          , "Rot Right"          ),
+	('4', "Rot 180"            , "Rot 180"            ),
+	('0', "Mirror X, Rot Right", "Mirror X, Rot Right"),
+	('7', "Mirror X, Rot Left" , "Mirror X, Rot Left" ),
+	('5', "Mirror Y"           , "Mirror Y"           ),
+	('6', "Mirror X"           , "Mirror X"           ),
 )
+
+# enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices
+# 	('0', "Flip Y"           , "Flip Y"           ),
+# 	('7', "Flip X"           , "Flip X"           ),
+# 	('1', "Rot 180"          , "Rot 180"          ),
+# 	('2', "Default"          , "Default"          ), # Y+ ?
+# 	('3', "Rot Left"         , "Rot Left"         ), # ! might be actual default (most patches have 0, 1, 2, 3 going forward)
+# 	('4', "Rot Right"        , "Rot Right"        ),
+# 	('5', "Rot Right, Flip X", "Rot Right, Flip X"),
+# 	('6', "Rot Right, Flip Y", "Rot Right, Flip Y"),
+# )
 
 patch_known_uvs = ( # these use SSX's UV system. Y- is up
 	[( 0.0,  0.0), ( 0.0, -1.0), (1.0,  0.0), ( 1.0, -1.0)], # 0  0

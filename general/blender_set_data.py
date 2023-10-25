@@ -133,7 +133,7 @@ def set_patch_object(patch_points, name, collection='Patches'):
     surface_object = bpy.data.objects.new(name, surface_data)
     bpy.data.collections[collection].objects.link(surface_object)
     
-    splines = surface_data.splines
+    splines = surface_data.splines # this every internal island/surface, not splines
 
     bpy.context.view_layer.objects.active = surface_object
     bpy.ops.object.mode_set(mode = 'EDIT')

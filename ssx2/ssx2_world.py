@@ -10,7 +10,7 @@ from ..panels import SSX2_Panel
 from ..external.ex_utils import prop_split
 #from ..general.bx_utils import getset_instance_collection, run_without_update
 from ..general.blender_set_data import *
-from ..general.blender_get_data import get_images_from_folder, get_uvs
+from ..general.blender_get_data import get_images_from_folder, get_uvs, get_uvs_per_verts
 from ..general.bx_utils import *
 
 from .ssx2_world_io_in import get_patches_json#*
@@ -18,9 +18,15 @@ from .ssx2_world_patches import (
 	ssx2_world_patches_register, 
 	ssx2_world_patches_unregister,
 	create_imported_patches,
+	
 	SSX2_OP_AddPatch,
 	SSX2_OP_AddControlGrid,
+	SSX2_OP_AddSplineCage,
+	SSX2_OP_AddPatchMaterial,
 	SSX2_OP_ToggleControlGrid,
+	SSX2_OP_CageToPatch,
+	SSX2_OP_PatchSplit4x4,
+
 	patch_tex_map_equiv_uvs,
 	patch_known_uvs,
 	existing_patch_uvs, # function
@@ -43,7 +49,7 @@ from .ssx2_world_lightmaps import SSX2_OP_BakeTest
 class SSX2_OP_AddInstance(bpy.types.Operator): # recreate this but use collection instead of model object
 	bl_idname = 'object.ssx2_add_instance'
 	bl_label = "Model Instance"
-	bl_description = 'Generate an instance'
+	bl_description = "Generate an instance"
 	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
 	@classmethod
@@ -507,12 +513,15 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 				for obj in patch_objects:
 					props = obj.ssx2_PatchProps
+					m = obj.matrix_world
+
+					print(obj.name)
 
 					if obj.ssx2_PatchProps.isControlGrid: # EXPORT CONTROL GRID
 						grid_points = []
 
 						for vtx in obj.data.vertices:
-							x, y, z = vtx.co * scale
+							x, y, z = (m @ vtx.co) * scale
 							grid_points.append((x, y, z, 1.0))
 
 						grid_uvs = [(uv[0], -uv[1]) for uv in get_uvs_per_verts(obj)]
@@ -551,7 +560,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						patch_points = []
 						for spline in obj.data.splines:
 							for p in spline.points:
-								x, y, z, w = p.co * scale
+								x, y, z, w = (m @ p.co) * scale
 								patch_points.append((x, y, z))
 
 						if not props.useManualUV:
@@ -1116,19 +1125,37 @@ class SSX2_WorldToolsPanel(SSX2_Panel): # (SSX2_WorldPanel)
 		spline_box = col.box()    # SPLINES
 		spline_box.label(text="Splines")
 		spl_box_row = spline_box.row()
-		spl_box_row.operator(SSX2_OP_AddSplineNURBS.bl_idname, icon='ADD')
+		#spl_box_row.operator(SSX2_OP_AddSplineNURBS.bl_idname, icon='ADD')
 		spl_box_row.operator(SSX2_OP_AddSplineBezier.bl_idname, icon='ADD')
 
 		patch_box = col.box()    # PATCHES
 		#patch_box.scale_y = 0.8
 		patch_box.label(text="Patches")
 		patch_box_row = patch_box.row()
-		patch_box_row.prop(context.scene.ssx2_WorldUIProps, 'patchMaterialChoice', text='')
-		patch_box_row.prop(context.scene.ssx2_WorldUIProps, 'patchTypeChoice', text='')
+		# patch_box_row.prop(context.scene.ssx2_WorldUIProps, 'patchMaterialChoice', text='')
+		# patch_box_row.prop(context.scene.ssx2_WorldUIProps, 'patchTypeChoice', text='')
+		patch_box_row.operator(SSX2_OP_AddPatch.bl_idname, icon='ADD')
+		patch_box_row.operator(SSX2_OP_AddControlGrid.bl_idname, icon='ADD')
+		
+		obj = bpy.context.active_object
+		if obj is not None:
+			if obj.type == 'SURFACE':
+				patch_box.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Control Grid")
+			elif obj.ssx2_PatchProps.isControlGrid:
+				patch_box.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Patch")
+			else:
+				patch_box.operator(SSX2_OP_ToggleControlGrid.bl_idname)
+		else:
+			patch_box.operator(SSX2_OP_ToggleControlGrid.bl_idname)
+
+		patch_box.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
+
+		#patch_box.label(text="Spline Cage")
 		patch_box_row2 = patch_box.row()
-		patch_box_row2.operator(SSX2_OP_AddControlGrid.bl_idname, icon='ADD')
-		patch_box_row2.operator(SSX2_OP_AddPatch.bl_idname, icon='ADD')
-		patch_box.operator(SSX2_OP_ToggleControlGrid.bl_idname)
+		patch_box_row2.operator(SSX2_OP_AddSplineCage.bl_idname, icon='ADD')
+		patch_box_row2.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
+		
+		
 		prop_split(patch_box, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
 
 
@@ -1225,6 +1252,19 @@ class SSX2_WorldInstancePanel(SSX2_Panel):
 		row.prop(context.object, 'show_in_front')#, text='Show in Front')
 		#prop_split(col, context.object, 'show_instancer_for_viewport', "Show Empty")
 
+class SSX2_WorldMaterialPanel(bpy.types.Panel):
+    bl_label = "Test"
+    bl_idname = "MATERIAL_PT_SSX2_material"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "material"
+    bl_options = {"HIDE_HEADER"}
+    
+    def draw(self, context):
+        layout = self.layout
+        layout.operator(SSX2_OP_AddPatchMaterial.bl_idname, text="New Patch Material", icon='ADD')
+
+
 
 def poll_wmodel_for_inst(self, context):
 	if context.type == 'MESH' and context.parent == None:# or just context.type == 'MESH':
@@ -1270,6 +1310,7 @@ classes = (
 	SSX2_WorldExportPanel,
 	SSX2_WorldInstancePanel, # properties panel
 	SSX2_SplinePanel,
+	SSX2_WorldMaterialPanel,
 
 )
 

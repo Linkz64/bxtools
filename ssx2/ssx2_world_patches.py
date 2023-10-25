@@ -26,6 +26,9 @@ from .ssx2_constants import (
 	indices_for_control_grid,
 )
 
+import os
+
+
 #import math
 
 def existing_patch_uvs(in_uvs):
@@ -186,6 +189,460 @@ def create_imported_patches(self, context, path, images, map_info=None):
 			layer_col = get_layer_collection(layer_collection, collection.name)
 			layer_col.exclude = True
 
+## Operators
+
+class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
+	bl_idname = 'object.ssx2_patch_split_4x4'
+	bl_label = "Split 4x4"
+	bl_description = "Splits selected patch into 4x4 patches"
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+
+	keep_original: bpy.props.BoolProperty(name="Keep Original", default=False)
+	apply_rotation: bpy.props.BoolProperty(name="Apply Rotation", default=True)
+	apply_scale: bpy.props.BoolProperty(name="Apply Scale", default=True)
+	
+	@classmethod
+	def poll(self, context):
+		#context.active_object # context.object
+		active_object = context.active_object
+		return (len(bpy.context.selected_objects) != 0) and (active_object is not None) and \
+		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid)
+
+	def execute(self, context):
+		print("\nSplitting\n")
+
+		# testing on active object first, make it do every patch and control grid after
+		# use run_without... function when creating patches
+
+		bpy.ops.object.mode_set(mode='OBJECT')
+		collection = bpy.context.collection
+		selected_objs = bpy.context.selected_objects # all selected objects
+		active_obj = bpy.context.active_object
+		bpy.context.view_layer.objects.active = None
+		active_obj.select_set(False)
+
+		if active_obj.ssx2_PatchProps.isControlGrid:
+			print("Control Grid")
+			return {'CANCELLED'}
+
+		active_obj_name = active_obj.name
+		active_obj_matrix = active_obj.matrix_local
+		islands = active_obj.data.splines
+		num_surfaces = len(islands)
+		split_islands = []
+		for j, s in enumerate(islands): # splines actually means internal surfaces/islands
+			num_points = len(s.points)
+			num_u = s.point_count_u
+			num_v = s.point_count_v # 4
+			all_spline_segs = []
+
+			if num_v > num_u:
+				num_u = num_v
+				num_v = s.point_count_u # 4
+			# ^ get the longest for 4x? strip to work
+			# or actually try to split ?x? patches
+
+			print(num_u, num_u % 4)
+			if num_points < 16:
+				self.report({'WARNING'}, "INVALID 1")
+				return {'CANCELLED'}
+			elif num_points == 16:
+				segment_points = [sp.co for sp in s.points[0:16]]
+				all_spline_segs.append([segment_points])
+
+			#return {'CANCELLED'}
+			
+			print("points u/v",num_u, num_v)
+
+			# Split into segments of 16 points
+
+			segment_count = (num_u - 1) // 3
+			segments = [[] for i in range(segment_count)]
+			print(f"\nsegments: {segment_count}\n")
+			
+			for v in range(4):#num_v):             # e.g 4v's each with 7u's
+				print("\nv:", v, v * num_u)
+
+				v_start = v * num_u
+				v_end = v_start + num_u
+
+				this_spline = []
+				for u in range(v_start, v_end, 3):
+					segment_points = s.points[u:u + 4]
+					segment_points = [sp.co for sp in segment_points]
+					print("u:", u, v_end-1, u + 4)
+					this_spline.append(segment_points)
+
+					if u + 4 >= v_end-1: # must break
+						break
+
+				all_spline_segs.append(this_spline)
+
+			for segs in all_spline_segs:
+				for k, seg in enumerate(segs):
+					segments[k] += seg
+			split_islands.append(segments)
+
+			#break # only do first island, for now
+
+		# for island in islands:
+		# 	islands.remove(island)
+
+		if len(split_islands) == 0:
+			return {'CANCELLED'}
+
+		to_reselect = []
+		current_patch = 0
+		for split_island in split_islands:
+			for new_patch_points in split_island: # EACH ONE OBJECT WITH 16 POINTS (4x4)
+
+				name = f"{active_obj_name}.s{current_patch}"
+				current_patch += 1
+				surface_data = bpy.data.curves.new(name, 'SURFACE') # Create Final Patch
+				#surface_data = active_obj.data
+				surface_data.dimensions = '3D'
+				for i in range(4):
+					spline = surface_data.splines.new(type='NURBS')
+					spline.points.add(3) # one point already exists
+					for j, point in enumerate(spline.points):
+						point.select = True
+						#nx, ny, nz = all_splines[i][j]
+						#point.co = 0.0, 0.0, 0.0, 1.0#nx, ny, nz, 1.0
+
+				surface_data.resolution_u = 2
+				surface_data.resolution_v = 2
+
+				surface_object = bpy.data.objects.new(name, surface_data)
+				collection.objects.link(surface_object)
+				
+				splines = surface_data.splines # this is a single surface, not multiple splines
+
+				bpy.context.view_layer.objects.active = surface_object
+				bpy.ops.object.mode_set(mode = 'EDIT')
+				bpy.ops.curve.make_segment()
+				
+				splines[0].order_u = 4
+				splines[0].order_v = 4
+				splines[0].use_endpoint_u = True
+				splines[0].use_endpoint_v = True
+				splines[0].use_bezier_u = True
+				splines[0].use_bezier_v = True
+
+				for j, p in enumerate(splines[0].points):
+					nx, ny, nz, nw = new_patch_points[j]
+					p.co = nx, ny, nz, 1.0
+
+				bpy.ops.object.mode_set(mode = 'OBJECT')
+				surface_object.matrix_local = active_obj_matrix
+				to_reselect.append(surface_object)
+				#surface_object.select_set(False)
+
+
+		if not self.keep_original:
+			bpy.data.objects.remove(active_obj)
+			#bpy.data.curves.remove(active_obj.data) # also removes all objects that are linked. not always wanted
+
+		for obj in to_reselect:
+			obj.select_set(True)
+
+		bpy.context.view_layer.objects.active = surface_object #obj
+		if self.apply_rotation:
+			bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+		if self.apply_scale:
+			bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+		# bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+		self.report({'INFO'}, f"Split into {len(segments)} Patches")
+
+		return {'FINISHED'}
+
+class SSX2_OP_CageToPatch(bpy.types.Operator): # Curve/Spline Cage to Patch.
+	bl_idname = 'object.patch_from_cage'
+	bl_label = "Patch from Cage"
+	bl_description = "Generates a patch from 2 or 4 bezier splines"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		if active_object is not None:
+			if active_object.type == 'CURVE':
+				if len(active_object.data.splines) > 1:
+					return True
+					
+		# return \
+		# (len(bpy.context.selected_objects) != 0) and \
+		# (active_object is not None) and \
+		# (active_object.type == 'CURVE')
+
+	def execute(self, context):
+		# if bpy.context.mode != 'OBJECT':
+		# 	bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
+		collection = bpy.context.collection
+		selected_objs = bpy.context.selected_objects
+		active_obj = bpy.context.active_object
+
+		if active_obj is None:
+			self.report({'ERROR'}, "An active object is required")
+			return {'CANCELLED'}
+
+		if active_obj.type != 'CURVE': # can be removed, 
+			self.report({'ERROR'}, f"Active object '{active_obj.name}' is not a bezier curve")
+			return {'CANCELLED'}
+
+		for obj in selected_objs:
+			num_splines = len(obj.data.splines)
+			m = obj.matrix_world
+			matrices = []
+			all_splines = []
+
+			if num_splines == 2:
+				print("2 splines")
+
+				row1_points = [] # final row 1
+				row4_points = [] # final row 4
+				for i, s in enumerate(obj.data.splines):
+
+					if s.type != 'BEZIER':
+						self.report({'ERROR'}, "Splines must be bezier type (with handles)")
+						return {'CANCELLED'}
+					if len(s.bezier_points) == 1:
+						self.report({'ERROR'}, f"Not enough points in spline {i+1}")
+						return {'CANCELLED'}
+
+					for j, p in enumerate(s.bezier_points):
+						current_points = []
+
+						if j == 0: # first
+							current_points.append(m @ p.co)
+							current_points.append(m @ p.handle_right)
+						elif j == len(s.bezier_points)-1: # last
+							current_points.append(m @ p.handle_left)
+							current_points.append(m @ p.co)
+						elif (j != 0) and (j != len(s.bezier_points)-1): # mids
+							current_points.append(m @ p.handle_left)
+							current_points.append(m @ p.co)
+							current_points.append(m @ p.handle_right)
+
+						if i == 0:
+							row1_points += current_points
+						else:
+							row4_points += current_points
+
+				row1_length = len(row1_points)#(len(obj.data.splines[0].bezier_points) * 2) + 3 # * 3 - 2
+				
+				if row1_length != len(row4_points):
+					self.report({'ERROR'}, f"Number of points must match on both splines")
+					return {'CANCELLED'}
+
+				row2 = []
+				row3 = []
+				for i in range(len(row1_points)):
+					c1p = row1_points[i]
+					c2p = row4_points[i]
+					row2.append(c1p + ((c2p - c1p) / 3))
+					row3.append(c2p - ((c2p - c1p) / 3))
+
+				all_splines.append(row1_points)
+				all_splines.append(row2)
+				all_splines.append(row3)
+				all_splines.append(row4_points)
+
+			elif num_splines > 3: # == 4
+				print("4 splines")
+
+				for i in range(4):
+					s = obj.data.splines[i]
+					current_spline = []
+
+					if s.type != 'BEZIER':
+						self.report({'ERROR'}, "Splines must be bezier type (with handles)")
+						return {'CANCELLED'}
+					if len(s.bezier_points) == 1:
+						self.report({'ERROR'}, f"Not enough points in spline {i+1}")
+						return {'CANCELLED'}
+
+					for j, p in enumerate(s.bezier_points):
+						current_points = []
+
+						if j == 0: # first
+							current_points.append(m @ p.co)
+							current_points.append(m @ p.handle_right)
+						elif j == len(s.bezier_points)-1: # last
+							current_points.append(m @ p.handle_left)
+							current_points.append(m @ p.co)
+						elif (j != 0) and (j != len(s.bezier_points)-1): # mids
+							current_points.append(m @ p.handle_left)
+							current_points.append(m @ p.co)
+							current_points.append(m @ p.handle_right)
+
+						current_spline += current_points
+
+					all_splines.append(current_spline)
+
+				row1_length = len(current_spline)
+
+				if row1_length * 4 != sum([len(i) for i in all_splines]):
+					self.report({'ERROR'}, f"Number of points must match on all splines")
+					return {'CANCELLED'}
+			else:
+				self.report({'ERROR'}, "Active object must have 2 or 4 splines.")
+				return {'CANCELLED'}
+
+
+			all_points_combined = []
+
+			for spl in all_splines:
+				all_points_combined += spl
+
+			# for p in all_points_combined:
+			# 	print(p)
+
+			#return {'CANCELLED'}
+
+			print("\nPATCH STRIP")
+
+			name = f"PatchStrip"
+			surface_data = bpy.data.curves.new(name, 'SURFACE') # Create Final Patch
+
+			surface_data.dimensions = '3D'
+			for i in range(row1_length):
+				spline = surface_data.splines.new(type='NURBS')
+				spline.points.add(3) # one point already exists
+				for j, point in enumerate(spline.points):
+					point.select = True
+					#nx, ny, nz = all_splines[i][j]
+					#point.co = 0.0, 0.0, 0.0, 1.0#nx, ny, nz, 1.0
+
+			surface_data.resolution_u = 2
+			surface_data.resolution_v = 2
+
+			surface_object = bpy.data.objects.new(name, surface_data)
+			collection.objects.link(surface_object)
+			
+			splines = surface_data.splines # this is a single surface, not multiple splines
+
+			bpy.context.view_layer.objects.active = surface_object
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.curve.make_segment()
+			
+			splines[0].order_u = 4
+			splines[0].order_v = 4
+			splines[0].use_endpoint_u = True
+			splines[0].use_endpoint_v = True
+			splines[0].use_bezier_u = True
+			splines[0].use_bezier_v = True
+
+			for j, p in enumerate(splines[0].points): # points of surface 0
+				nx, ny, nz = all_points_combined[j]
+				p.co = nx, ny, nz, 1.0
+
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			bpy.context.active_object.select_set(False)
+
+		self.report({'INFO'}, "Finished")
+		return {'FINISHED'}
+
+class SSX2_OP_AddSplineCage(bpy.types.Operator):
+	bl_idname = 'object.ssx2_add_spline_cage'
+	bl_label = "Spline Cage"
+	bl_description = 'Generate a spline cage'
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	
+	def execute(self, context):
+		if context.mode != "OBJECT":
+			bpy.ops.object.mode_set(mode = "OBJECT")
+		bpy.ops.object.select_all(action = "DESELECT")
+
+		collection = bpy.context.collection
+
+		append_path = templates_append_path
+		curve_data_name = "SplineCageAppend231022"
+		nodes_tree_name = "CageLoftAppend231022"
+		curve_data = bpy.data.curves.get(curve_data_name)
+		node_tree = bpy.data.node_groups.get(nodes_tree_name)
+
+		print("Append Spline Cage:", curve_data is None)
+		print("Append Node Tree:", node_tree is None)
+
+		if not os.path.isfile(append_path):
+			self.report({'ERROR'}, f"Failed to append {append_path}")
+			return {'CANCELLED'}
+
+		with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+			if node_tree is None:
+				if nodes_tree_name in data_from.node_groups:
+					data_to.node_groups = [nodes_tree_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
+					return {'CANCELLED'}
+
+			if curve_data is None:
+				if curve_data_name in data_from.curves:
+					data_to.curves = [curve_data_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append spline cage from {append_path}")
+					return {'CANCELLED'}
+
+		curve_data = bpy.data.curves.get(curve_data_name)
+		if curve_data.users == 0:
+			curve_data.use_fake_user = True
+		curve_data = curve_data.copy()
+		curve_obj = bpy.data.objects.new("SplineCage", curve_data)
+		curve_data.name = curve_obj.name
+		curve_obj.location = bpy.context.scene.cursor.location
+
+		node_tree = bpy.data.node_groups.get(nodes_tree_name)
+		if node_tree.users == 0:
+			node_tree.use_fake_user = True
+		node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
+		node_modifier.node_group = node_tree
+		#node_tree.use_fake_user = True # keeps it from being deleted on .blend reopen
+
+		collection.objects.link(curve_obj)
+
+		return {'FINISHED'}
+
+class SSX2_OP_AddPatchMaterial(bpy.types.Operator):
+	bl_idname = 'material.ssx2_add_patch_material'
+	bl_label = "Patch Material"
+	bl_description = 'Create a Patch Material'
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	
+	def execute(self, context):
+
+		obj = bpy.context.active_object
+
+		append_path = templates_append_path
+		material_name = "PatchMaterialAppend231022"
+		material = bpy.data.materials.get(material_name)
+
+		if material is None:
+			print("Append Material: True")
+			if not os.path.isfile(append_path):
+				self.report({'ERROR'}, f"Failed to append {append_path}")
+				return {'CANCELLED'}
+
+			with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+				if material_name in data_from.materials:
+					data_to.materials = [material_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append material from {append_path}")
+					return {'CANCELLED'}
+
+		material = bpy.data.materials.get(material_name)
+		# if material.users == 0:
+		# 	material.use_fake_user = True
+		# material = material.copy()
+		material.name = "pch"
+
+		print(material.name)
+		obj.data.materials.append(material)
+
+		return {'FINISHED'}
+
 class SSX2_OP_AddControlGrid(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_control_grid'
 	bl_label = "Control Grid"
@@ -203,16 +660,53 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 			self.report({'WARNING'}, "'Patches' Collection not found!")
 			collection = bpy.context.collection
 
-		scale = (100 / bpy.context.scene.bx_WorldScale) + 14
+		append_path = templates_append_path
+		material_name = "PatchMaterialAppend231022"
+		node_tree_name = "GridTesselateAppend231022"
+		material = bpy.data.materials.get(material_name)
+		node_tree = bpy.data.node_groups.get(node_tree_name)
 
-		bpy.ops.mesh.primitive_grid_add(enter_editmode=False, align='CURSOR',
+		print("Append Material:", material is None)
+		print("Append Node Tree:", node_tree is None)
+
+		if not os.path.isfile(append_path):
+			self.report({'ERROR'}, f"Failed to append {append_path}")
+			return {'CANCELLED'}
+
+		with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+			if node_tree is None:
+				if node_tree_name in data_from.node_groups:
+					data_to.node_groups = [node_tree_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
+					return {'CANCELLED'}
+			if material is None:
+				if material_name in data_from.materials:
+					data_to.materials = [material_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append material from {append_path}")
+					return {'CANCELLED'}
+
+		# I should just append grid from templates.blend
+
+		#scale = (100 / bpy.context.scene.bx_WorldScale) + 14
+		bpy.ops.mesh.primitive_grid_add(enter_editmode=False, size=10, #align='CURSOR', align='WORLD'
 			x_subdivisions=3,
-			y_subdivisions=3)
+			y_subdivisions=3,
+			location=(5, 5, 0),
+			rotation=(0, 0, -1.57079632679)) # scale= doens't work. blender plz fix
+
+		bpy.ops.transform.resize(value=(-1, 1, 1), orient_type='LOCAL', constraint_axis=(False, True, False))
+		#orient_type='LOCAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='LOCAL'
+
+		bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) # sets origin to bottom left
+		bpy.ops.object.editmode_toggle()
+		bpy.ops.mesh.flip_normals()
+		bpy.ops.object.editmode_toggle()
 
 		grid = bpy.context.active_object
 		collection_it_was_added_to = grid.users_collection[0]
-		grid.scale = (scale, scale, 0)
-		bpy.ops.object.transform_apply(scale=True)
+		grid.location = bpy.context.scene.cursor.location
 		grid_data = grid.data
 
 		props = grid.ssx2_PatchProps
@@ -225,15 +719,29 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 		# props.manualUV2 = (0.0, 0.0)
 		# props.manualUV3 = (0.0, 0.0)
 
-		mat = bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice
-		if mat is not None:
-			#mat_name = mat.name
-			pass
-		else:
-			mat = set_patch_material(f"pch")
-			bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice = mat
+		# mat = bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice
+		# if mat is not None:
+		# 	#mat_name = mat.name
+		# 	pass
+		# else:
+		# 	mat = set_patch_material(f"pch")
+		# 	bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice = mat
 
-		grid.data.materials.append(mat)
+		material = bpy.data.materials.get("pch")
+		if material is None:
+			material = bpy.data.materials.get(material_name)
+			if material.users == 0:
+				material.use_fake_user = True
+			material = material.copy()
+			material.name = "pch"
+		grid.data.materials.append(material)
+
+		node_tree = bpy.data.node_groups.get(node_tree_name)
+		if node_tree.users == 0:
+			node_tree.use_fake_user = True
+		node_modifier = grid.modifiers.new(name="GeoNodes", type='NODES')
+		node_modifier.node_group = node_tree
+		node_modifier["Input_3"] = 1
 
 		if collection_it_was_added_to.name != collection.name:
 			collection_it_was_added_to.objects.unlink(grid)
@@ -259,6 +767,57 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 			collection = bpy.context.collection
 			#return {'CANCELLED'}
 
+		append_path = templates_append_path
+		material_name = "PatchMaterialAppend231022"
+		surface_name = "SurfPatchAppend231022"
+		material = bpy.data.materials.get(material_name)
+		surface = bpy.data.curves.get(surface_name)
+
+		print("Append Material:", material is None)
+		print("Append Surface:", surface is None)
+
+		if not os.path.isfile(append_path):
+			self.report({'ERROR'}, f"Failed to append {append_path}")
+			return {'CANCELLED'}
+
+		with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+			if surface is None:
+				if surface_name in data_from.curves:
+					data_to.curves = [surface_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
+					return {'CANCELLED'}
+			if material is None:
+				if material_name in data_from.materials:
+					data_to.materials = [material_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append material from {append_path}")
+					return {'CANCELLED'}
+
+		surface = bpy.data.curves.get(surface_name)
+		print(surface)
+		print(surface.users)
+		if surface.users == 0:
+			surface.use_fake_user = True
+		surface = surface.copy()
+		patch = bpy.data.objects.new("SurfPatch", surface)
+		surface.name = patch.name#"SurfPatch"
+
+		patch.location = bpy.context.scene.cursor.location
+		patch.ssx2_PatchProps.type = '1'
+		patch.ssx2_PatchProps.texMapPreset = '3'
+
+		material = bpy.data.materials.get("pch")
+		if material is None:
+			material = bpy.data.materials.get(material_name)
+			if material.users == 0:
+				material.use_fake_user = True
+			material = material.copy()
+			material.name = "pch"
+		patch.data.materials.append(material)
+		collection.objects.link(patch)
+
+		"""
 		bpy.ops.surface.primitive_nurbs_surface_surface_add(enter_editmode=False, align='CURSOR', rotation=(0.0, 0.0, 0.0))
 		patch = bpy.context.active_object
 		collection_it_was_added_to = patch.users_collection[0]
@@ -277,16 +836,14 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 			p.co = (p.co.x*scale+align_to_grid, p.co.y*scale+align_to_grid, 0.0, p.co.w)
 
 		patch.ssx2_PatchProps.type = '1'
-		patch.ssx2_PatchProps.texMapPreset = '2'
+		patch.ssx2_PatchProps.texMapPreset = '3'#'2'
 		#patch.ssx2_PatchProps.texMap = (0.0, 0.0, 0.0)
 		# patch.ssx2_PatchProps.useManualUV = False
 		# patch.ssx2_PatchProps.manualUV0 = (0.0, 0.0, ) # needs to be like this
 		# patch.ssx2_PatchProps.manualUV1 = (0.0, 0.0, )
 		# patch.ssx2_PatchProps.manualUV2 = (0.0, 0.0, )
 		# patch.ssx2_PatchProps.manualUV3 = (0.0, 0.0, )
-		
 		#patch.color = (0.0, 0.0, 0.0, 1.0)
-
 
 		mat = bpy.context.scene.ssx2_WorldUIProps.patchMaterialChoice
 		if mat is not None:
@@ -302,6 +859,7 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 		if collection_it_was_added_to.name != collection.name:
 			collection_it_was_added_to.objects.unlink(patch)
 			collection.objects.link(patch)
+		"""
 
 		return {"FINISHED"}
 
@@ -321,6 +879,26 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 	def toggle_to_control_grid(self, context, objects_to_convert):
 		# to_reselect = []
 
+		append_path = templates_append_path
+		node_tree_name = "GridTesselateAppend231022"
+		node_tree = bpy.data.node_groups.get(node_tree_name)
+
+		if node_tree is None:
+			print("Append Node Tree: True")
+
+			if not os.path.isfile(append_path):
+				self.report({'ERROR'}, f"Failed to append {append_path}")
+				return {'CANCELLED'}
+
+			with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+				if node_tree_name in data_from.node_groups:
+					data_to.node_groups = [node_tree_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
+					return {'CANCELLED'}
+
+		node_tree = bpy.data.node_groups.get(node_tree_name)
+
 		def temp_function():
 			for obj in objects_to_convert:
 				if obj.type != 'SURFACE':
@@ -333,7 +911,10 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 				patch_matrix = Matrix(obj.matrix_world) # should work
 				patch_points = []
 				patch_uvs = []
-				patch_material = obj.data.materials[0]
+				if len(obj.data.materials) > 0:
+					patch_material = obj.data.materials[0]
+				else:
+					patch_material = None
 				props = obj.ssx2_PatchProps
 				patch_type = props.type
 				patch_showoff_only = props.showoffOnly
@@ -363,12 +944,18 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 					new_grid = bpy.data.objects.new(patch_name, mesh)
 
 				new_grid.data = set_patch_control_grid(mesh, patch_points, patch_uvs)
-				new_grid.data.materials.append(patch_material)
+				if patch_material is not None:
+					new_grid.data.materials.append(patch_material)
 				new_grid.ssx2_PatchProps.type = patch_type
 				new_grid.ssx2_PatchProps.showoffOnly = patch_showoff_only
 				new_grid.ssx2_PatchProps.isControlGrid = True
 
 				collection.objects.link(new_grid)
+
+				node_modifier = new_grid.modifiers.new(name="GeoNodes", type='NODES')
+				node_modifier.node_group = node_tree
+				node_modifier["Input_3"] = 1
+
 
 				new_grid.matrix_world = patch_matrix
 
@@ -593,11 +1180,15 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 classes = (
 	SSX2_OP_AddPatch,
 	SSX2_OP_AddControlGrid,
+	SSX2_OP_AddSplineCage,
+	SSX2_OP_AddPatchMaterial,
 
 	SSX2_PatchPanel,
 	SSX2_PatchPropGroup,
 
 	SSX2_OP_ToggleControlGrid,
+	SSX2_OP_CageToPatch,
+	SSX2_OP_PatchSplit4x4,
 )
 
 def ssx2_world_patches_register():

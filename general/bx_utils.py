@@ -1,6 +1,9 @@
 import bpy
 import struct
 import numpy as np
+from os import path
+
+templates_append_path = path.dirname(__file__)[:-7]+"general/templates.blend"
 
 if __name__ == '__main__': # for DXT texture testing
 	def get_string(f, x):
