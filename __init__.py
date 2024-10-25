@@ -45,7 +45,7 @@ else:
     from .ssx3 import ssx3_register, ssx3_unregister
     from .external.ex_utils import prop_split
     from .panels import *
-    from .general.bx_utils import bx_report
+    #from .general.bx_utils import BXT
 
     for name in module_names: # for reload
         full_name = (f"{__name__}.{name}")
@@ -55,7 +55,7 @@ else:
 
 bl_info = {
     'name': 'BXTools',
-    'blender': (3, 0, 0), # minimum version
+    'blender': (3, 6, 0), # minimum version
     "category": "Import-Export",
     'author': 'Linkz64',
     'description': 'Plugin for importing and exporting SSX game data',
@@ -71,7 +71,7 @@ enum_platform = (
     # ('PS2', "PS2", "Sony PlayStation 2"),
     ('XBX', "Xbox", "Microsoft Xbox"),
     # ('NGC', "GameCube", "Nintendo GameCube"),
-    ('ICE', "IceSaw", "GlitcherOG's Level files"), # Level only
+    ('ICE', "JSON", "GlitcherOG's Level files"), # Level only
 )
 
 
@@ -124,19 +124,46 @@ def update_choice(self, context):
     if game == "SSX1" and plat != "PS2":
         #self.bx_PlatformChoice = "PS2"
         self.bx_GameChoice = "SSX2"
-        #bx_report("Not available")
+        #BXT.popup("Not available")
     # elif game == "SSX2" and (plat != "XBX" and plat != 'NGC'):
     #     self.bx_PlatformChoice = "XBX"
     elif game == "SSX3":# and plat != "XBX":
         #self.bx_PlatformChoice = "XBX"
         self.bx_GameChoice = "SSX2"
-        #bx_report("Not available")
+        #BXT.popup("Not available")
     """
 
 classes = (
     BXT_Panel,
     BXT_PanelInProperties
 )
+
+
+
+
+
+
+addon_keymaps = []
+
+def register_keymaps():
+    wm = bpy.context.window_manager
+    km = wm.keyconfigs.addon.keymaps.new(name="Curve", space_type="EMPTY")
+
+    kmi = km.keymap_items.new("curve.select_spline_cage_along_v", 'R', 'PRESS', ctrl=True, shift=True)
+    # kmi.properties.operator = "Translate"
+    addon_keymaps.append((km, kmi))
+
+    print("BXT Keymap 'Select Along V' added to 'Keymap > 3D View > Curve (Global)'")
+
+def unregister_keymaps():
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if kc:
+        for km, kmi in addon_keymaps:
+            km.keymap_items.remove(kmi)
+
+    addon_keymaps.clear()
+
 
 def register():
     ssx2_register()
@@ -154,6 +181,8 @@ def register():
     bpy.types.Scene.bx_ModelScale = bpy.props.FloatProperty(name="Model Scale", default=100.0, soft_min=1.0, soft_max=1000.0,
         description="Model Scale\nDefault: 100.0")
 
+    register_keymaps()
+
 def unregister():
     ssx2_unregister()
     ssx3_unregister()
@@ -163,6 +192,8 @@ def unregister():
 
     del bpy.types.Scene.bx_WorldScale
     del bpy.types.Scene.bx_ModelScale
+
+    unregister_keymaps()
 
     for c in classes:
         unregister_class(c)

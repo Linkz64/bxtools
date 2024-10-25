@@ -1,38 +1,32 @@
 import bpy
+from mathutils import Vector
 import struct
 import numpy as np
 from os import path
+from math import ceil
+
+from .bx_struct import get_string
+from ..external.DXTDecompress import DXTBuffer
 
 templates_append_path = path.dirname(__file__)[:-7]+"general/templates.blend"
 
-if __name__ == '__main__': # for DXT texture testing
-	def get_string(f, x):
-		a = f.read(x)
-		return a.decode('utf-8').strip('\x00')
-	import sys
-	#import os; root = os.path.abspath(os.curdir).replace("general", "external")
-	sys.path.append(sys.path[0].replace("general", "external"))
-	from DXTDecompress import DXTBuffer
-	from PIL import Image
+class BXT:
+	def __init__(self, bpyself, context):
+		print(bpyself, context)
+	def info(bpyself, string):
+		bpyself.report({'INFO'}, "BXT " + string)
+	def warn(bpyself, string):
+		bpyself.report({'WARNING'}, "BXT " + string)
+	def error(bpyself, string):
+		bpyself.report({'ERROR'}, "BXT " + string)
 
-else:
-	from .bx_struct import get_string
-	from ..external.DXTDecompress import DXTBuffer
+	def popup(string, title="Error", icon='ERROR'):
+		def report(self, context):
+			self.layout.label(text=string)
+		bpy.context.window_manager.popup_menu(report, title=title, icon=icon)
 
 
 ### UI
-
-def bx_report(string, title="Error", icon='ERROR'):
-	"""
-	Popup Menu
-	string = text/description
-	title = "Error"
-	icon = 'ERROR'
-	"""
-	def report(self, context):
-		self.layout.label(text=string)
-
-	bpy.context.window_manager.popup_menu(report, title=title, icon=icon)
 
 def prop_enum_horizontal(layout, data, field, label, spacing=0.5, **prop_kwargs):
 	split = layout.split(factor=spacing)
@@ -41,8 +35,12 @@ def prop_enum_horizontal(layout, data, field, label, spacing=0.5, **prop_kwargs)
 	split_row.prop(data, field, expand=True)
 
 
-
 ### Blender Internal
+
+def set_active(obj):
+	#bpy.ops.object.select_all(action='DESELECT')
+	bpy.context.view_layer.objects.active = obj
+	obj.select_set(True)
 
 def run_without_update(func):
 	# run without view layer update
@@ -77,6 +75,28 @@ def collection_grouping(name, parent_col, group_size, increment):
 		parent_col.children.link(new_col)
 	return new_col
 
+
+def getset_collection_to_target(name, target_collection): # move=False
+	"""Gets or Creates collection and parents it to target collection"""
+	col = bpy.data.collections.get(name)
+	if col is None:
+		col = bpy.data.collections.new(name)
+		target_collection.children.link(col)
+	# elif col.name != name:
+	# 	col = bpy.data.collections.new(name)
+	# 	target_collection.children.link(col)
+	# if target_collection.children.get(name) is None:
+	# 	target_collection.children.link(col)
+	return col
+
+def getset_collection(name):
+	"""Creates/Gets collection"""
+	col = bpy.data.collections.get(name)
+	if col is None:
+		col = bpy.data.collections.new(name)
+	return col
+
+
 def getset_instance_collection(model, name):
 	"""Checks if Instance Collection exists, creates it if it doesn't, then return the name of the Instance Collection
 	model = Chosen mesh/model object
@@ -98,6 +118,9 @@ def getset_instance_collection(model, name):
 
 
 ### Math
+
+def midpoint(p1, p2):
+	return (p1 + p2) / 2
 
 def normalize(input_list, sum_target=100, key=None):
 	"""
@@ -158,24 +181,51 @@ def interpolate_patch_uvs(uv_points, divisions): # gen
 			new_uv_points.append(interpolated_uv)
 	return new_uv_points
 
+def lerp_uv(uv0, uv1, amount): # aka linear interpolate vector2
+	uv0u = uv0[0]
+	uv0v = uv0[1]
+	uv1u = uv1[0]
+	uv1v = uv1[1]
 
+	new_u = uv0u + (uv1u - uv0u) * amount
+	new_v = uv0v + (uv1v - uv0v) * amount
+	return (new_u, new_v)
+
+def fix_uvs_u(uvs, factor=0.01):
+	uv0 = Vector(uvs[0])
+	uv1 = Vector(uvs[1])
+	uv2 = Vector(uvs[2])
+	uv3 = Vector(uvs[3])
+
+	uvs[0] = lerp_uv(uv0, uv1, factor)
+	uvs[1] = lerp_uv(uv1, uv0, factor)
+	uvs[2] = lerp_uv(uv2, uv3, factor)
+	uvs[3] = lerp_uv(uv3, uv2, factor)
+def fix_uvs_v(uvs, factor=0.01):
+	uv0 = Vector(uvs[0])
+	uv1 = Vector(uvs[1])
+	uv2 = Vector(uvs[2])
+	uv3 = Vector(uvs[3])
+
+	uvs[0] = lerp_uv(uv0, uv2, factor)
+	uvs[2] = lerp_uv(uv2, uv0, factor)
+	uvs[1] = lerp_uv(uv1, uv3, factor)
+	uvs[3] = lerp_uv(uv3, uv1, factor)
+
+def enc_to_mid_eq1(a, b,                      encoded, mid_table):
+	return encoded[a] / 3 + mid_table[b]
+def enc_to_mid_eq2(a, b, mid_a,               encoded, mid_table):
+	return (encoded[a] + encoded[b]) / 3 + mid_table[mid_a]
+def enc_to_mid_eq3(a,    mid_a, mid_b, mid_c, encoded, mid_table):
+	return encoded[a] + encoded[mid_a] + encoded[mid_b] + encoded[mid_c]
+def mid_to_raw_eq1(a, b,                    mid_table, raw):
+	return mid_table[a] / 3 + raw[b]
+def mid_to_raw_eq2(a, b, mid_a,             mid_table, raw):
+	return (mid_table[a] + mid_table[b]) / 3 + raw[mid_a]
+def mid_to_raw_eq3(a,    mid_a, mid_b, mid_c, mid_table):
+	return mid_table[a] + mid_table[mid_a] + mid_table[mid_b] + mid_table[mid_c]
 
 def patch_points_decode(encoded):
-
-	def enc_to_mid_eq1(a, b,                      encoded, mid_table):
-		return encoded[a] / 3 + mid_table[b]
-	def enc_to_mid_eq2(a, b, mid_a,               encoded, mid_table):
-		return (encoded[a] + encoded[b]) / 3 + mid_table[mid_a]
-	def enc_to_mid_eq3(a,    mid_a, mid_b, mid_c, encoded, mid_table):
-		return encoded[a] + encoded[mid_a] + encoded[mid_b] + encoded[mid_c]
-
-	def mid_to_raw_eq1(a, b,                    mid_table, raw):
-		return mid_table[a] / 3 + raw[b]
-	def mid_to_raw_eq2(a, b, mid_a,             mid_table, raw):
-		return (mid_table[a] + mid_table[b]) / 3 + raw[mid_a]
-	def mid_to_raw_eq3(a,    mid_a, mid_b, mid_c, mid_table):
-		return mid_table[a] + mid_table[mid_a] + mid_table[mid_b] + mid_table[mid_c]
-
 	mid_table = [Vector((0.0, 0.0, 0.0))]*16
 	raw       = [Vector((0.0, 0.0, 0.0))]*16
 
@@ -210,24 +260,22 @@ def patch_points_decode(encoded):
 
 	return raw
 
+def raw_to_mid_eq1(a, b, raw):
+	return (raw[a] - raw[b]) * 3
+def raw_to_mid_eq2(a, b, mid_a, raw, mid_table):
+	return (raw[a] - raw[b]) * 3 - mid_table[mid_a]
+def raw_to_mid_eq3(a,    mid_a, mid_b, mid_c, raw, mid_table):
+	return raw[a] - mid_table[mid_a] - mid_table[mid_b] - mid_table[mid_c]
+def mid_to_enc_eq1(a, b, mid_table):
+	return (mid_table[a] - mid_table[b]) * 3
+def mid_to_enc_eq2(a, b, end_a, mid_table, encoded):
+	return (mid_table[a] - mid_table[b]) * 3 - encoded[end_a]
+def mid_to_enc_eq3(a,         mid_a, mid_b, mid_c, mid_table, encoded):
+	return mid_table[a] - encoded[mid_a] - encoded[mid_b] - encoded[mid_c]
+
 def patch_points_encode(raw):
-
-	def raw_to_mid_eq1(a, b, raw):
-		return (raw[a] - raw[b]) * 3
-	def raw_to_mid_eq2(a, b, mid_a, raw, mid_table):
-		return (raw[a] - raw[b]) * 3 - mid_table[mid_a]
-	def raw_to_mid_eq3(a,    mid_a, mid_b, mid_c, raw, mid_table):
-		return raw[a] - mid_table[mid_a] - mid_table[mid_b] - mid_table[mid_c]
-
-	def mid_to_enc_eq1(a, b, mid_table):
-		return (mid_table[a] - mid_table[b]) * 3
-	def mid_to_enc_eq2(a, b, end_a, mid_table, encoded):
-		return (mid_table[a] - mid_table[b]) * 3 - encoded[end_a]
-	def mid_to_enc_eq3(a,         mid_a, mid_b, mid_c, mid_table, encoded):
-		return mid_table[a] - encoded[mid_a] - encoded[mid_b] - encoded[mid_c]
-
-	mid_table = [vec((0.0, 0.0, 0.0))]*16
-	encoded   = [vec((0.0, 0.0, 0.0))]*16
+	mid_table = [Vector((0.0, 0.0, 0.0))]*16
+	encoded   = [Vector((0.0, 0.0, 0.0))]*16
 
 	for i in range(0, 16, 4): # makes this list: [0, 4, 8, 12]
 		mid_table[i  ] = raw[i]
@@ -260,10 +308,130 @@ def patch_points_encode(raw):
 
 	return encoded
 
+## Splines
+
+def calc_spline_segments(num_points): # segments of 4
+	return ceil((num_points - 1) / 3)
+
+def segment_spline(all_splines): # segments into groups of 4
+	expected_segments = ceil((len(all_splines[0]) - 1) / 3)
+	segments = [[] for i in range(expected_segments)]
+	for points in all_splines:
+		for i in range(0, len(points), 3):
+			segment_points = points[i:i + 4]
+			if i == len(points) - 1:
+				break
+			segments[i // 3].append(segment_points)
+	return segments
+
+def bezier_to_raw(bezier_points, m, scale): # aka bezier to poly or nurbs
+	bez_points_compare = len(bezier_points)-1
+	spline = []
+	for i, p in enumerate(bezier_points):
+		points = []
+
+		if (i != 0) and (i != bez_points_compare): # mid points
+			points.append(scale * (m @ p.handle_left))
+			points.append(scale * (m @ p.co))
+			points.append(scale * (m @ p.handle_right))
+		elif i == 0: # first point
+			points.append(scale * (m @ p.co))
+			points.append(scale * (m @ p.handle_right))
+		elif i == bez_points_compare: # last point
+			points.append(scale * (m @ p.handle_left))
+			points.append(scale * (m @ p.co))
+
+		spline += points
+	return spline
+
+def bezier_to_raw_old(obj, m=None, count=4):
+	scale = bpy.context.scene.bx_WorldScale
+	if m is None:
+		m = obj.matrix_world
+	splines = obj.data.splines
+	all_splines = []
+	for i in range(count):
+		s = splines[i]
+		current_spline = []
+
+		if s.type != 'BEZIER':
+			self.report({'WARNING'}, f"{obj} Splines must be bezier type (with handles)")
+			return None
+		if len(s.bezier_points) < 2:
+			self.report({'WARNING'}, f"Not enough points in spline {i+1}")
+			return None
+
+		for j, p in enumerate(s.bezier_points):
+			current_points = []
+
+			if j == 0: # first
+				current_points.append(scale * (m @ p.co))
+				current_points.append(scale * (m @ p.handle_right))
+			elif j == len(s.bezier_points)-1: # last
+				current_points.append(scale * (m @ p.handle_left))
+				current_points.append(scale * (m @ p.co))
+			elif (j != 0) and (j != len(s.bezier_points)-1): # mids
+				current_points.append(scale * (m @ p.handle_left))
+				current_points.append(scale * (m @ p.co))
+				current_points.append(scale * (m @ p.handle_right))
+
+			current_spline += current_points
+
+		all_splines.append(current_spline)
+
+	row1_length = len(current_spline)
+	if row1_length * count != sum([len(i) for i in all_splines]):
+		print(f"{obj.name} Failed! Number of points must match on all splines")
+		return None
+
+	return all_splines
 
 
+def double_quad_cage(raw): # essentially subdivides along v but only on 4 splines
+	temp_strip1 = [[] for i in range(4)]
+	temp_strip2 = [[] for i in range(4)]
+
+	for i in range(len(raw[0])):
+		og1 = raw[0][i]
+		og2 = raw[1][i]
+		og3 = raw[2][i]
+		og4 = raw[3][i]
+
+		new2 = midpoint(og1, og2) # handles scaled down to half
+		new6 = midpoint(og3, og4)
+		mid_a = midpoint(og2, og3) # middle of opposite handles
+		mid_b = midpoint(new2, new6)
+
+		new4 = midpoint(mid_a, mid_b) # middle point of the 2 patch strips
+
+		new3 = midpoint(mid_a, new2)
+		new5 = midpoint(mid_a, new6)
+
+		temp_strip1[0].append(og1)
+		temp_strip1[1].append(new2)
+		temp_strip1[2].append(new3)
+		temp_strip1[3].append(new4)
+
+		temp_strip2[0].append(new4)
+		temp_strip2[1].append(new5)
+		temp_strip2[2].append(new6)
+		temp_strip2[3].append(og4)
+
+	yield temp_strip1
+	yield temp_strip2
 
 
+def adjust_path_points(spline_points):
+	adjusted_points = [Vector(spline_points[1].co[:3]) - Vector(spline_points[0].co[:3])]
+
+	for j in range(2, len(spline_points)):
+		p = Vector(spline_points[j].co[:3])
+		prev = Vector(spline_points[j - 1].co[:3])
+
+		new_point = p - prev
+		adjusted_points.append(new_point)
+
+	return adjusted_points
 
 
 ### Mesh

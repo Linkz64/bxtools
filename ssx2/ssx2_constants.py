@@ -40,6 +40,32 @@ enum_ssx2_world = ( # alphabetical order
 	('untrack', "Untracked",              ""),
 )
 
+enum_ssx2_empty_mode = (
+	('NONE',       "None",            ""),
+	('PATH_AI',    "Path AI",         "Start, AI follow, Reset, etc"),
+	('PATH_EVENT', "Path Event",      "Checkpoints, Finish Line, etc"),
+	('INSTANCE',   "Model Instance",  "Not Implemented Yet"),
+)
+
+enum_ssx2_curve_mode = (
+	('NONE',       "None",        ""),
+	('SPLINE',     "Spline",      "Spline for grindable rails and model animations"),
+	('CAGE',       "Spline Cage", "Spline cage patch"),
+	('PATH_AI',    "Path AI",     "Start, AI follow, Reset, etc"),
+	('PATH_EVENT', "Path Event",  "Checkpoints, Finish Line, etc"),
+)
+
+enum_ssx2_spline_cage_type = (
+	('DUAL', "(2) Dual", "2 spline cage patch"),
+	('QUAD', "(4) Quad", "4 spline cage patch"),
+	('HEXA', "(6) Hexa", "6 spline cage patch"),
+)
+
+# enum_ssx2_path_mode = (
+# 	('AI',    'Ai',    "Start, Ai follow, Reset, etc"),
+# 	('EVENT', 'Event', "Checkpoints, Finish Line, etc"),
+# )
+
 enum_ssx2_surface_type = ( # ? = to be checked # used by patches and splines
 	('0', "Reset",             "Resets the player position back to the nearest path point", 'FILE_REFRESH',           0),
 	('1', "Snow Main",         "Track Snow",                                                'FREEZE',                 1),
@@ -65,15 +91,13 @@ enum_ssx2_surface_type = ( # ? = to be checked # used by patches and splines
 enum_ssx2_surface_type_spline = enum_ssx2_surface_type + (\
 	('-1', "[None]",           "None", 'X', -1), ) # BLANK1
 
-# enum_ssx2_surface_type_extended = (
-# 	('50', "[BEZIER PATCH]","NURBS/Bézier patch", 'SURFACE_NSURFACE', 50), \
-# 	('51', "[CONTROL GRID]","Control Grid", 'MESH_GRID',        51)
-# 	)  # MESH_GRID GRID LIGHTPROBE_GRID
-
-enum_ssx2_surface_type_extended = enum_ssx2_surface_type + (\
-	('50', "[BEZIER PATCH]","NURBS/Bézier patch", 'SURFACE_NSURFACE', 50), \
-	('51', "[CONTROL GRID]","Control Grid", 'MESH_GRID',        51), )  # MESH_GRID GRID LIGHTPROBE_GRID
-	# for selecting by type # Icould give these custom enum id but whatever
+enum_ssx2_surface_type_extended = enum_ssx2_surface_type + (
+	('50', "[SURFACE PATCH]","Surface Patch",   'SURFACE_NSURFACE', 50), # "[BEZIER PATCH]","NURBS/Bézier patch"
+	('51', "[CONTROL GRID]","Control Grid",     'MESH_GRID',        51), 
+	('52', "[SPLINE CAGE]", "Spline Cage",      'SURFACE_DATA',     52), 
+	('53', "[DUAL CAGE]",   "Dual Spline Cage", 'SURFACE_DATA',     53), 
+	('54', "[QUAD CAGE]",   "Quad Spline Cage", 'SURFACE_DATA',     54), 
+	('55', "[HEXA CAGE]",   "Hexa Spline Cage", 'SURFACE_DATA',     55), )  # MESH_GRID GRID LIGHTPROBE_GRID
 
 enum_ssx2_patch_group = (
 	('NONE', "None", "No grouping"),
@@ -104,7 +128,7 @@ enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_ma
 # 	('6', "Rot Right, Flip Y", "Rot Right, Flip Y"),
 # )
 
-patch_known_uvs = ( # these use SSX's UV system. Y- is up
+patch_known_uvs = ( # these use SSX's UV system. Starts top left. Y+ down.
 	[( 0.0,  0.0), ( 0.0, -1.0), (1.0,  0.0), ( 1.0, -1.0)], # 0  0
 	[( 0.0, -1.0), ( 0.0,  0.0), (1.0, -1.0), ( 1.0,  0.0)], # 1  1
 	[( 1.0,  0.0), ( 1.0, -1.0), (0.0,  0.0), ( 0.0, -1.0)], # 2  2
@@ -121,7 +145,7 @@ patch_known_uvs = ( # these use SSX's UV system. Y- is up
 	#[( 0.0,  0.0), ( 2.0,  0.0), (0.0, -2.0), ( 2.0, -2.0)],# 13 too big
 )
 
-patch_known_uvs_blender = ( # these use Blender's UV system. Y+ is up
+patch_known_uvs_blender = ( # these use Blender's UV system. Starts bottom left. Y+ up
 	[( 0.0,  0.0), ( 0.0,  1.0), (1.0,  0.0), ( 1.0,  1.0)], # 0  0 Flip Y
 	[( 0.0,  1.0), ( 0.0,  0.0), (1.0,  1.0), ( 1.0,  0.0)], # 1  1
 	[( 1.0,  0.0), ( 1.0,  1.0), (0.0,  0.0), ( 0.0,  1.0)], # 2  2

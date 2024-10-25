@@ -53,7 +53,7 @@ def get_uint16(f):
 
 def get_uint8(f):
 	"""
-	Signed 8-bit Integer (1 byte)
+	Unigned 8-bit Integer (1 byte)
 	Range: 0 to 255
 	"""
 	return struct.unpack("B", f.read(1))[0]
@@ -67,13 +67,12 @@ def get_float32(f):
 	Single 32-bit floating point value
 
 	Length: 4 bytes
-	Range: -inf to inf
+	Range: -inf to inf (negative infinity to positive infinity)
+	Special: nan (not a number)
 	Examples:
 		0x0000A040 = 5.0
 		0x0000F0FF = nan  (Not a Number)
-		0x0000F07F = nan
 		0x0000807F = inf  (Positive infinity)
-		0x000080FF = -inf (Negative infinity)
 	"""
 	return struct.unpack("f", f.read(4))[0]
 
