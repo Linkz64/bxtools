@@ -1357,7 +1357,16 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 							if not tex.endswith(".png") or len(tex) < 5:
 								tex = "0022.png"
 
-					patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
+					#patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
+					if not props.useManualUV:
+						patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
+					else:
+						patch_uvs = [
+							(props.manualUV0[0], -props.manualUV0[1]),
+							(props.manualUV2[0], -props.manualUV2[1]), # these
+							(props.manualUV1[0], -props.manualUV1[1]), # are swapped
+							(props.manualUV3[0], -props.manualUV3[1]),
+						]
 					
 					if props.fixU:
 						fix_uvs_u(patch_uvs)
