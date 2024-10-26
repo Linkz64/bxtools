@@ -20,9 +20,9 @@ with the repository in your blender addons folder.
 
 ## Info
 SSX Tricky Levels:
-	- Patch editing
-	- Spline editing
-	- Player/Ai paths editing
+- Patch editing (e.g Terrain)
+- Spline editing (e.g Rails)
+- Player/Ai paths editing
 
 Avoid these:
 - Editing Control Grid topology (Extruding, deleting, decimating, etc)
