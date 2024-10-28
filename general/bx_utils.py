@@ -1,4 +1,5 @@
 import bpy
+from bpy.ops import _BPyOpsSubModOp
 from mathutils import Vector
 import struct
 import numpy as np
@@ -14,11 +15,11 @@ class BXT:
 	def __init__(self, bpyself, context):
 		print(bpyself, context)
 	def info(bpyself, string):
-		bpyself.report({'INFO'}, "BXT " + string)
+		bpyself.report({'INFO'}, string)
 	def warn(bpyself, string):
-		bpyself.report({'WARNING'}, "BXT " + string)
+		bpyself.report({'WARNING'}, string)
 	def error(bpyself, string):
-		bpyself.report({'ERROR'}, "BXT " + string)
+		bpyself.report({'ERROR'}, string)
 
 	def popup(string, title="Error", icon='ERROR'):
 		def report(self, context):
@@ -44,7 +45,6 @@ def set_active(obj):
 
 def run_without_update(func):
 	# run without view layer update
-	from bpy.ops import _BPyOpsSubModOp
 	view_layer_update = _BPyOpsSubModOp._view_layer_update
 	def dummy_view_layer_update(context):
 		pass
@@ -115,6 +115,42 @@ def getset_instance_collection(model, name):
 		if col not in obj.users_collection:
 			bpy.data.collections[name].objects.link(obj)
 	return name
+
+def append_geonodes(node_tree_name):
+	if not path.isfile(templates_append_path):
+		print(f"Failed to find {templates_append_path}")
+		return None
+
+	with bpy.data.libraries.load(templates_append_path, link=False) as (data_from, data_to):
+		if node_tree_name in data_from.node_groups:
+			data_to.node_groups = [node_tree_name]
+		else:
+			print(f"Failed to append geonodes from {templates_append_path}")
+			return None
+
+	node_tree = bpy.data.node_groups.get(node_tree_name)
+	if node_tree is None:
+		print(f"Failed to append geonodes from {templates_append_path}")
+		return None
+	return node_tree
+
+def append_material(mat_name):
+	if not path.isfile(templates_append_path):
+		print(f"Failed to find {templates_append_path}")
+		return None
+
+	with bpy.data.libraries.load(templates_append_path, link=False) as (data_from, data_to):
+		if mat_name in data_from.materials:
+			data_to.materials = [mat_name]
+		else:
+			print(f"Failed to append material from {templates_append_path}")
+			return None
+
+	mat = bpy.data.materials.get(mat_name)
+	if mat is None:
+		print(f"Failed to append material from {templates_append_path}")
+		return None
+	return mat
 
 
 ### Math

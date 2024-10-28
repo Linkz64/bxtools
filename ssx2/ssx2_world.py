@@ -769,6 +769,176 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 		# view.overlay.display_handle = 'ALL'
 
 		return {'FINISHED'}
+	
+
+class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
+	bl_idname = "scene.ssx2_world_reload_node_trees"
+	bl_label = "Reload Node Trees"
+	bl_description = "Reloads geometry nodes and material nodes from templates.blend"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def execute(self, context):
+		warn = False
+
+		cage_loft_appends = []
+		grid_tesselate_appends = []
+		path_line_appends = []
+
+		mat_reapply_general = []
+		mat_reapply_spline_cage = []
+		mat_names = []
+		mat_textures = []
+
+		for obj in bpy.data.objects:
+			
+			if obj.type == 'MESH' or obj.type == 'SURFACE':
+				if len(obj.material_slots) != 0:
+					mat = obj.material_slots[0].material
+					if mat is not None:
+						tex = mat.node_tree.nodes["Image Texture"].image
+
+						if mat.name in mat_names:
+							mat_reapply_general.append((obj, mat_names.index(mat.name)))
+						else:
+							mat_reapply_general.append((obj, len(mat_names)))
+							mat_names.append(mat.name)
+							mat_textures.append(tex)
+
+			if obj.type != 'MESH' and obj.type != 'CURVE':
+				continue
+
+			for j, mod in enumerate(obj.modifiers):
+				if mod.type == 'NODES' and mod.node_group:
+					if mod.node_group.name.startswith("CageLoftAppend"):
+						mod_options = (
+							mod["Input_3"], # loft
+							mod["Input_2"], # ends only
+							mod["Input_5"], # hexa middle
+							mod["Input_6"], # double v
+							mod["Input_4"], # auto smooth
+							mod["Input_7"], # material
+						)
+						mat = mod["Input_7"]
+						if mat is not None:
+							tex = mat.node_tree.nodes["Image Texture"].image
+							
+							if mat.name in mat_names:
+								mat_reapply_spline_cage.append((obj, mat_names.index(mat.name), j))
+							else:
+								mat_reapply_spline_cage.append((obj, len(mat_names), j))
+								mat_names.append(mat.name)
+								mat_textures.append(tex)
+
+						cage_loft_appends.append((obj, j, mod_options))
+						break
+					elif mod.node_group.name.startswith("GridTesselateAppend"):
+						grid_tesselate_appends.append((obj, j))
+						break
+					elif mod.node_group.name.startswith("PathLinesAppend"):
+						path_line_appends.append((obj, j))
+						break
+
+		### Geonodes
+		
+		if len(cage_loft_appends) != 0:
+			for node_group in bpy.data.node_groups:
+				if node_group.name.startswith("CageLoftAppend"):
+					bpy.data.node_groups.remove(node_group)
+				elif node_group.name.startswith("CageLoftGroupA"):
+					bpy.data.node_groups.remove(node_group)
+
+			node_tree = append_geonodes("CageLoftAppend")
+			if node_tree is not None:
+				for item in cage_loft_appends:
+					obj = item[0]
+					mod = obj.modifiers[item[1]]
+					mod.node_group = node_tree
+
+					mod["Input_3"] = item[2][0]
+					mod["Input_2"] = item[2][1]
+					mod["Input_5"] = item[2][2]
+					mod["Input_6"] = item[2][3]
+					mod["Input_4"] = item[2][4]
+					mod["Input_7"] = item[2][5]
+			else:
+				warn = True
+
+		if len(grid_tesselate_appends) != 0:
+			for node_group in bpy.data.node_groups:
+				if node_group.name.startswith("GridTesselateAppend"):
+					bpy.data.node_groups.remove(node_group)
+				elif node_group.name.startswith("CageLoftGroupB"):
+					bpy.data.node_groups.remove(node_group)
+				elif node_group.name.startswith("BezierColumnsGroup"):
+					bpy.data.node_groups.remove(node_group)
+			
+			node_tree = append_geonodes("GridTesselateAppend")
+			if node_tree is not None:
+				for item in grid_tesselate_appends:
+					obj = item[0]
+					obj.modifiers[item[1]].node_group = node_tree
+			else:
+				warn = True
+
+		if len(path_line_appends) != 0:
+			for node_group in bpy.data.node_groups:
+				if node_group.name.startswith("PathLinesAppend"):
+					bpy.data.node_groups.remove(node_group)
+				
+			node_tree = append_geonodes("PathLinesAppend")
+			if node_tree is not None:
+				for item in path_line_appends:
+					obj = item[0]
+					obj.modifiers[item[1]].node_group = node_tree
+			else:
+				warn = True
+
+
+		### Materials
+
+		mats_new = []
+
+		if len(mat_names) != 0:
+			mat = bpy.data.materials.get("PatchMaterialAppend")
+			if mat is not None:
+				bpy.data.materials.remove(mat)
+
+			for mat_name in mat_names:
+				bpy.data.materials.remove(bpy.data.materials.get(mat_name))
+
+			mat_append = append_material("PatchMaterialAppend")
+
+			for i, mat_name in enumerate(mat_names):
+				mat = mat_append.copy()
+				mat.name = mat_name
+
+				mat.node_tree.nodes["Image Texture"].image = mat_textures[i]
+				mats_new.append(mat)
+
+		mat = bpy.data.materials.get("PatchMaterialAppend")
+		if mat is not None:
+			bpy.data.materials.remove(mat)
+
+		if len(mat_reapply_general) != 0:
+			for item in mat_reapply_general:
+				obj = item[0]
+				obj.material_slots[0].material = mats_new[item[1]]
+
+		if len(mat_reapply_spline_cage) != 0:
+			for item in mat_reapply_spline_cage:
+				obj = item[0]
+				mod = obj.modifiers[item[2]]
+				mod["Input_7"] = mats_new[item[1]]
+				obj.data.materials.clear()
+				obj.data.materials.append(mod["Input_7"])
+
+		if warn:
+			BXT.warn(f"Failed to append nodes from {templates_append_path}")
+		else:
+			BXT.info(self, "Reloaded Node Trees")
+		
+
+		return {'FINISHED'}
 
 class SSX2_OP_WorldExpandUIBoxes(bpy.types.Operator): # turn this into a general thing not just world
 	bl_idname = "object.ssx2_expand_ui_boxes"
@@ -2391,7 +2561,9 @@ class SSX2_WorldToolsPanel(SSX2_Panel): # (SSX2_WorldPanel)
 		
 		# if bpy.data.collections.get('Patches') is None:
 		# 	col.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
-		col.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
+		general_row = col.row()
+		general_row.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
+		general_row.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH')
 
 		spline_box = col.box()    # SPLINES
 		spline_box.label(text="Splines")
@@ -2556,8 +2728,9 @@ class SSX2_WorldMaterialPanel(bpy.types.Panel):
 		row = layout.row()
 		row.operator(SSX2_OP_AddPatchMaterial.bl_idname, text="New Patch Material", icon='ADD')
 
-		if obj.ssx2_CurveMode == 'CAGE':
-			row.operator(SSX2_OP_SendMaterialToModifier.bl_idname, text="Send to Modifier")
+		if obj is not None:
+			if obj.ssx2_CurveMode == 'CAGE':
+				row.operator(SSX2_OP_SendMaterialToModifier.bl_idname, text="Send to Modifier")
 
 
 
@@ -2601,6 +2774,7 @@ classes = (
 	SSX2_OP_WorldImport,
 	SSX2_OP_WorldExport,
 	SSX2_OP_WorldExpandUIBoxes,
+	SSX2_OP_WorldReloadNodeTrees,
 	SSX2_OP_WorldInitiateProject,
 	SSX2_WorldPathEventAdd,
 	SSX2_WorldPathEventRemove,

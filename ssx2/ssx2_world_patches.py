@@ -896,16 +896,17 @@ class SSX2_OP_AddPatchMaterial(bpy.types.Operator):
 		obj.data.materials.clear()
 		obj.data.materials.append(material)
 
-		cage_nodes = None
-		for mod in obj.modifiers:
-			if mod.type == 'NODES' and mod.node_group:
-				if "CageLoftAppend" in mod.node_group.name:
-					cage_nodes = mod.node_group
-					break
-		if cage_nodes is not None:
-			mod["Input_7"] = material
-		else:
-			self.report({'WARNING'}, "Modifier is missing. Modifiers > Geometry Nodes > CageLoftAppend")
+		if obj.type == 'CURVE':
+			cage_nodes = None
+			for mod in obj.modifiers:
+				if mod.type == 'NODES' and mod.node_group:
+					if "CageLoftAppend" in mod.node_group.name:
+						cage_nodes = mod.node_group
+						break
+			if cage_nodes is not None:
+				mod["Input_7"] = material
+			else:
+				self.report({'WARNING'}, "Modifier is missing. Modifiers > Geometry Nodes > CageLoftAppend")
 
 		return {'FINISHED'}
 	
@@ -929,9 +930,7 @@ class SSX2_OP_SendMaterialToModifier(bpy.types.Operator):
 						break
 			if cage_nodes is not None:
 				mod["Input_7"] = active_material
-
 				obj.data.materials.clear()
-
 				obj.data.materials.append(active_material)
 			else:
 				self.report({'WARNING'}, "Modifier is missing. Modifiers > Geometry Nodes > CageLoftAppend")
