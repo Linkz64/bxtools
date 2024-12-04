@@ -1,4 +1,4 @@
-print("\n\nBXTools Plugin Initiated\n")
+print("\n\nBXTools Plugin Initiating\n")
 
 """
 Force reload other local modules when plugin is toggled or when "Reload Scripts" is pressed.
@@ -15,18 +15,11 @@ module_names = ( # for reloading
     'general.bx_utils',
 
     'ssx2.__init__',
-    #'ssx2.ssx2_model_pack',
-    #'ssx2.ssx2_model_unpack',
-    #'ssx2.ssx2_model',
     'ssx2.ssx2_world',
     'ssx2.ssx2_world_io_in',
     'ssx2.ssx2_world_patches',
+    'ssx2.ssx2_world_panels',
     'ssx2.ssx2_constants',
-    #'ssx2.ssx2_world_lightmaps'
-
-    #'ssx3.__init__',
-    #'ssx3.ssx3_model_pack',
-    #'ssx3.ssx3_model_unpack',
 )
 
 if 'bpy' in locals():
@@ -80,15 +73,12 @@ class BXT_Panel(bpy.types.Panel):
     bl_label = 'BXTools'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'BXT'#'View'
-
-    @classmethod
-    def poll(cls, context):
-        return True
+    bl_category = 'BXTools'
+    bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context): 
         col = self.layout.column()
-        col.scale_y = 1.1 # extra padding
+        col.scale_y = 1.1
         prop_split(col, context.scene, 'bx_GameChoice', "Game")
         prop_split(col, context.scene, 'bx_PlatformChoice', "Platform")
         extras_box = col.box()
@@ -197,3 +187,5 @@ def unregister():
 
     for c in classes:
         unregister_class(c)
+
+print("\nBXTools Done Inititaing")

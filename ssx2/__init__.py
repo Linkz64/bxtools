@@ -8,21 +8,26 @@ from .ssx2_model_pack import ssx2_set_mxf_data
 from ..external.ex_utils import prop_split
 from ..general.bx_utils import getset_instance_collection
 
+from .ssx2_world_panels import (
+	ssx2_world_panels_register,
+	ssx2_world_panels_unregister,
+)
 
-classes = (
+from .ssx2_world_patches import (
+	ssx2_world_patches_register, 
+	ssx2_world_patches_unregister,
 )
 
 def ssx2_register():
-	for c in classes:
-		register_class(c)
 
 	ssx2_world_register()
+	ssx2_world_patches_register()
+	ssx2_world_panels_register()
 	ssx2_model_register()
 
 def ssx2_unregister():
 
 	ssx2_model_unregister()
+	ssx2_world_panels_unregister()
+	ssx2_world_patches_unregister()
 	ssx2_world_unregister()
-
-	for c in classes:
-		unregister_class(c)

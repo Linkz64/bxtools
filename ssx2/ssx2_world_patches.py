@@ -10,7 +10,6 @@ from ..general.bx_utils import *
 from ..panels import SSX2_Panel
 from .ssx2_world_io_in import *
 
-# from .ssx2_world import ssx2_WorldUIProps
 
 from .ssx2_constants import (
 	#enum_ssx2_world_project_mode,
@@ -191,6 +190,55 @@ def create_imported_patches(self, context, path, images, map_info=None):
 			layer_col.exclude = True
 
 ## Operators
+
+class SSX2_OP_SelectSplineCageV(bpy.types.Operator):
+	bl_idname = "curve.select_spline_cage_along_v"
+	bl_label = "Select Along V"
+
+	@classmethod
+	def poll(self, context):
+		obj = context.active_object
+		if obj is None:
+			return False
+		elif context.active_object.mode == 'EDIT':
+			return True
+
+	def execute(self, context):
+		# selected_objs = context.selected_objects
+		active_obj = context.active_object
+
+		if active_obj.ssx2_CurveMode != 'CAGE':
+			return {'CANCELLED'}
+		# if active_obj.mode != 'EDIT':
+		# 	return {'CANCELLED'}
+
+		splines = active_obj.data.splines
+
+		select_indices = []
+		for spline in splines:
+			for j, p in enumerate(spline.bezier_points):
+				if p.select_control_point:
+					select_indices.append((j, 0))
+				if p.select_left_handle:
+					select_indices.append((j, 1))
+				if p.select_right_handle:
+					select_indices.append((j, 2))
+
+		if len(select_indices) == 0:
+			self.report({'WARNING'}, "No points selected")
+			return {'CANCELLED'}
+
+		for uh in select_indices:
+			for spline in splines:
+				p = spline.bezier_points[uh[0]]
+				if uh[1] == 0:
+					p.select_control_point = True
+				elif uh[1] == 1:
+					p.select_left_handle = True
+				elif uh[1] == 2:
+					p.select_right_handle = True
+
+		return {'FINISHED'}
 
 class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
 	bl_idname = 'object.ssx2_patch_split_4x4'
@@ -1481,6 +1529,7 @@ classes = (
 	SSX2_OP_CageToPatch,
 	SSX2_OP_FlipSplineOrder,
 	SSX2_OP_PatchSplit4x4,
+	SSX2_OP_SelectSplineCageV,
 )
 
 def ssx2_world_patches_register():
