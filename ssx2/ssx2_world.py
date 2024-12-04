@@ -588,11 +588,14 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 
 		for obj in bpy.data.objects:
 			
+			tex = None
 			if (obj.type == 'MESH' and obj.ssx2_PatchProps.isControlGrid) or obj.type == 'SURFACE':
 				if len(obj.material_slots) != 0:
 					mat = obj.material_slots[0].material
 					if mat is not None:
-						tex = mat.node_tree.nodes["Image Texture"].image
+						tex_node = mat.node_tree.nodes.get("Image Texture")
+						if tex_node:
+							tex = tex_node.image
 
 						if mat.name in mat_names:
 							mat_reapply_general.append((obj, mat_names.index(mat.name)))
@@ -608,16 +611,18 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 				if mod.type == 'NODES' and mod.node_group:
 					if mod.node_group.name.startswith("CageLoftAppend"):
 						mod_options = (
-							mod["Input_3"], # loft
-							mod["Input_2"], # ends only
-							mod["Input_5"], # hexa middle
-							mod["Input_6"], # double v
-							mod["Input_4"], # auto smooth
-							mod["Input_7"], # material
+							mod["Input_3"], # -loft
+							mod["Input_2"], # -ends only
+							mod["Input_5"], # -hexa middle
+							mod["Input_6"], # -double v
+							mod["Input_4"], # -auto smooth
+							mod["Input_7"], # -material
 						)
 						mat = mod["Input_7"]
 						if mat is not None:
-							tex = mat.node_tree.nodes["Image Texture"].image
+							tex_node = mat.node_tree.nodes.get("Image Texture")
+							if tex_node:
+								tex = tex_node.image
 							
 							if mat.name in mat_names:
 								mat_reapply_spline_cage.append((obj, mat_names.index(mat.name), j))
