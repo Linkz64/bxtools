@@ -83,7 +83,10 @@ def get_patches_json(file_path):
 
 			points = []
 			for point in patch["Points"]:
-				x, y, z = point
+				#x, y, z = point
+				x = point[0]
+				y = point[1]
+				z = point[2]
 				points.append((x / scale, y / scale, z / scale, 1.0))
 
 			main.points   = points

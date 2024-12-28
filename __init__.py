@@ -137,13 +137,20 @@ addon_keymaps = []
 
 def register_keymaps():
     wm = bpy.context.window_manager
-    km = wm.keyconfigs.addon.keymaps.new(name="Curve", space_type="EMPTY")
 
+    km = wm.keyconfigs.addon.keymaps.new(name="Curve", space_type="EMPTY")
+    kmi = km.keymap_items.new("curve.select_spline_cage_along_u", 'E', 'PRESS', ctrl=True, shift=True)
+    addon_keymaps.append((km, kmi))
+
+    print("BXT Keymap 'Select Along U' added to 'Keymap > 3D View > Curve > Curve (Global)'")
+
+
+    km = wm.keyconfigs.addon.keymaps.new(name="Curve", space_type="EMPTY")
     kmi = km.keymap_items.new("curve.select_spline_cage_along_v", 'R', 'PRESS', ctrl=True, shift=True)
     # kmi.properties.operator = "Translate"
     addon_keymaps.append((km, kmi))
 
-    print("BXT Keymap 'Select Along V' added to 'Keymap > 3D View > Curve (Global)'")
+    print("BXT Keymap 'Select Along V' added to 'Keymap > 3D View > Curve > Curve (Global)'")
 
 def unregister_keymaps():
     wm = bpy.context.window_manager

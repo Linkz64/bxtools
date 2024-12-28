@@ -29,6 +29,92 @@ from .ssx2_constants import (
 from .ssx2_world_lightmaps import SSX2_OP_BakeTest
 
 
+def update_select_by_surface_type(self, context):
+	# select surface patches by surface type
+	# note context only works on `set=`
+	if bpy.context.mode != "OBJECT":
+		bpy.ops.object.mode_set(mode="OBJECT")
+
+	#bpy.context.view_layer.layer_collection
+	#bpy.context.view_layer.objects
+	#bpy.data.objects
+	all_objects = bpy.context.view_layer.objects
+	
+	#selected_type = enum_ssx2_surface_type[context] # check enum_ssx2_surface_type
+	selected_type = self.patchSelectByType # string
+	selected_int = int(selected_type)
+	found = False
+	if selected_int < 50: #selected_type not in ('50', '51'):
+		for obj in all_objects:
+			if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
+				#if 'ssx2_PatchType' in dir(obj):if obj.ssx2_PatchType == selected_type:
+				if obj.ssx2_PatchProps.type == selected_type:#selected_type[0]:
+					obj.select_set(True)
+					found = True
+	elif selected_int == 50: # NURBS/Bezier Surface
+		for obj in all_objects:
+			if obj.type == 'SURFACE':
+				obj.select_set(True)
+				found = True
+	elif selected_int == 51: # Control Grid
+		for obj in all_objects:
+			if obj.ssx2_PatchProps.isControlGrid:
+				obj.select_set(True)
+				found = True
+	elif selected_int == 52:  # All Spline Cage
+		for obj in all_objects:
+			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
+				obj.select_set(True)
+				found = True
+	elif selected_int == 53:  # Dual Spline Cage
+		for obj in all_objects:
+			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
+				if len(obj.data.splines) == 2:
+					obj.select_set(True)
+					found = True
+	elif selected_int == 54:  # Quad Spline Cage
+		for obj in all_objects:
+			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
+				if len(obj.data.splines) == 4:
+					obj.select_set(True)
+					found = True
+	elif selected_int == 55:  # Hexa Spline Cage
+		for obj in all_objects:
+			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
+				if len(obj.data.splines) == 6:
+					obj.select_set(True)
+					found = True
+
+	# else: # select all surf/grid
+
+	if found == False:
+		pass
+		#bx_report("None found", title="Info", icon='INFO')
+
+def poll_mat_for_add_patch(self, context):
+	return context.use_nodes
+	#return context.name.startswith('surf') or context.name.startswith('patch')
+
+def poll_wmodel_for_inst(self, context):
+	if context.type == 'MESH' and context.parent == None:# or just context.type == 'MESH':
+		return True
+	else:
+		return False
+
+def update_wmodel_for_inst(self, context):
+	mdl = self.ssx2_ModelForInstance
+
+	if mdl == None:
+		print("No model specified.")
+		self.instance_collection = None
+		self.show_instancer_for_viewport = True
+	else:
+		mdlinst = getset_instance_collection(mdl, f"ins_{mdl.name}")
+		self.instance_type = 'COLLECTION' # the context.object.ssx2_wModel method will take care of this
+		self.instance_collection = bpy.data.collections.get(mdlinst)
+		#self.show_instancer_for_viewport = False
+		#print(self.ssx2_ModelForInstance)
+				
 
 
 ## Operators
@@ -361,177 +447,6 @@ class SSX2_OP_PathEventRemove(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-
-
-class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImportExportProps
-	importFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', 
-		default="",
-		description="Folder that contains the world files")
-	worldChoice: bpy.props.EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
-	worldChoiceCustom: bpy.props.StringProperty(name="", default="gari", subtype='NONE',
-		description="Name of input file e.g gari, megaple, pipe")
-	importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
-	importNames: bpy.props.BoolProperty(name="Import Names", default=True)
-
-	importSplines: bpy.props.BoolProperty(name="Import Splines", default=True)
-	expandImportSplines: bpy.props.BoolProperty(default=False)
-	splineImportAsNURBS: bpy.props.BoolProperty(default=False)
-
-	importPatches: bpy.props.BoolProperty(name="Import Patches", default=True)
-	expandImportPatches: bpy.props.BoolProperty(default=False)
-	patchImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
-	patchImportAsControlGrid: bpy.props.BoolProperty(default=False)
-
-	importPaths: bpy.props.BoolProperty(name="Import Paths", default=True)
-	importPathsAsCurve: bpy.props.BoolProperty(default=True)
-	expandImportPaths: bpy.props.BoolProperty(default=False)
-
-	exportFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', default="",
-		description="Export folder path")
-	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)
-	exportPatchesCages: bpy.props.BoolProperty(name="Cages", default=True)
-	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=True)
-
-	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=True)
-	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=True)
-
-	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
-	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
-
-class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
-	# name: bpy.props.StringProperty(name="", subtype='NONE',
-	# 	description="Name of the event")
-	u0: bpy.props.IntProperty(name="u0",
-		description="",
-		min=-1,
-		max=1000)
-	u1: bpy.props.IntProperty(name="u1",
-		description="",
-		min=-1,
-		max=1000)
-	u2: bpy.props.FloatProperty(name="u2")
-	u3: bpy.props.FloatProperty(name="u3")
-
-	checked: bpy.props.BoolProperty(name="", default=False)
-
-class SSX2_WorldPathPropGroup(bpy.types.PropertyGroup):
-	# mode: bpy.props.EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
-	reset: bpy.props.BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
-		description="Can be warped to when reset")
-	start: bpy.props.BoolProperty(name="Start Point", default=False, # FOR AIPATHS ONLY?
-		description="Start/Spawn Point")
-
-	aipaths_u3: bpy.props.IntProperty(name="AiPaths u1",
-		description="",)
-		# min=-1,
-		# max=1000)
-
-	eventpaths_u2: bpy.props.FloatProperty(name="EventPaths u2",
-		description="")
-
-
-	events: bpy.props.CollectionProperty(type=SSX2_WorldPathEventPropGroup)
-
-	# active_event_index = bpy.props.IntProperty(default=0)
-
-class SSX2_WorldSplinePropGroup(bpy.types.PropertyGroup): # ssx2_SplineProps
-	type: bpy.props.EnumProperty(name='Spline Type', items=enum_ssx2_surface_type_spline)
-
-	# change these to enum? spline_hide_mode = (NONE, SHOWOFF, RACE)
-	#	assuming showoff and race set to True hides it in every mode
-	#
-	# hideShowoff: bpy.props.BoolProperty(name="Hide Showoff", default=False,
-	# 	description="Hide in showoff modes.")
-	# hideRace: bpy.props.BoolProperty(name="Hide Race", default=False,
-	# 	description="Hide in race modes.")
-
-
-
-
-
-
-
-def update_select_by_surface_type(self, context):
-	# select surface patches by surface type
-	# note context only works on `set=`
-	if bpy.context.mode != "OBJECT":
-		bpy.ops.object.mode_set(mode="OBJECT")
-
-	#bpy.context.view_layer.layer_collection
-	#bpy.context.view_layer.objects
-	#bpy.data.objects
-	all_objects = bpy.context.view_layer.objects
-	
-	#selected_type = enum_ssx2_surface_type[context] # check enum_ssx2_surface_type
-	selected_type = self.patchSelectByType # string
-	selected_int = int(selected_type)
-	found = False
-	if selected_int < 50: #selected_type not in ('50', '51'):
-		for obj in all_objects:
-			if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
-				#if 'ssx2_PatchType' in dir(obj):if obj.ssx2_PatchType == selected_type:
-				if obj.ssx2_PatchProps.type == selected_type:#selected_type[0]:
-					obj.select_set(True)
-					found = True
-	elif selected_int == 50: # NURBS/Bezier Surface
-		for obj in all_objects:
-			if obj.type == 'SURFACE':
-				obj.select_set(True)
-				found = True
-	elif selected_int == 51: # Control Grid
-		for obj in all_objects:
-			if obj.ssx2_PatchProps.isControlGrid:
-				obj.select_set(True)
-				found = True
-	elif selected_int == 52:  # All Spline Cage
-		for obj in all_objects:
-			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
-				obj.select_set(True)
-				found = True
-	elif selected_int == 53:  # Dual Spline Cage
-		for obj in all_objects:
-			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
-				if len(obj.data.splines) == 2:
-					obj.select_set(True)
-					found = True
-	elif selected_int == 54:  # Quad Spline Cage
-		for obj in all_objects:
-			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
-				if len(obj.data.splines) == 4:
-					obj.select_set(True)
-					found = True
-	elif selected_int == 55:  # Hexa Spline Cage
-		for obj in all_objects:
-			if obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
-				if len(obj.data.splines) == 6:
-					obj.select_set(True)
-					found = True
-
-	# else: # select all surf/grid
-
-	if found == False:
-		pass
-		#bx_report("None found", title="Info", icon='INFO')
-
-def poll_mat_for_add_patch(self, context):
-	return context.use_nodes
-	#return context.name.startswith('surf') or context.name.startswith('patch')
-
-class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class definition
-	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
-	patchSelectByType: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
-		description="Test")
-	patchMaterialChoice: bpy.props.PointerProperty(type=bpy.types.Material, poll=poll_mat_for_add_patch)
-	patchTypeChoice: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type, default='1')
-
-	# expandImportSplines: bpy.props.BoolProperty(default=False)
-	# expandImportPatches: bpy.props.BoolProperty(default=False)
-	# expandImportPaths: bpy.props.BoolProperty(default=False)
-
-	expandToolsPatches: bpy.props.BoolProperty(default=False)
-
-
-
 class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 	bl_idname = "scene.ssx2_world_initiate_project"
 	bl_label = "Initiate Project"
@@ -741,9 +656,6 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 		
 
 		return {'FINISHED'}
-
-
-
 
 class SSX2_OP_WorldImport(bpy.types.Operator):
 	bl_idname = "wm.ssx2_import_world"
@@ -2095,7 +2007,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					for vtx in obj.data.vertices:
 						x, y, z = (m @ vtx.co) * scale
-						grid_points.append((x, y, z, 1.0))
+						grid_points.append((x, y, z))
 
 					# grid_uvs = [(uv[0], -uv[1]) for uv in get_uvs_per_verts(obj)]
 					# patch_uvs = [grid_uvs[12], grid_uvs[0], grid_uvs[15], grid_uvs[3]] # uv corners from mesh
@@ -2161,27 +2073,103 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 
 
+### PropertyGroups
 
-def poll_wmodel_for_inst(self, context):
-	if context.type == 'MESH' and context.parent == None:# or just context.type == 'MESH':
-		return True
-	else:
-		return False
+class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImportExportProps
+	importFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', 
+		default="",
+		description="Folder that contains the world files")
+	worldChoice: bpy.props.EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
+	worldChoiceCustom: bpy.props.StringProperty(name="", default="gari", subtype='NONE',
+		description="Name of input file e.g gari, megaple, pipe")
+	importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
+	importNames: bpy.props.BoolProperty(name="Import Names", default=True)
 
-def update_wmodel_for_inst(self, context):
-	mdl = self.ssx2_ModelForInstance
+	importSplines: bpy.props.BoolProperty(name="Import Splines", default=True)
+	expandImportSplines: bpy.props.BoolProperty(default=False)
+	splineImportAsNURBS: bpy.props.BoolProperty(default=False)
 
-	if mdl == None:
-		print("No model specified.")
-		self.instance_collection = None
-		self.show_instancer_for_viewport = True
-	else:
-		mdlinst = getset_instance_collection(mdl, f"ins_{mdl.name}")
-		self.instance_type = 'COLLECTION' # the context.object.ssx2_wModel method will take care of this
-		self.instance_collection = bpy.data.collections.get(mdlinst)
-		#self.show_instancer_for_viewport = False
-		#print(self.ssx2_ModelForInstance)
-				
+	importPatches: bpy.props.BoolProperty(name="Import Patches", default=True)
+	expandImportPatches: bpy.props.BoolProperty(default=False)
+	patchImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
+	patchImportAsControlGrid: bpy.props.BoolProperty(default=False)
+
+	importPaths: bpy.props.BoolProperty(name="Import Paths", default=True)
+	importPathsAsCurve: bpy.props.BoolProperty(default=True)
+	expandImportPaths: bpy.props.BoolProperty(default=False)
+
+	exportFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', default="",
+		description="Export folder path")
+	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)
+	exportPatchesCages: bpy.props.BoolProperty(name="Cages", default=True)
+	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=True)
+
+	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=True)
+	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=True)
+
+	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
+	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
+
+class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
+	# name: bpy.props.StringProperty(name="", subtype='NONE',
+	# 	description="Name of the event")
+	u0: bpy.props.IntProperty(name="u0",
+		description="",
+		min=-1,
+		max=1000)
+	u1: bpy.props.IntProperty(name="u1",
+		description="",
+		min=-1,
+		max=1000)
+	u2: bpy.props.FloatProperty(name="u2")
+	u3: bpy.props.FloatProperty(name="u3")
+
+	checked: bpy.props.BoolProperty(name="", default=False)
+
+class SSX2_WorldPathPropGroup(bpy.types.PropertyGroup):
+	# mode: bpy.props.EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
+	reset: bpy.props.BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
+		description="Can be warped to when reset")
+	start: bpy.props.BoolProperty(name="Start Point", default=False, # FOR AIPATHS ONLY?
+		description="Start/Spawn Point")
+
+	aipaths_u3: bpy.props.IntProperty(name="AiPaths u1",
+		description="",)
+		# min=-1,
+		# max=1000)
+
+	eventpaths_u2: bpy.props.FloatProperty(name="EventPaths u2",
+		description="")
+
+
+	events: bpy.props.CollectionProperty(type=SSX2_WorldPathEventPropGroup)
+
+	# active_event_index = bpy.props.IntProperty(default=0)
+
+class SSX2_WorldSplinePropGroup(bpy.types.PropertyGroup): # ssx2_SplineProps
+	type: bpy.props.EnumProperty(name='Spline Type', items=enum_ssx2_surface_type_spline)
+
+	# change these to enum? spline_hide_mode = (NONE, SHOWOFF, RACE)
+	#	assuming showoff and race set to True hides it in every mode
+	#
+	# hideShowoff: bpy.props.BoolProperty(name="Hide Showoff", default=False,
+	# 	description="Hide in showoff modes.")
+	# hideRace: bpy.props.BoolProperty(name="Hide Race", default=False,
+	# 	description="Hide in race modes.")
+
+class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class definition
+	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
+	patchSelectByType: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
+		description="Test")
+	patchMaterialChoice: bpy.props.PointerProperty(type=bpy.types.Material, poll=poll_mat_for_add_patch)
+	patchTypeChoice: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type, default='1')
+
+	# expandImportSplines: bpy.props.BoolProperty(default=False)
+	# expandImportPatches: bpy.props.BoolProperty(default=False)
+	# expandImportPaths: bpy.props.BoolProperty(default=False)
+
+	expandToolsPatches: bpy.props.BoolProperty(default=False)
+
 
 classes = (
 	SSX2_WorldImportExportPropGroup,

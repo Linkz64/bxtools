@@ -28,9 +28,6 @@ from .ssx2_constants import (
 
 import os
 
-
-#import math
-
 def existing_patch_uvs(in_uvs):
 	uvs = [tuple(round(flt, 5) for flt in uv) for uv in in_uvs]
 	#uvs = in_uvs
@@ -191,6 +188,49 @@ def create_imported_patches(self, context, path, images, map_info=None):
 
 ## Operators
 
+class SSX2_OP_SelectSplineCageU(bpy.types.Operator):
+	bl_idname = "curve.select_spline_cage_along_u"
+	bl_label = "Select Along U"
+
+	@classmethod
+	def poll(self, context):
+		obj = context.active_object
+		if obj is None:
+			return False
+		elif context.active_object.mode == 'EDIT':
+			return True
+
+	def execute(self, context):
+		# selected_objs = context.selected_objects
+		active_obj = context.active_object
+
+		# if active_obj.ssx2_CurveMode != 'CAGE':
+		# 	return {'CANCELLED'}
+		# if active_obj.mode != 'EDIT':
+		# 	return {'CANCELLED'}
+
+		splines = active_obj.data.splines
+
+		select_indices = []
+		for i, spline in enumerate(splines):
+			for p in spline.bezier_points:
+				if p.select_control_point:
+					select_indices.append(i)
+				elif p.select_left_handle:
+					select_indices.append(i)
+				elif p.select_right_handle:
+					select_indices.append(i)
+
+		if len(select_indices) == 0:
+			self.report({'WARNING'}, "No points selected")
+			return {'CANCELLED'}
+
+		for spline_index in select_indices:
+			for p in splines[spline_index].bezier_points:
+				p.select_control_point = True
+
+		return {'FINISHED'}
+
 class SSX2_OP_SelectSplineCageV(bpy.types.Operator):
 	bl_idname = "curve.select_spline_cage_along_v"
 	bl_label = "Select Along V"
@@ -207,8 +247,8 @@ class SSX2_OP_SelectSplineCageV(bpy.types.Operator):
 		# selected_objs = context.selected_objects
 		active_obj = context.active_object
 
-		if active_obj.ssx2_CurveMode != 'CAGE':
-			return {'CANCELLED'}
+		# if active_obj.ssx2_CurveMode != 'CAGE':
+		# 	return {'CANCELLED'}
 		# if active_obj.mode != 'EDIT':
 		# 	return {'CANCELLED'}
 
@@ -957,7 +997,7 @@ class SSX2_OP_AddPatchMaterial(bpy.types.Operator):
 				self.report({'WARNING'}, "Modifier is missing. Modifiers > Geometry Nodes > CageLoftAppend")
 
 		return {'FINISHED'}
-	
+
 class SSX2_OP_SendMaterialToModifier(bpy.types.Operator):
 	bl_idname = 'material.ssx2_send_material_to_modifier'
 	bl_label = "Send Material to Modifier"
@@ -1424,6 +1464,207 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 			
 		return {"FINISHED"}
 
+class SSX2_OP_CopyPatchUVsToSelected(bpy.types.Operator):
+	bl_idname = "object.ssx2_patches_copy_uvs"
+	bl_label = "Copy UVs to Selected"
+	bl_description = ""
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+   		or active_object.ssx2_CurveMode == 'CAGE'))
+
+	def execute(self, context):
+		active_object = context.active_object
+		selected_objects = context.selected_objects
+		patch_props = active_object.ssx2_PatchProps
+
+		useManualUVs = patch_props.useManualUV
+		manualUV0 = patch_props.manualUV0
+		manualUV1 = patch_props.manualUV1
+		manualUV2 = patch_props.manualUV2
+		manualUV3 = patch_props.manualUV3
+		texMapPreset = patch_props.texMapPreset
+
+		for obj in selected_objects:
+			if ((obj.type == 'SURFACE' or 
+			obj.ssx2_PatchProps.isControlGrid or 
+			obj.ssx2_CurveMode == 'CAGE')):
+				obj.ssx2_PatchProps.useManualUV = useManualUVs
+				obj.ssx2_PatchProps.manualUV0 = manualUV0
+				obj.ssx2_PatchProps.manualUV1 = manualUV1
+				obj.ssx2_PatchProps.manualUV2 = manualUV2
+				obj.ssx2_PatchProps.manualUV3 = manualUV3
+				obj.ssx2_PatchProps.texMapPreset = texMapPreset
+
+		return {'FINISHED'}
+	
+class SSX2_OP_AddCageVGuide(bpy.types.Operator):
+	bl_idname = "object.ssx2_add_v_guide"
+	bl_label = ""
+	bl_description = ""
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		# return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+		# (active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+   		# or active_object.ssx2_CurveMode == 'CAGE'))
+		return ((len(bpy.context.selected_objects) != 0) and 
+			(active_object is not None) and 
+			(active_object.ssx2_CurveMode == 'CAGE'))
+
+	def execute(self, context):
+		active_obj = context.active_object
+
+		if active_obj.ssx2_CurveMode != 'CAGE':
+			return {'CANCELLED'}
+		# if active_obj.mode != 'EDIT':
+		# 	return {'CANCELLED'}
+
+		splines = active_obj.data.splines
+
+		# new_splines = [[] for i in range( len(splines[0].bezier_points) * 3)]
+		# print(len(splines[0].bezier_points) * 3)
+		linear_list = []
+		
+		for i, spline in enumerate(splines):
+			speen = []
+			for j, p in enumerate(spline.bezier_points):
+				speen.append(p.handle_left)
+				speen.append(p.co)
+				speen.append(p.handle_right)
+			linear_list.append(speen)
+
+		num_splines = len(splines)
+
+		curve_data = bpy.data.curves.new("Patch V Guide", type='CURVE')
+		curve_data.dimensions = '3D'
+
+		if num_splines == 2:
+			for i in range(len(splines[0].bezier_points) * 3):
+				spline = curve_data.splines.new(type='BEZIER')
+				spline.bezier_points.add(1)
+				spline.resolution_u = 7
+
+				p0_co = linear_list[0][i]
+				p1_co = linear_list[1][i]
+
+				# right handle
+				a = p1_co - p0_co
+				p0_hr = a / 3
+				p0_hr = p0_hr + p0_co
+
+				# left handle
+				a = p0_hr - p0_co
+				p0_hl = a * -1
+				p0_hl = p0_hl + p0_co
+
+				spline.bezier_points[0].handle_left =  p0_hl
+				spline.bezier_points[0].co =           p0_co
+				spline.bezier_points[0].handle_right = p0_hr
+				spline.bezier_points[0].handle_left_type = 'ALIGNED'
+				spline.bezier_points[0].handle_right_type = 'ALIGNED'
+
+				# left handle
+				a = p1_co - p0_co
+				p1_hl = a / 1.5
+				p1_hl = p1_hl + p0_co
+
+				# right handle
+				a = p1_hl - p1_co
+				p1_hr = a * -1
+				p1_hr = p1_hr + p1_co
+
+				spline.bezier_points[1].handle_left  = p1_hl
+				spline.bezier_points[1].co =           p1_co
+				spline.bezier_points[1].handle_right = p1_hr
+				spline.bezier_points[1].handle_left_type = 'ALIGNED'
+				spline.bezier_points[1].handle_right_type = 'ALIGNED'
+
+		elif num_splines == 4:
+			for i in range(len(splines[0].bezier_points) * 3):
+				spline = curve_data.splines.new(type='BEZIER')
+				spline.bezier_points.add(1)
+				spline.resolution_u = 7
+
+				p0_co = linear_list[0][i]
+				p0_hr = linear_list[1][i]
+
+				a = p0_hr - p0_co
+				p0_hl = a * -1
+				p0_hl = p0_hl + p0_co
+
+				spline.bezier_points[0].handle_left =  p0_hl
+				spline.bezier_points[0].co =           p0_co
+				spline.bezier_points[0].handle_right = p0_hr
+				spline.bezier_points[0].handle_left_type = 'ALIGNED'
+				spline.bezier_points[0].handle_right_type = 'ALIGNED'
+
+				p1_hl = linear_list[2][i]
+				p1_co = linear_list[3][i]
+				
+				a = p1_hl - p1_co
+				p1_hr = a * -1
+				p1_hr = p1_hr + p1_co
+
+				spline.bezier_points[1].handle_left  = p1_hl
+				spline.bezier_points[1].co =           p1_co
+				spline.bezier_points[1].handle_right = p1_hr
+				spline.bezier_points[1].handle_left_type = 'ALIGNED'
+				spline.bezier_points[1].handle_right_type = 'ALIGNED'
+
+		elif num_splines == 6:
+			for i in range(len(splines[0].bezier_points) * 3):
+				spline = curve_data.splines.new(type='BEZIER')
+				spline.bezier_points.add(2)
+				spline.resolution_u = 7
+
+				p0_co = linear_list[0][i] # 1st new point
+				p0_hr = linear_list[1][i]
+				p1_hl = linear_list[2][i]
+				p1_co = (linear_list[2][i] + linear_list[3][i]) / 2 # 2nd new point
+				p1_hr = linear_list[3][i]
+				p2_hl = linear_list[4][i]
+				p2_co = linear_list[5][i] # 3rd new point
+
+				a = p0_hr - p0_co
+				p0_hl = a * -1
+				p0_hl = p0_hl + p0_co
+
+				spline.bezier_points[0].handle_left =  p0_hl
+				spline.bezier_points[0].co =           p0_co
+				spline.bezier_points[0].handle_right = p0_hr
+				spline.bezier_points[0].handle_left_type = 'ALIGNED'
+				spline.bezier_points[0].handle_right_type = 'ALIGNED'
+
+				spline.bezier_points[1].handle_left  = p1_hl
+				spline.bezier_points[1].co =           p1_co
+				spline.bezier_points[1].handle_right = p1_hr
+				spline.bezier_points[1].handle_left_type = 'ALIGNED'
+				spline.bezier_points[1].handle_right_type = 'ALIGNED'
+
+				a = p2_hl - p2_co
+				p2_hr = a * -1
+				p2_hr = p2_hr + p2_co
+
+				spline.bezier_points[2].handle_left  = p2_hl
+				spline.bezier_points[2].co =           p2_co
+				spline.bezier_points[2].handle_right = p2_hr
+				spline.bezier_points[2].handle_left_type = 'ALIGNED'
+				spline.bezier_points[2].handle_right_type = 'ALIGNED'
+
+		curve_object = bpy.data.objects.new("Patch V Guide", curve_data)
+		scene_collection = bpy.context.scene.collection
+		scene_collection.objects.link(curve_object)
+
+		curve_object.matrix_world = active_obj.matrix_world
+
+		return {'FINISHED'}
 
 class SSX2_PatchPanel(SSX2_Panel):
 	bl_label = "BX Surface Patch"
@@ -1520,6 +1761,7 @@ classes = (
 	SSX2_OP_AddControlGrid,
 	SSX2_OP_AddSplineCage,
 	SSX2_OP_AddPatchMaterial,
+	SSX2_OP_AddCageVGuide,
 	SSX2_OP_SendMaterialToModifier,
 
 	SSX2_PatchPanel,
@@ -1529,7 +1771,9 @@ classes = (
 	SSX2_OP_CageToPatch,
 	SSX2_OP_FlipSplineOrder,
 	SSX2_OP_PatchSplit4x4,
+	SSX2_OP_SelectSplineCageU,
 	SSX2_OP_SelectSplineCageV,
+	SSX2_OP_CopyPatchUVsToSelected,
 )
 
 def ssx2_world_patches_register():

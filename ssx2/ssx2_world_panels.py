@@ -24,12 +24,15 @@ from .ssx2_world_patches import (
     SSX2_OP_AddControlGrid,
     SSX2_OP_AddSplineCage,
     SSX2_OP_AddPatchMaterial,
+    SSX2_OP_AddCageVGuide,
     SSX2_OP_SendMaterialToModifier,
     SSX2_OP_ToggleControlGrid,
     SSX2_OP_CageToPatch,
     SSX2_OP_FlipSplineOrder,
     SSX2_OP_PatchSplit4x4,
+    SSX2_OP_SelectSplineCageU,
     SSX2_OP_SelectSplineCageV,
+    SSX2_OP_CopyPatchUVsToSelected,
 )
 
 
@@ -53,6 +56,7 @@ class SSX2_WorldPanel(SSX2_Panel):
         general_row = col.row()
         general_row.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
         general_row.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH', text="Reload Appends")
+        #col.operator("script.reload", text="⟳⟳⟳⟳⟳")
 
         col.menu(SSX2_WorldAddMenu.bl_idname, text="Add Object")
 
@@ -172,6 +176,7 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
             layout.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 
         layout.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
+        layout.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname)
 
         #layout.label(text="Spline Cage")
         layout.separator()
@@ -180,7 +185,10 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
         row2 = layout.row()
         row2.operator(SSX2_OP_FlipSplineOrder.bl_idname, text="Flip Spline Order")
         row2.operator("curve.switch_direction", text="Flip Point Order")
-        layout.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
+        row3 = layout.row()
+        row3.operator(SSX2_OP_SelectSplineCageU.bl_idname, text="Select U")
+        row3.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
+        layout.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide")
         
         #layout.label(text="Other")
         layout.separator()
