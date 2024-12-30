@@ -298,14 +298,10 @@ class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
 		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid)
 
 	def execute(self, context):
-		print("\nSplitting\n")
-
-		# testing on active object first, make it do every patch and control grid after
-		# use run_without... function when creating patches
-
 		bpy.ops.object.mode_set(mode='OBJECT')
+
 		collection = bpy.context.collection
-		selected_objs = bpy.context.selected_objects # all selected objects
+		#selected_objs = bpy.context.selected_objects # all selected objects
 		active_obj = bpy.context.active_object
 		bpy.context.view_layer.objects.active = None
 		active_obj.select_set(False)
@@ -317,132 +313,102 @@ class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
 		active_obj_name = active_obj.name
 		active_obj_matrix = active_obj.matrix_local
 		islands = active_obj.data.splines
-		num_surfaces = len(islands)
-		split_islands = []
+		all_patch_segments = []
 		for j, s in enumerate(islands): # splines actually means internal surfaces/islands
 			num_points = len(s.points)
 			num_u = s.point_count_u
-			num_v = s.point_count_v # 4
-			all_spline_segs = []
+			num_v = s.point_count_v
+			#num_segments = (num_u - 1) // 3
+			num_strips = (num_v - 1) // 3
 
-			if num_v > num_u:
-				num_u = num_v
-				num_v = s.point_count_u # 4
-			# ^ get the longest for 4x? strip to work
-			# or actually try to split ?x? patches
+			print("points total/u/v", num_points, num_u, num_v)
 
-			#print(num_u, num_u % 4)
-			if num_points < 16:
-				self.report({'WARNING'}, "INVALID 1")
-				return {'CANCELLED'}
-			elif num_points == 16:
-				segment_points = [sp.co for sp in s.points[0:16]]
-				all_spline_segs.append([segment_points])
+			if num_u < 4 or num_v < 4:
+				self.report({'WARNING'}, f"{active_obj_name}, Must have at least 4 points on U and V on each island")
+				return {"CANCELLED"}
 
-			#return {'CANCELLED'}
-			
-			#print("points u/v",num_u, num_v)
+			splines = [] # each is a single spline curve
 
-			# Split into segments of 16 points
+			for v in range(num_v):
+				spline = []
+				for u in range(num_u):
+					spline.append((num_u*v) + u)
+				splines.append(spline)
 
-			segment_count = (num_u - 1) // 3
-			segments = [[] for i in range(segment_count)]
-			#print(f"\nsegments: {segment_count}\n")
-			
-			for v in range(4):#num_v):             # e.g 4v's each with 7u's
-				#print("\nv:", v, v * num_u)
+			new_patch_strips = [
+				[splines[0], splines[1], splines[2], splines[3]]
+			]
 
-				v_start = v * num_u
-				v_end = v_start + num_u
+			if num_strips > 1:
+				for i in range(1, num_strips):
+					start = 3 * i
+					new_patch_strips.append(
+						[splines[start + 0], splines[start + 1], splines[start + 2], splines[start + 3]]
+					)
 
-				this_spline = []
-				for u in range(v_start, v_end, 3):
-					segment_points = s.points[u:u + 4]
-					segment_points = [sp.co for sp in segment_points]
-					#print("u:", u, v_end-1, u + 4)
-					this_spline.append(segment_points)
+			for new_strip in new_patch_strips:
+				segments = segment_spline(new_strip)
 
-					if u + 4 >= v_end-1: # must break
-						break
+				for i, spline in enumerate(segments):
+					seg = []
+					for point_indices in spline:
+						for point_index in point_indices:
+							seg.append(s.points[point_index].co)
+					all_patch_segments.append(seg)
 
-				all_spline_segs.append(this_spline)
-
-			for segs in all_spline_segs:
-				for k, seg in enumerate(segs):
-					segments[k] += seg
-			split_islands.append(segments)
-
-			#break # only do first island, for now
-
-		# for island in islands:
-		# 	islands.remove(island)
-
-		if len(split_islands) == 0:
+		num_all_patch_segments = len(all_patch_segments)
+		if num_all_patch_segments == 0:
 			return {'CANCELLED'}
 
 		to_reselect = []
 		current_patch = 0
-		for split_island in split_islands:
-			for new_patch_points in split_island: # EACH ONE OBJECT WITH 16 POINTS (4x4)
+		for patch_segment in all_patch_segments: # EACH ONE OBJECT WITH 16 POINTS (4x4)
+			name = f"{active_obj_name}.s{current_patch}"
+			current_patch += 1
+			surface_data = bpy.data.curves.new(name, 'SURFACE') # Create Final Patch
+			surface_data.dimensions = '3D'
+			for i in range(4):
+				spline = surface_data.splines.new(type='NURBS')
+				spline.points.add(3) # one point already exists
+				for j, point in enumerate(spline.points):
+					point.select = True
 
-				name = f"{active_obj_name}.s{current_patch}"
-				current_patch += 1
-				surface_data = bpy.data.curves.new(name, 'SURFACE') # Create Final Patch
-				#surface_data = active_obj.data
-				surface_data.dimensions = '3D'
-				for i in range(4):
-					spline = surface_data.splines.new(type='NURBS')
-					spline.points.add(3) # one point already exists
-					for j, point in enumerate(spline.points):
-						point.select = True
-						#nx, ny, nz = all_splines[i][j]
-						#point.co = 0.0, 0.0, 0.0, 1.0#nx, ny, nz, 1.0
+			surface_data.resolution_u = 2
+			surface_data.resolution_v = 2
 
-				surface_data.resolution_u = 2
-				surface_data.resolution_v = 2
+			surface_object = bpy.data.objects.new(name, surface_data)
+			collection.objects.link(surface_object)
+			
+			splines = surface_data.splines # this is a single surface/island, not multiple curves
 
-				surface_object = bpy.data.objects.new(name, surface_data)
-				collection.objects.link(surface_object)
-				
-				splines = surface_data.splines # this is a single surface, not multiple splines
+			bpy.context.view_layer.objects.active = surface_object
+			bpy.ops.object.mode_set(mode = 'EDIT')
+			bpy.ops.curve.make_segment()
+			
+			splines[0].order_u = 4
+			splines[0].order_v = 4
+			splines[0].use_endpoint_u = True
+			splines[0].use_endpoint_v = True
+			splines[0].use_bezier_u = True
+			splines[0].use_bezier_v = True
 
-				bpy.context.view_layer.objects.active = surface_object
-				bpy.ops.object.mode_set(mode = 'EDIT')
-				bpy.ops.curve.make_segment()
-				
-				splines[0].order_u = 4
-				splines[0].order_v = 4
-				splines[0].use_endpoint_u = True
-				splines[0].use_endpoint_v = True
-				splines[0].use_bezier_u = True
-				splines[0].use_bezier_v = True
+			for j, p in enumerate(splines[0].points):
+				nx, ny, nz, nw = patch_segment[j]
+				p.co = nx, ny, nz, 1.0
 
-				for j, p in enumerate(splines[0].points):
-					nx, ny, nz, nw = new_patch_points[j]
-					p.co = nx, ny, nz, 1.0
-
-				bpy.ops.object.mode_set(mode = 'OBJECT')
-				surface_object.matrix_local = active_obj_matrix
-				to_reselect.append(surface_object)
-				#surface_object.select_set(False)
-
+			bpy.ops.object.mode_set(mode = 'OBJECT')
+			surface_object.matrix_local = active_obj_matrix
+			to_reselect.append(surface_object)
 
 		if not self.keep_original:
 			bpy.data.objects.remove(active_obj)
-			#bpy.data.curves.remove(active_obj.data) # also removes all objects that are linked. not always wanted
-
+		
 		for obj in to_reselect:
 			obj.select_set(True)
 
-		bpy.context.view_layer.objects.active = surface_object #obj
-		if self.apply_rotation:
-			bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-		if self.apply_scale:
-			bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+		bpy.context.view_layer.objects.active = surface_object
 
-		# bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-
-		self.report({'INFO'}, f"Split into {len(segments)} Patches")
+		self.report({'INFO'}, f"Split into {num_all_patch_segments} Patches")
 
 		return {'FINISHED'}
 

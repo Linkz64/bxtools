@@ -188,7 +188,7 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
         row3 = layout.row()
         row3.operator(SSX2_OP_SelectSplineCageU.bl_idname, text="Select U")
         row3.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
-        layout.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide")
+        layout.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
         
         #layout.label(text="Other")
         layout.separator()
