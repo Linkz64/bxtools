@@ -1718,51 +1718,7 @@ class SSX2_OP_AddCageVGuide(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_PatchPanel(SSX2_Panel):
-	bl_label = "BX Surface Patch"
-	bl_idname = "OBJECT_PT_SSX2_Surface_Patch"
-	bl_space_type = "PROPERTIES"
-	bl_region_type = "WINDOW"
-	bl_context = "object"
-	bl_options = {"HIDE_HEADER"}
 
-	@classmethod
-	def poll(cls, context):
-		return context.scene.bx_GameChoice == 'SSX2' and \
-		(context.object is not None) # and context.object.type == 'SURFACE')
-		# context.ssx2_PatchProps.isControlGrid # this doesn't work
-
-	def draw(self, context):
-		col = self.layout.column()
-		obj = context.object
-		# col.label(text=str(context.object.ssx2_PatchProps.isControlGrid))
-		
-		if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
-			prop_split(col, obj.ssx2_PatchProps, 'type', "Patch Type")
-			#prop_split(col, obj.ssx2_PatchProps, 'useManualUV', "Manual Mapping")
-			col.prop(obj.ssx2_PatchProps, 'showoffOnly', text="Showoff Only")
-		# if context.object.type == 'SURFACE':
-			# if obj.ssx2_CurveMode != 'CAGE':
-			col.prop(obj.ssx2_PatchProps, 'fixU', text="Fix U Seam")
-			col.prop(obj.ssx2_PatchProps, 'fixV', text="Fix V Seam")
-			col.prop(obj.ssx2_PatchProps, 'useManualUV', text="Manual Mapping")
-			if not obj.ssx2_PatchProps.useManualUV:
-				prop_split(col, obj.ssx2_PatchProps, 'texMapPreset', "Mapping Preset")
-				#col.prop(obj.ssx2_PatchProps, 'patchFixUVRepeat', text="Fix UV Repeat")
-				#prop_split(col, obj.ssx2_PatchProps, "texMap", "Texture Mapping")
-			col_split = col.split(factor=0.5)
-			row = col.row()
-			row_split = row.split(factor=0.5)
-			if obj.ssx2_PatchProps.useManualUV:
-				# col_split.prop(obj.ssx2_PatchProps, "manualUV0", text="")
-				# col_split.prop(obj.ssx2_PatchProps, "manualUV1", text="")
-				# row_split.prop(obj.ssx2_PatchProps, "manualUV2", text="")
-				# row_split.prop(obj.ssx2_PatchProps, "manualUV3", text="")
-
-				col_split.prop(obj.ssx2_PatchProps, "manualUV1", text="")
-				col_split.prop(obj.ssx2_PatchProps, "manualUV3", text="")
-				row_split.prop(obj.ssx2_PatchProps, "manualUV0", text="")
-				row_split.prop(obj.ssx2_PatchProps, "manualUV2", text="")
 
 
 
@@ -1816,7 +1772,6 @@ classes = (
 	SSX2_OP_AddCageVGuide,
 	SSX2_OP_SendMaterialToModifier,
 
-	SSX2_PatchPanel,
 	SSX2_PatchPropGroup,
 
 	SSX2_OP_ToggleControlGrid,
