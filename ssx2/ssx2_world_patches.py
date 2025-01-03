@@ -191,6 +191,12 @@ def create_imported_patches(self, context, path, images, map_info=None):
 class SSX2_OP_SelectSplineCageU(bpy.types.Operator):
 	bl_idname = "curve.select_spline_cage_along_u"
 	bl_label = "Select Along U"
+	bl_description = "Selects all points along U. Requires initial selection"
+	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+
+	select_left: bpy.props.BoolProperty(name="Left", default=True)
+	select_control: bpy.props.BoolProperty(name="Control", default=True)
+	select_right: bpy.props.BoolProperty(name="Right", default=True)
 
 	@classmethod
 	def poll(self, context):
@@ -216,10 +222,13 @@ class SSX2_OP_SelectSplineCageU(bpy.types.Operator):
 			for p in spline.bezier_points:
 				if p.select_control_point:
 					select_indices.append(i)
+					break
 				elif p.select_left_handle:
 					select_indices.append(i)
+					break
 				elif p.select_right_handle:
 					select_indices.append(i)
+					break
 
 		if len(select_indices) == 0:
 			self.report({'WARNING'}, "No points selected")
@@ -227,13 +236,20 @@ class SSX2_OP_SelectSplineCageU(bpy.types.Operator):
 
 		for spline_index in select_indices:
 			for p in splines[spline_index].bezier_points:
-				p.select_control_point = True
-
+				if self.select_control:
+					p.select_control_point = True
+				if self.select_left:
+					p.select_left_handle = True
+				if self.select_right:
+					p.select_right_handle = True
+		
 		return {'FINISHED'}
 
 class SSX2_OP_SelectSplineCageV(bpy.types.Operator):
 	bl_idname = "curve.select_spline_cage_along_v"
 	bl_label = "Select Along V"
+	bl_description = "Selects all points along V. Requires initial selection"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@classmethod
 	def poll(self, context):
@@ -284,18 +300,18 @@ class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
 	bl_idname = 'object.ssx2_patch_split_4x4'
 	bl_label = "Split 4x4"
 	bl_description = "Splits selected patch into 4x4 patches"
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}#, 'PRESET'}
 
 	keep_original: bpy.props.BoolProperty(name="Keep Original", default=False)
-	apply_rotation: bpy.props.BoolProperty(name="Apply Rotation", default=True)
-	apply_scale: bpy.props.BoolProperty(name="Apply Scale", default=True)
+	#apply_rotation: bpy.props.BoolProperty(name="Apply Rotation", default=True)
+	#apply_scale: bpy.props.BoolProperty(name="Apply Scale", default=True)
 	
 	@classmethod
 	def poll(self, context):
 		#context.active_object # context.object
 		active_object = context.active_object
 		return (len(bpy.context.selected_objects) != 0) and (active_object is not None) and \
-		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid)
+		(active_object.type == 'SURFACE')# or active_object.ssx2_PatchProps.isControlGrid)
 
 	def execute(self, context):
 		bpy.ops.object.mode_set(mode='OBJECT')
@@ -303,16 +319,22 @@ class SSX2_OP_PatchSplit4x4(bpy.types.Operator):
 		collection = bpy.context.collection
 		#selected_objs = bpy.context.selected_objects # all selected objects
 		active_obj = bpy.context.active_object
-		bpy.context.view_layer.objects.active = None
-		active_obj.select_set(False)
+		active_obj_name = active_obj.name
+		active_obj_matrix = active_obj.matrix_local
+		islands = active_obj.data.splines
 
 		if active_obj.ssx2_PatchProps.isControlGrid:
 			print("Control Grid")
 			return {'CANCELLED'}
 
-		active_obj_name = active_obj.name
-		active_obj_matrix = active_obj.matrix_local
-		islands = active_obj.data.splines
+		if len(islands) == 1:
+			if len(islands[0].points) == 16:
+				self.report({'WARNING'}, "Already a single 4x4 segment")
+				return {'CANCELLED'}
+			
+		bpy.context.view_layer.objects.active = None
+		active_obj.select_set(False)
+
 		all_patch_segments = []
 		for j, s in enumerate(islands): # splines actually means internal surfaces/islands
 			num_points = len(s.points)
@@ -919,7 +941,7 @@ class SSX2_OP_AddPatchMaterial(bpy.types.Operator):
 	bl_idname = 'material.ssx2_add_patch_material'
 	bl_label = "Patch Material"
 	bl_description = 'Create a Patch Material'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
 
@@ -968,7 +990,7 @@ class SSX2_OP_SendMaterialToModifier(bpy.types.Operator):
 	bl_idname = 'material.ssx2_send_material_to_modifier'
 	bl_label = "Send Material to Modifier"
 	bl_description = 'Sends material to modifier'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	def execute(self, context):
 
@@ -996,7 +1018,7 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_control_grid'
 	bl_label = "Control Grid"
 	bl_description = 'Generate a control grid patch'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	origin: bpy.props.BoolProperty(name='Origin at Center')
 	
@@ -1101,7 +1123,7 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_patch'
 	bl_label = "Surface Patch"
 	bl_description = 'Generate a surface patch'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	origin: bpy.props.BoolProperty(name='Origin at Center')
 	
@@ -1183,7 +1205,7 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 	bl_idname = 'object.ssx2_toggle_control_grid'
 	bl_label = "Toggle Control Grid"
 	bl_description = 'Converts selection to a NURBS Patch or a Control Grid depending on active object'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 	
 	@classmethod
 	def poll(self, context):
@@ -1430,10 +1452,74 @@ class SSX2_OP_ToggleControlGrid(bpy.types.Operator):
 			
 		return {"FINISHED"}
 
+class SSX2_OP_CopyMaterialToSelected(bpy.types.Operator):
+	bl_idname = "object.ssx2_copy_material"
+	bl_label = "Copy Material to Selected"
+	bl_description = "Copy material from active object to all selected objects"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+   		or active_object.ssx2_CurveMode == 'CAGE'))
+	
+	def execute(self, context):
+		active_object = context.active_object
+		selected_objects = context.selected_objects
+
+		new_mat = None
+
+		if active_object.ssx2_CurveMode == 'CAGE':
+			cage_nodes = None
+			for mod in active_object.modifiers:
+				if mod.type == 'NODES' and mod.node_group:
+					if "CageLoftAppend" in mod.node_group.name:
+						cage_nodes = mod.node_group
+						break
+			if cage_nodes is not None:
+				new_mat = mod["Input_7"]
+			else:
+				self.report({'WARNING'}, "Modifier is missing on active object")
+				return {'CANCELLED'}
+		
+		if new_mat is None:
+			if len(active_object.data.materials) == 0:
+				new_mat = None
+				# self.report({'ERROR'}, "Material is missing on active object")
+				# return {'CANCELLED'}
+			else:
+				new_mat = active_object.data.materials[0]
+
+		for obj in selected_objects:
+			if ((obj.type == 'SURFACE' or 
+			obj.ssx2_PatchProps.isControlGrid or 
+			obj.ssx2_CurveMode == 'CAGE')):
+				obj.data.materials.clear()
+				if new_mat is not None:
+					obj.data.materials.append(new_mat)
+
+				if obj.ssx2_CurveMode == 'CAGE':
+					cage_nodes = None
+					for mod in obj.modifiers:
+						print(mod)
+						if mod.type == 'NODES' and mod.node_group:
+							if "CageLoftAppend" in mod.node_group.name:
+								cage_nodes = mod.node_group
+								break
+					if cage_nodes is not None:
+						mod["Input_7"] = new_mat
+					else:
+						self.report({'WARNING'}, f"Modifier is missing on {obj.name}")
+						return {'CANCELLED'}
+
+		return {'FINISHED'}
+
 class SSX2_OP_CopyPatchUVsToSelected(bpy.types.Operator):
 	bl_idname = "object.ssx2_patches_copy_uvs"
 	bl_label = "Copy UVs to Selected"
-	bl_description = ""
+	bl_description = "Copy UVs from active object to all selected objects"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	@classmethod
@@ -1739,6 +1825,7 @@ classes = (
 	SSX2_OP_PatchSplit4x4,
 	SSX2_OP_SelectSplineCageU,
 	SSX2_OP_SelectSplineCageV,
+	SSX2_OP_CopyMaterialToSelected,
 	SSX2_OP_CopyPatchUVsToSelected,
 )
 

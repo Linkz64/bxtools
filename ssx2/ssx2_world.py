@@ -123,7 +123,7 @@ class SSX2_OP_AddInstance(bpy.types.Operator): # change this to use collection i
 	bl_idname = 'object.ssx2_add_instance'
 	bl_label = "Model Instance"
 	bl_description = "Generate an instance"
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@classmethod
 	def poll(self, context):
@@ -172,7 +172,7 @@ class SSX2_OP_AddSplineBezier(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_spline_bezier'
 	bl_label = "Bezier Curve"
 	bl_description = 'Generate a bezier curve'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
 
@@ -215,7 +215,7 @@ class SSX2_OP_AddSplineNURBS(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_spline_nurbs'
 	bl_label = "NURBS Curve"
 	bl_description = 'Generate a NURBS curve'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	@classmethod
 	def poll(self, context):
@@ -256,7 +256,7 @@ class SSX2_OP_AddPath(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_path'
 	bl_label = "Add Path"
 	bl_description = 'Generate a path'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	empties: bpy.props.BoolProperty(name="Use Empties", default=False)
 
@@ -359,7 +359,7 @@ class SSX2_OP_AddPathChild(bpy.types.Operator):
 	bl_idname = 'object.ssx2_add_path_child'
 	bl_label = "Add Path Child"
 	bl_description = 'Generate a child node for the active node'
-	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
 

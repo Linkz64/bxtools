@@ -33,6 +33,7 @@ from .ssx2_world_patches import (
     SSX2_OP_SelectSplineCageU,
     SSX2_OP_SelectSplineCageV,
     SSX2_OP_CopyPatchUVsToSelected,
+    SSX2_OP_CopyMaterialToSelected,
 )
 
 
@@ -53,7 +54,7 @@ class SSX2_WorldPanel(SSX2_Panel):
             if io.worldChoice == 'CUSTOM':
                 prop_split(col, io, 'worldChoiceCustom', 'Custom Choice')
                 
-        general_row = col.row()
+        general_row = col.row(align=True)
         general_row.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
         general_row.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH', text="Reload Appends")
         #col.operator("script.reload", text="⟳⟳⟳⟳⟳")
@@ -176,18 +177,23 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
             layout.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 
         layout.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
-        layout.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname)
+        row = layout.row(align=True)
+        row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVS to")
+        row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
 
         #layout.label(text="Spline Cage")
         layout.separator()
-        layout = layout
         layout.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
-        row2 = layout.row()
-        row2.operator(SSX2_OP_FlipSplineOrder.bl_idname, text="Flip Spline Order")
-        row2.operator("curve.switch_direction", text="Flip Point Order")
-        row3 = layout.row()
-        row3.operator(SSX2_OP_SelectSplineCageU.bl_idname, text="Select U")
-        row3.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
+
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.operator("curve.switch_direction", text="Flip U Order")
+        row.operator(SSX2_OP_FlipSplineOrder.bl_idname, text="Flip V Order")
+        
+        row = col.row(align=True)
+        row.operator(SSX2_OP_SelectSplineCageU.bl_idname, text="Select U")
+        row.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
+
         layout.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
         
         #layout.label(text="Other")
