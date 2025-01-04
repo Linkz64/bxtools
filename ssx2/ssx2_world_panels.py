@@ -34,6 +34,7 @@ from .ssx2_world_patches import (
 	SSX2_OP_SelectSplineCageV,
 	SSX2_OP_CopyPatchUVsToSelected,
 	SSX2_OP_CopyMaterialToSelected,
+	SSX2_OP_PatchUVEditor,
 )
 
 
@@ -163,42 +164,49 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		self.layout.label(text="", icon='SURFACE_NSURFACE')
 
 	def draw(self, context):
-		layout = self.layout
+		from .ssx2_world_patches import glob_obj_proxy
+		col = self.layout.column()
 
 		obj = bpy.context.active_object
 		if obj is not None:
 			if obj.type == 'SURFACE':
-				layout.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Control Grid")
+				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Control Grid")
 			elif obj.ssx2_PatchProps.isControlGrid:
-				layout.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Patch")
+				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Patch")
 			else:
-				layout.operator(SSX2_OP_ToggleControlGrid.bl_idname)
+				col.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 		else:
-			layout.operator(SSX2_OP_ToggleControlGrid.bl_idname)
+			col.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 
-		layout.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
-		row = layout.row(align=True)
+		col.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
+		row = col.row(align=True)
 		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVS to")
 		row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
 
-		#layout.label(text="Spline Cage")
-		layout.separator()
-		layout.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
+		#col.label(text="Spline Cage")
+		col.separator()
+		col.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
 
-		col = layout.column(align=True)
-		row = col.row(align=True)
+		col_b = col.column(align=True)
+		row = col_b.row(align=True)
 		row.operator("curve.switch_direction", text="Flip U Order")
 		row.operator(SSX2_OP_FlipSplineOrder.bl_idname, text="Flip V Order")
 		
-		row = col.row(align=True)
+		row = col_b.row(align=True)
 		row.operator(SSX2_OP_SelectSplineCageU.bl_idname, text="Select U")
 		row.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
 
-		layout.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
+		col.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
+
+		if glob_obj_proxy is None:
+			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor")
+		else:
+			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="Apply UV Edits")#, icon='')
+			#col.label(text="")
 		
 		#layout.label(text="Other")
-		layout.separator()
-		prop_split(layout, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
+		col.separator()
+		prop_split(col, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
 
 class SSX2_WorldSplinesSubPanel(bpy.types.Panel):
 	bl_idname = 'BXT_PT_world_splines_panel'
