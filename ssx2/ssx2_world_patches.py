@@ -31,7 +31,9 @@ import time
 
 glob_start_time = time.time()
 glob_obj_pch = None
+glob_obj_pch_name = ""
 glob_obj_proxy = None
+glob_obj_proxy_name = "BXT_UV_PROXY"
 glob_bm = None
 
 def existing_patch_uvs(in_uvs):
@@ -194,37 +196,44 @@ def create_imported_patches(self, context, path, images, map_info=None):
 
 
 def reset_proxy_state():
-	global glob_obj_pch, glob_obj_proxy, glob_bm
+	global glob_obj_pch, glob_obj_pch_name, glob_obj_proxy, glob_bm
 	glob_obj_pch = None
+	glob_obj_pch_name = ""
 	glob_obj_proxy = None
 	glob_bm = None
+	obj_to_delete = bpy.data.objects.get(glob_obj_proxy_name)
+	mesh_to_delete = bpy.data.meshes.get(glob_obj_proxy_name)
+	if obj_to_delete is not None:
+		bpy.data.objects.remove(obj_to_delete, do_unlink=True)
+		bpy.data.meshes.remove(mesh_to_delete, do_unlink=True)
+	
+	obj_pch = bpy.data.objects.get(glob_obj_pch_name)
+	if obj_pch is not None:
+		set_active(obj_pch)
 
 def live_uv_update():
 	global glob_obj_pch
 	global glob_obj_proxy
 	global glob_bm
 	timer = time.time() - glob_start_time
-	if timer > 1000:
-		print("TEST STOP") # maybe keep but stop after 30 mins
+	if timer > 1800:
 		reset_proxy_state()
 		return None
 
 	if glob_obj_proxy is None:
 		reset_proxy_state()
-		return
+		return None
 
 	if repr(glob_obj_proxy) == "<bpy_struct, Object invalid>":
-		print("OH PROXY")# sometimes undo will cause it to lose RNA
+		# sometimes undo will cause it to lose RNA
 		glob_obj_proxy = bpy.data.objects.get("BXT_UV_PROXY")
 		if glob_obj_proxy is None:
-			print("CRITICAL OH OH PROXY")
 			reset_proxy_state()
 			return None
 	if repr(glob_obj_pch) == "<bpy_struct, Object invalid>":
-		glob_obj_pch = bpy.data.objects.get("SurfPatch")
-		print("OH PATCH")
+		# sometimes undo will cause it to lose RNA
+		glob_obj_pch = bpy.data.objects.get(glob_obj_pch_name)
 		if glob_obj_pch is None:
-			print("CRITICAL OH OH PATCH")
 			reset_proxy_state()
 			return None
 
@@ -235,31 +244,22 @@ def live_uv_update():
 			glob_bm = bmesh.from_edit_mesh(mesh)
 
 		if len(glob_bm.faces) != 1:
-			print("CRITICAL OH OH FACES")
 			reset_proxy_state()
 			return None
 		if len(glob_bm.verts) != 4:
-			print("CRITICAL OH OH VERTICES")
 			reset_proxy_state()
 			return None
 
 		uv_layer = glob_bm.loops.layers.uv.active
 		for face in glob_bm.faces:
-			print(face.loops[0][uv_layer].uv)
 			glob_obj_pch.ssx2_PatchProps.manualUV0 = face.loops[0][uv_layer].uv
 			glob_obj_pch.ssx2_PatchProps.manualUV2 = face.loops[1][uv_layer].uv
 			glob_obj_pch.ssx2_PatchProps.manualUV3 = face.loops[2][uv_layer].uv
 			glob_obj_pch.ssx2_PatchProps.manualUV1 = face.loops[3][uv_layer].uv
 			
-			
 			glob_obj_pch.update_tag()
-		#     for area in bpy.context.screen.areas: # not needed
-		#         if area.type == 'VIEW_3D':
-		#             area.tag_redraw()
-		# bmesh.update_edit_mesh(mesh) # not needed
 	else:
 		glob_bm = None
-
 
 	return 0.005
 
@@ -271,38 +271,47 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 	bl_description = "Opens UV editing window"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@classmethod
+	def poll(self, context):
+		if glob_obj_proxy is None:
+			active_object = context.active_object
+			return (len(bpy.context.selected_objects) != 0) and (active_object is not None)
+		else:
+			return True
+
 	# @classmethod
 	# def poll(self, context):
-	# 	obj = context.active_object
-	# 	if obj is None:
-	# 		return False
+	# 	active_object = context.active_object
+	# 	return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+	# 	(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+   	# 	or active_object.ssx2_CurveMode == 'CAGE'))
 	
 	def execute(self, context):
 		global glob_obj_pch
+		global glob_obj_pch_name
 		global glob_obj_proxy
 		global glob_bm
-		proxy_name = "BXT_UV_PROXY" # maybe add to .self
 
 		if glob_obj_proxy is not None:
 			reset_proxy_state()
-			obj_to_delete = bpy.data.objects.get(proxy_name)
-			mesh_to_delete = bpy.data.meshes.get(proxy_name)
-			if obj_to_delete is not None:
-				bpy.data.objects.remove(obj_to_delete, do_unlink=True)
-				bpy.data.meshes.remove(mesh_to_delete, do_unlink=True)
 			self.report({'INFO'}, "Done")
 			return {'FINISHED'}
-		
-		# use a global to save the state if the op is first time or
-		# waiting for user to apply
-		# or switch glob_obj_proxy back to None and use that as the state
 
 		glob_obj_pch = bpy.context.active_object
-		glob_obj_pch = bpy.data.objects.get("SurfPatch")
-		# do if is patch checks here
-		mat = glob_obj_pch.data.materials[0]
-
 		props = glob_obj_pch.ssx2_PatchProps
+		
+		if (
+			glob_obj_pch.type != 'SURFACE' and props.isControlGrid != True and 
+			glob_obj_pch.ssx2_CurveMode != 'CAGE'
+			):
+			self.report({'WARNING'}, f"Active object is not a patch: {glob_obj_pch.name}")
+			return {'CANCELLED'}
+		
+		glob_obj_pch_name = glob_obj_pch.name
+
+		mat = None
+		if len(glob_obj_pch.data.materials) != 0:
+			mat = glob_obj_pch.data.materials[0]
 
 		if props.useManualUV:
 			patch_uvs = [
@@ -322,7 +331,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 			
 		props.useManualUV = True
 		
-		glob_obj_proxy = bpy.data.objects.get(proxy_name)
+		glob_obj_proxy = bpy.data.objects.get(glob_obj_proxy_name)
 		if glob_obj_proxy is None:
 			bpy.ops.mesh.primitive_plane_add(enter_editmode=True,
 				align='WORLD',
@@ -330,8 +339,8 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 				scale=(1, 1, 1)
 			)
 			glob_obj_proxy = bpy.context.active_object
-			glob_obj_proxy.name = proxy_name
-			glob_obj_proxy.data.name = proxy_name
+			glob_obj_proxy.name = glob_obj_proxy_name
+			glob_obj_proxy.data.name = glob_obj_proxy_name
 		else:
 			set_active(glob_obj_proxy)
 			if glob_obj_proxy.mode != 'EDIT':
@@ -344,7 +353,8 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 		bpy.ops.uv.select_all(action='SELECT')
 
 		mesh.materials.clear()
-		mesh.materials.append(mat)
+		if mat is not None:
+			mesh.materials.append(mat)
 
 		glob_bm = bmesh.from_edit_mesh(mesh)
 
@@ -356,6 +366,12 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 			face.loops[3][uv_layer].uv = patch_uvs[1]
 
 		bmesh.update_edit_mesh(mesh)
+
+		# bpy.ops.screen.back_to_previous()
+		screen = bpy.context.screen
+		if bpy.context.screen.show_fullscreen:
+			bpy.ops.screen.back_to_previous()
+			#bpy.ops.screen.screen_full_area(use_hide_panels=False)
 		
 		#window = bpy.context.window
 		for area in bpy.context.screen.areas:
@@ -364,7 +380,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 					bpy.ops.screen.area_dupli('INVOKE_DEFAULT')
 					break
 				break
-					
+		
 		for window in bpy.context.window_manager.windows:
 			if len(window.screen.areas) == 1:
 				for area in window.screen.areas:
@@ -382,6 +398,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 				window.screen.areas[1].spaces[0].show_region_ui = False
 				window.screen.areas[0].spaces[0].show_region_toolbar = False
 				window.screen.areas[0].spaces[0].show_region_ui = False
+				window.screen.areas[0].spaces[0].show_region_tool_header = False
 
 		print("\nstarting bpy timer")
 		#bpy.app.timers.register(functools.partial(live_uv_update, [glob_obj_pch, glob_obj_proxy, glob_bm]))

@@ -182,6 +182,11 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		row = col.row(align=True)
 		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVS to")
 		row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
+		if glob_obj_proxy is None:
+			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor", icon='WINDOW')
+		else:
+			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="Apply UV Edits", icon='CHECKMARK')
+			#col.label(text="")
 
 		#col.label(text="Spline Cage")
 		col.separator()
@@ -197,12 +202,6 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		row.operator(SSX2_OP_SelectSplineCageV.bl_idname, text="Select V")
 
 		col.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
-
-		if glob_obj_proxy is None:
-			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor")
-		else:
-			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="Apply UV Edits")#, icon='')
-			#col.label(text="")
 		
 		#layout.label(text="Other")
 		col.separator()
