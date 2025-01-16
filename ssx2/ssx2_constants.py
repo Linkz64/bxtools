@@ -44,7 +44,7 @@ enum_ssx2_empty_mode = (
 	('NONE',       "None",            ""),
 	('PATH_AI',    "Path AI",         "Start, AI follow, Reset, etc"),
 	('PATH_EVENT', "Path Event",      "Checkpoints, Finish Line, etc"),
-	('INSTANCE',   "Model Instance",  "Not Implemented Yet"),
+	('INSTANCE',   "Prefab Instance", "Experimental"),
 )
 
 enum_ssx2_curve_mode = (

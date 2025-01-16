@@ -95,26 +95,20 @@ def poll_mat_for_add_patch(self, context):
 	return context.use_nodes
 	#return context.name.startswith('surf') or context.name.startswith('patch')
 
-def poll_wmodel_for_inst(self, context):
-	if context.type == 'MESH' and context.parent == None:# or just context.type == 'MESH':
-		return True
+def poll_prefab_for_inst(self, context):
+	# if collection.ssx2 collection type/mode == 'PREFAB':
+	return True
+
+def update_prefab_for_inst(self, context):
+	fab = self.ssx2_PrefabForInstance
+	if fab:
+		self.instance_type = 'COLLECTION'
+		self.instance_collection = fab
 	else:
-		return False
-
-def update_wmodel_for_inst(self, context):
-	mdl = self.ssx2_ModelForInstance
-
-	if mdl == None:
-		print("No model specified.")
+		print("No prefab specified.")
 		self.instance_collection = None
 		self.show_instancer_for_viewport = True
-	else:
-		mdlinst = getset_instance_collection(mdl, f"ins_{mdl.name}")
-		self.instance_type = 'COLLECTION' # the context.object.ssx2_wModel method will take care of this
-		self.instance_collection = bpy.data.collections.get(mdlinst)
-		#self.show_instancer_for_viewport = False
-		#print(self.ssx2_ModelForInstance)
-				
+
 
 
 ## Operators
@@ -670,7 +664,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		return (\
 			io.importPatches or \
 			io.importSplines or \
-			io.importPaths\
+			io.importPaths or \
+			io.importPrefabs\
 			) and \
 			(s.bx_PlatformChoice == 'XBX' or s.bx_PlatformChoice == 'NGC' or\
 			s.bx_PlatformChoice == 'PS2' or s.bx_PlatformChoice == 'ICE')
@@ -858,7 +853,265 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# 		for i, patch in enumerate(to_group):
 		# 			new_col.objects.link(patch)
 		# 			patches_collection.objects.unlink(patch)
+
+	def create_prefabs_json(self):
+		scene_collection = bpy.context.scene.collection
+		active_collection = bpy.context.collection
+
+		models_folder_path = self.folder_path + '/Models/'
+		if not os.path.exists(models_folder_path):
+			self.report({'ERROR'}, f"Folder 'Models' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+
+		prefabs_file_path = self.folder_path + '/Prefabs.json'
+		if not os.path.isfile(prefabs_file_path):
+			self.report({'ERROR'}, f"File 'Prefabs.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+
+		instances_file_path = self.folder_path + '/Instances.json'
+		if not os.path.isfile(instances_file_path):
+			self.report({'ERROR'}, f"File 'Instances.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+		
+		prefabs_collection = getset_collection_to_target('Prefabs', scene_collection)
+		instances_collection = getset_collection_to_target('Instances', scene_collection)
+
+		
+
+
+		### Import Prefabs
+		print("\nParsing Prefabs")
+
+		meshes_to_merge = []
+		materials_to_import = []
+
+		with open(prefabs_file_path, 'r') as f:
+			data = json.load(f)
+
+		prefab_collections = []
+
+		for i, json_fab in enumerate(data["Prefabs"]):
+			fab_name = json_fab["PrefabName"]
+			print(fab_name, "sub_objs:", len(json_fab["PrefabObjects"]))
+
+			new_prefab_collection = bpy.data.collections.new(fab_name)
+			prefabs_collection.children.link(new_prefab_collection)
+
+			prefabs_collection["Unknown3"] = json_fab["Unknown3"]
+			prefabs_collection["AnimTime"] = json_fab["AnimTime"]
+
+			sub_objs = []
+
+			for j, sub_obj in enumerate(json_fab["PrefabObjects"]):
+				primary_mesh = ""
+				if len(sub_obj["MeshData"]) != 0:
+					primary_mesh = sub_obj["MeshData"][0]["MeshPath"]
+
+				print(sub_obj["MeshData"])
+
+				sub_obj_dict = {
+					"parent_idx": sub_obj["ParentID"],
+					"flags": sub_obj["Flags"],
+					"animation": sub_obj["Animation"],
+					"primary_mesh": primary_mesh,
+					"position": sub_obj["Position"],
+					"rotation": sub_obj["Rotation"],
+					"scale": sub_obj["Scale"],
+					"include_animation": sub_obj["IncludeAnimation"],
+					"include_matrix": sub_obj["IncludeMatrix"],
+				}
+
+				to_merge = []
+				for mesh_data in sub_obj["MeshData"]:
+					to_merge.append((mesh_data["MeshPath"], mesh_data["MaterialID"]))
+
+					if mesh_data["MaterialID"] not in materials_to_import:
+						materials_to_import.append(mesh_data["MaterialID"])
+				meshes_to_merge.append(to_merge)
+
+				sub_objs.append(sub_obj_dict)
+
+				# meshes_to_merge.append([(m["MeshPath"], m["MaterialID"]) for m in sub_obj["MeshData"]])
+
+			# if i == 250:
+			# 	break
 			
+			prefab_collections.append((new_prefab_collection, sub_objs))
+
+
+
+		# obj_files = next(os.walk(models_folder_path))[2]
+		# len(obj_files) == 0: ERROR!!!
+
+
+
+		# i could apply placeholder materials/material_slots first
+		# material
+		# unknown int 18
+		# unk_18 & 0xFFFF for first 2 bytes
+		# unk_18 >> 16 for the last 2 bytes
+		# for mat in materials_to_import:
+		# 	print(mat)
+
+		
+
+		already_merged = []
+
+		for mesh_data in meshes_to_merge:
+			print(mesh_data)
+			if not mesh_data:
+				continue
+			
+			primary_mesh = mesh_data[0][0]
+			new_obj_name = primary_mesh[:-4]
+
+			existing_object = bpy.data.objects.get(new_obj_name)
+			if existing_object is not None:
+				if existing_object.type == 'MESH':
+					continue
+
+			if new_obj_name in already_merged:
+				continue
+
+			initial_obj_count = len(bpy.data.objects)
+			new_obj_count = 0
+
+			new_objs = []
+			for mesh_path in mesh_data:
+				bpy.ops.wm.obj_import(filepath=models_folder_path + mesh_path[0])
+
+				if len(bpy.data.objects) != initial_obj_count + new_obj_count:
+					# new_obj = bpy.context.active_object
+					new_obj = bpy.context.view_layer.objects.active
+					new_obj.scale = new_obj.scale / 100
+					bpy.ops.object.rotation_clear(clear_delta=False)
+					bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+					active_collection.objects.unlink(new_obj)
+					new_obj_count += 1
+				else:
+					print(f"ERROR!!! Invalid .obj file {models_folder_path + mesh_path[0]}")
+					return "OH OH"
+					#new_obj = bpy.data.objects.new(f"mesh{i:03d}_{new_obj_name}"[:], None)
+
+				new_objs.append(new_obj)
+
+				scene_collection.objects.link(new_obj)
+
+			if len(mesh_data) != 1:
+				bpy.context.view_layer.objects.active = new_objs[0]
+				for obj in new_objs:
+					obj.select_set(True)
+				bpy.ops.object.join()
+
+			new_obj = bpy.context.view_layer.objects.active
+			new_obj.name = new_obj_name
+			new_obj.data.name = new_obj_name
+
+			scene_collection.objects.unlink(new_obj)
+
+			already_merged.append(new_obj_name)
+
+		root_layer_collection = bpy.context.view_layer.layer_collection
+		for prefab_collection in prefab_collections:
+			new_prefab_collection = prefab_collection[0]
+			
+			current_new_objs = []
+			for j, sub_obj in enumerate(prefab_collection[1]):
+				primary_mesh = sub_obj["primary_mesh"]
+				
+				if not primary_mesh:
+					mesh = bpy.data.meshes.new("Empty Mesh")
+					new_obj = bpy.data.objects.new("Empty Mesh", mesh)
+					new_obj_name = new_obj.name
+
+					new_obj.show_axis = True
+					new_obj.show_texture_space = True
+				else:
+					new_obj_name = primary_mesh[:-4]
+					new_obj = bpy.data.objects.get(new_obj_name)
+
+				current_new_objs.append(new_obj)
+
+				print("parent_idx:  --- ", sub_obj["parent_idx"])
+				print("flags:  --- ", sub_obj["flags"])
+				print("animation:  --- ", sub_obj["animation"])
+				print("primary_mesh:  --- ", sub_obj["primary_mesh"])
+				print("position:  --- ", sub_obj["position"])
+				print("rotation:  --- ", sub_obj["rotation"])
+				print("scale:  --- ", sub_obj["scale"])
+				print("include_animation:  --- ", sub_obj["include_animation"])
+				print("include_matrix:  --- ", sub_obj["include_matrix"])
+
+				if sub_obj["include_matrix"]:
+					new_obj.location = Vector(sub_obj["position"]) / 100 # WorldScale
+					# new_obj.rotation_mode = 'QUATERNION'
+					quat = sub_obj["rotation"]
+					new_obj.rotation_quaternion = [quat[3], quat[0], quat[1], quat[2]]
+					new_obj.rotation_mode = 'XYZ'
+
+				new_prefab_collection.objects.link(new_obj)
+				
+				if sub_obj["parent_idx"] != -1:
+					parent_object = current_new_objs[sub_obj["parent_idx"]]
+					new_obj.parent = parent_object
+			current_new_objs.clear()
+
+
+			layer_collection = get_layer_collection(root_layer_collection, new_prefab_collection.name)
+			layer_collection.exclude = True
+			#layer_collection.hide_viewport = True
+
+
+
+
+		### Import Instances
+		print("\nImporting Instances")
+
+		with open(instances_file_path, 'r') as f:
+			data = json.load(f)
+
+		#new_instances = []
+		
+		for json_inst in data["Instances"]:
+			#print(json_inst["InstanceName"])
+
+			if True:
+				empty = bpy.data.objects.new(json_inst["InstanceName"], None)
+				empty.empty_display_size = 100 / 100 # WorldScale
+				empty.rotation_mode = 'QUATERNION'
+				empty.empty_display_type = 'ARROWS'
+				empty.location = Vector(json_inst["Location"]) / 100 # WorldScale
+				quat = json_inst["Rotation"]
+				empty.rotation_quaternion = [quat[3], quat[0], quat[1], quat[2]]
+				empty.rotation_mode = 'XYZ'
+				empty.scale = json_inst["Scale"]
+				empty.instance_type = 'COLLECTION'
+				if len(prefab_collections) < json_inst["ModelID"] + 1:
+					return "OH OH"
+				empty.ssx2_PrefabForInstance = prefab_collections[json_inst["ModelID"]][0]
+				empty.instance_collection = prefab_collections[json_inst["ModelID"]][0]
+				empty.ssx2_EmptyMode = 'INSTANCE'
+
+				# collision mode = enum? (Self, Custom, BBox)
+
+				for key in json_inst:
+					if key in [
+						"InstanceName",
+						"Location",
+						"Rotation",
+						"Scale"]:
+						continue
+					empty[key] = json_inst[key]
+					# print(type(json_inst[key]), key)
+					# if isinstance(json_inst[key], list):
+					# 	print(type(json_inst[key][0])) # 'dict' 'str' makes it 'Python' type in blender
+
+				
+				instances_collection.objects.link(empty)
+
+			#new_instances.append(empty)
+
+
 	def import_json(self):
 		scene = bpy.context.scene
 		scene_collection = scene.collection
@@ -868,26 +1121,30 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		#io.importTextures
 		#io.patchImportGrouping
 
-		folder_path = scene.ssx2_WorldImportExportProps.importFolderPath
-		folder_path = os.path.abspath(bpy.path.abspath(folder_path))
-		if not os.path.exists(folder_path): #.isdir
+		self.folder_path = scene.ssx2_WorldImportExportProps.importFolderPath
+		self.folder_path = os.path.abspath(bpy.path.abspath(self.folder_path))
+		if not os.path.exists(self.folder_path): #.isdir
 			self.report({'ERROR'}, f"Import Folder does not exist")
 			return {'CANCELLED'}
 
-		if io.importPatches: # PATCHES
+		if io.importPatches: # <------------------------------- Import Patches
 			getset_collection_to_target('Patches', scene_collection)
 
-			self.json_patches = get_patches_json(folder_path+'/Patches.json')
-			self.images = get_images_from_folder(folder_path+'/Textures/')
+			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
+			self.images = get_images_from_folder(self.folder_path+'/Textures/')
 
 			run_without_update(self.create_patches_json)
+
+
+		if io.importPrefabs: # <------------------------------- Import Prefabs & Instances
+			run_without_update(self.create_prefabs_json)
 
 
 		if io.importPaths: # <------------------------------- Import Paths
 			print("Importing Paths")
 
-			aip_file_path = folder_path + '/AIP.json'
-			sop_file_path = folder_path + '/SOP.json'
+			aip_file_path = self.folder_path + '/AIP.json'
+			sop_file_path = self.folder_path + '/SOP.json'
 			if not os.path.isfile(aip_file_path):
 				self.report({'ERROR'}, f"File 'AIP.json' does not exist in 'Import Folder'")
 				return {'CANCELLED'}
@@ -1143,6 +1400,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				#break # only general
 
+
 		if io.importSplines: # <------------------------------- Import Splines
 			print("Importing Splines")
 
@@ -1160,7 +1418,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				scene_collection.children.link(collection)
 
 
-			file_path = folder_path + '/Splines.json'
+			file_path = self.folder_path + '/Splines.json'
 			if not os.path.isfile(file_path):
 				self.report({'ERROR'}, f"File 'Splines.json' does not exist in 'Import Folder'")
 				return {'CANCELLED'}
@@ -1295,6 +1553,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			# SELECT ALL AT THE END AND SET ORIGIN
 			#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+
+
 
 	def execute(self, context):
 		
@@ -2071,6 +2331,45 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		self.report({'INFO'}, "Exported")
 		return {'FINISHED'}
 
+class SSX2_OP_SelectPrefab(bpy.types.Operator):
+	bl_idname = "scene.ssx2_select_prefab"
+	bl_label = "Select Prefab"
+	bl_description = "Active selects the Prefab collection and object"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	add_mode: bpy.props.BoolProperty(default=False)
+
+	def execute(self, context):
+		active_object = bpy.context.view_layer.objects.active
+		target_collection = active_object.instance_collection
+		target_name = target_collection.name
+
+		layer_collection = get_layer_collection(bpy.context.view_layer.layer_collection, "Prefabs")
+		if layer_collection:
+			# layer_collection.exclude = False
+			layer_collection.hide_viewport = False
+
+		layer_collection = get_layer_collection(bpy.context.view_layer.layer_collection, target_name)
+
+		if layer_collection:
+			layer_collection.exclude = False
+			layer_collection.hide_viewport = False
+
+			if not self.add_mode:
+				bpy.ops.object.select_all(action='DESELECT')
+
+			bpy.context.view_layer.active_layer_collection = layer_collection
+			print(f"Active collection set to: {layer_collection.name}")
+
+			if layer_collection.has_objects:
+				first_object = target_collection.objects[0]
+				first_object.select_set(True)
+				bpy.context.view_layer.objects.active = first_object
+			return {'FINISHED'}
+		
+		#self.report({"WARNING"}, "Collection not found in 'Prefabs' Collection")
+		self.report({"WARNING"}, "Collection not found")
+		return {'CANCELLED'}
 
 
 ### PropertyGroups
@@ -2084,6 +2383,9 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 		description="Name of input file e.g gari, megaple, pipe")
 	importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
 	importNames: bpy.props.BoolProperty(name="Import Names", default=True)
+
+	importPrefabs: bpy.props.BoolProperty(name="Import Prefabs", default=True)
+	# prefabImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
 
 	importSplines: bpy.props.BoolProperty(name="Import Splines", default=True)
 	expandImportSplines: bpy.props.BoolProperty(default=False)
@@ -2192,6 +2494,8 @@ classes = (
 	SSX2_OP_PathEventAdd,
 	SSX2_OP_PathEventRemove,
 
+	SSX2_OP_SelectPrefab,
+
 )
 
 def ssx2_world_register():
@@ -2207,14 +2511,12 @@ def ssx2_world_register():
 	bpy.types.Object.ssx2_EmptyMode = bpy.props.EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
 	bpy.types.Object.ssx2_CurveMode = bpy.props.EnumProperty(name='Curve Mode', items=enum_ssx2_curve_mode)
 
-	bpy.types.Object.ssx2_ModelForInstance   = bpy.props.PointerProperty(type=bpy.types.Object, poll=poll_wmodel_for_inst, update=update_wmodel_for_inst)
-	bpy.types.Scene.ssx2_ModelForAddInstance = bpy.props.PointerProperty(type=bpy.types.Object, poll=poll_wmodel_for_inst)
+	bpy.types.Object.ssx2_PrefabForInstance = bpy.props.PointerProperty(type=bpy.types.Collection, poll=poll_prefab_for_inst, update=update_prefab_for_inst)
 
 
 def ssx2_world_unregister():
 
-	del bpy.types.Object.ssx2_ModelForInstance
-	del bpy.types.Scene.ssx2_ModelForAddInstance
+	del bpy.types.Object.ssx2_PrefabForInstance
 
 	del bpy.types.Scene.ssx2_WorldImportExportProps
 	del bpy.types.Scene.ssx2_WorldUIProps

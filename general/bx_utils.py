@@ -44,7 +44,7 @@ def set_active(obj):
 	obj.select_set(True)
 
 def run_without_update(func):
-	# run without view layer update
+	""" Run without view layer update """
 	view_layer_update = _BPyOpsSubModOp._view_layer_update
 	def dummy_view_layer_update(context):
 		pass
@@ -55,18 +55,17 @@ def run_without_update(func):
 		_BPyOpsSubModOp._view_layer_update = view_layer_update
 
 def get_layer_collection(layer_col, col_name):
-	"""Get matching collection from the outliner"""
+	"""Recursive! Get matching collection from the outliner"""
 	found = None
 	if layer_col.name == col_name:
 		return layer_col
 	for layer in layer_col.children:
-		#print("layer", layer)
 		found = get_layer_collection(layer, col_name)
 		if found:
 			return found
 
 def collection_grouping(name, parent_col, group_size, increment):
-	#collection name/prefix, parent collection, grouping size, increment
+	"""(collection name, parent collection, grouping size, increment)"""
 	col_name = f"{name}.{int(increment / group_size)+1}"
 	new_col = bpy.data.collections.get(col_name)
 	if new_col is None:
@@ -74,7 +73,6 @@ def collection_grouping(name, parent_col, group_size, increment):
 	if not bpy.context.scene.user_of_id(new_col): # if not in scene/layer bring it
 		parent_col.children.link(new_col)
 	return new_col
-
 
 def getset_collection_to_target(name, target_collection): # move=False
 	"""Gets or Creates collection and parents it to target collection"""

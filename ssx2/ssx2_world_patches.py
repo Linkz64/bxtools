@@ -194,7 +194,6 @@ def create_imported_patches(self, context, path, images, map_info=None):
 			layer_col = get_layer_collection(layer_collection, collection.name)
 			layer_col.exclude = True
 
-
 def reset_proxy_state():
 	global glob_obj_pch, glob_obj_pch_name, glob_obj_proxy, glob_bm
 	glob_obj_pch = None
@@ -262,6 +261,11 @@ def live_uv_update():
 		glob_bm = None
 
 	return 0.005
+
+def update_patch_uv_preset(self, context):
+	self.texMap = patch_tex_maps[int(self.texMapPreset)]
+	# update manual uvs too
+
 
 ## Operators
 
@@ -1937,13 +1941,7 @@ class SSX2_OP_AddCageVGuide(bpy.types.Operator):
 
 
 
-
-
-
-def update_patch_uv_preset(self, context):
-	self.texMap = patch_tex_maps[int(self.texMapPreset)]
-	# update manual uvs too
-
+### PropertyGroups
 
 class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)

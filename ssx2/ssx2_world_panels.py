@@ -16,6 +16,8 @@ from .ssx2_world import (
 
 	SSX2_OP_WorldImport,
 	SSX2_OP_WorldExport,
+
+	SSX2_OP_SelectPrefab,
 )
 
 from .ssx2_world_patches import (
@@ -78,39 +80,45 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 			col_row.prop(io, "importTextures")
 
 		# PATCHES
-		patches_box = col.box()
-		pch_col_box = patches_box.column()
-		pch_header_row = pch_col_box.row(align=True)
-		pch_header_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
+		the_box = col.box()
+		box_col = the_box.column()
+		box_col_row = box_col.row(align=True)
+		box_col_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
 			icon='DISCLOSURE_TRI_DOWN' if io.expandImportPatches\
 			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportPatches'
-		pch_header_row.prop(io, "importPatches", text="Patches")
+		box_col_row.prop(io, "importPatches", text="Patches")
 		if io.expandImportPatches:
-			pch_col_box.prop(io, "patchImportAsControlGrid", text="As Control Grid")
-			prop_enum_horizontal(pch_col_box, io, 'patchImportGrouping', "Grouping", spacing=0.3)
+			box_col.prop(io, "patchImportAsControlGrid", text="As Control Grid")
+			prop_enum_horizontal(box_col, io, 'patchImportGrouping', "Grouping", spacing=0.3)
 			
 		# SPLINES
-		splines_box = col.box()
-		spl_box_col = splines_box.column()
-		spl_header_row = spl_box_col.row(align=True)
-		spl_header_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
+		the_box = col.box()
+		box_col = the_box.column()
+		box_col_row = box_col.row(align=True)
+		box_col_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
 			icon='BLANK1' if io.expandImportSplines\
 			else 'BLANK1',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportSplines'
-		spl_header_row.prop(io, "importSplines", text="Splines")
+		box_col_row.prop(io, "importSplines", text="Splines")
 		# if io.expandImportSplines:
-		# 	spl_box_col.prop(io, "splineImportAsNURBS", text="As NURBS")
-			#prop_enum_horizontal(spl_box_col, io, 'patchImportGrouping', "Grouping", spacing=0.3)
+		# 	box_col.prop(io, "splineImportAsNURBS", text="As NURBS")
+			#prop_enum_horizontal(box_col, io, 'patchImportGrouping', "Grouping", spacing=0.3)
 		
 		# PATHS
-		paths_box = col.box()
-		pth_col_box = paths_box.column()
-		pth_header_row = pth_col_box.row(align=True)
-		pth_header_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
+		the_box = col.box()
+		box_col = the_box.column()
+		box_col_row = box_col.row(align=True)
+		box_col_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
 			icon='DISCLOSURE_TRI_DOWN' if io.expandImportPaths\
 			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportPaths'
-		pth_header_row.prop(io, "importPaths", text="Paths")
+		box_col_row.prop(io, "importPaths", text="Paths")
 		if io.expandImportPaths:
-			pth_col_box.prop(io, "importPathsAsCurve", text="As Poly Curve")
+			box_col.prop(io, "importPathsAsCurve", text="As Poly Curve")
+
+		# PREFABS
+		the_box = col.box()
+		box_row = the_box.row(align=True)
+		box_row.label(icon='BLANK1')
+		box_row.prop(io, "importPrefabs", text="Prefabs (Experimental)")
 
 		# IMPORT BUTTON
 		col.operator(SSX2_OP_WorldImport.bl_idname)
@@ -161,7 +169,7 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 	bl_options = {'DEFAULT_CLOSED'}
 
 	def draw_header(self, context):
-		self.layout.label(text="", icon='SURFACE_NSURFACE')
+		self.layout.label(icon='SURFACE_NSURFACE')
 
 	def draw(self, context):
 		from .ssx2_world_patches import glob_obj_proxy
@@ -312,10 +320,15 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 
 		elif empty_mode == "INSTANCE":
 			col = self.layout.column()
-			prop_split(col, context.object, 'ssx2_ModelForInstance', "Model")
+			row = col.row(align=True)
+			row.operator(SSX2_OP_SelectPrefab.bl_idname, text="Select Prefab")
+			row.operator(SSX2_OP_SelectPrefab.bl_idname, text="Select Prefab (Add)").add_mode = True
+			prop_split(col, context.object, 'ssx2_PrefabForInstance', "Prefab", spacing=0.2)
 			row = col.row()
 			row.prop(context.object, 'show_instancer_for_viewport', text='Show Instancer')
 			row.prop(context.object, 'show_in_front')#, text='Show in Front')
+			
+			
 
 class SSX2_CurvePropPanel(SSX2_Panel):
 	bl_label = "BX Spline Curve"
@@ -392,13 +405,13 @@ class SSX2_MaterialPropPanel(SSX2_Panel):
 	def draw(self, context):
 		obj = context.object
 
-		layout = self.layout
-		row = layout.row()
+		col = self.layout.column()
+		row = col.row(align=True)
 		row.operator(SSX2_OP_AddPatchMaterial.bl_idname, text="New Patch Material", icon='ADD')
 
 		if obj is not None:
 			if obj.ssx2_CurveMode == 'CAGE':
-				row.operator(SSX2_OP_SendMaterialToModifier.bl_idname, text="Send to Modifier")
+				row.operator(SSX2_OP_SendMaterialToModifier.bl_idname, text="Send to Modifier", icon='MODIFIER_ON')
 
 class SSX2_PatchPropPanel(SSX2_Panel):
 	bl_label = "BX Surface Patch"
