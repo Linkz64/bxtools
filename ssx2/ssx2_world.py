@@ -29,6 +29,12 @@ from .ssx2_constants import (
 from .ssx2_world_lightmaps import SSX2_OP_BakeTest
 
 
+import re
+def natural_key(s):
+	return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
+
+
+
 def update_select_by_surface_type(self, context):
 	# select surface patches by surface type
 	# note context only works on `set=`
@@ -892,7 +898,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		for i, json_fab in enumerate(data["Prefabs"]):
 			fab_name = json_fab["PrefabName"]
-			print(fab_name, "sub_objs:", len(json_fab["PrefabObjects"]))
+			# print(fab_name, "sub_objs:", len(json_fab["PrefabObjects"]))
 
 			new_prefab_collection = bpy.data.collections.new(fab_name)
 			prefabs_collection.children.link(new_prefab_collection)
@@ -904,16 +910,17 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			for j, sub_obj in enumerate(json_fab["PrefabObjects"]):
 				primary_mesh = ""
-				if len(sub_obj["MeshData"]) != 0:
+				# primary_mesh_index = -1
+				if sub_obj["MeshData"]:
 					primary_mesh = sub_obj["MeshData"][0]["MeshPath"]
-
-				print(sub_obj["MeshData"])
+					# primary_mesh_index = sub_obj["MeshData"][0]["MeshID"]
 
 				sub_obj_dict = {
 					"parent_idx": sub_obj["ParentID"],
 					"flags": sub_obj["Flags"],
 					"animation": sub_obj["Animation"],
 					"primary_mesh": primary_mesh,
+					# "primary_mesh_index": primary_mesh_index,
 					"position": sub_obj["Position"],
 					"rotation": sub_obj["Rotation"],
 					"scale": sub_obj["Scale"],
@@ -923,7 +930,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				to_merge = []
 				for mesh_data in sub_obj["MeshData"]:
-					to_merge.append((mesh_data["MeshPath"], mesh_data["MaterialID"]))
+					to_merge.append((mesh_data["MeshPath"], mesh_data["MeshID"], mesh_data["MaterialID"]))
 
 					if mesh_data["MaterialID"] not in materials_to_import:
 						materials_to_import.append(mesh_data["MaterialID"])
@@ -953,63 +960,137 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# for mat in materials_to_import:
 		# 	print(mat)
 
-		
 
-		already_merged = []
+		new_global_scale = 1 / 100 # WorldScale
 
-		for mesh_data in meshes_to_merge:
-			print(mesh_data)
-			if not mesh_data:
-				continue
-			
-			primary_mesh = mesh_data[0][0]
-			new_obj_name = primary_mesh[:-4]
+		obj_file_import_mode = 0
 
-			existing_object = bpy.data.objects.get(new_obj_name)
-			if existing_object is not None:
-				if existing_object.type == 'MESH':
+		if obj_file_import_mode == 0:
+
+			bpy.ops.object.select_all(action='DESELECT')
+			view_layer = bpy.context.view_layer
+			view_layer.active_layer_collection = view_layer.layer_collection # "Scene Collection"
+
+			# obj_file_paths = [models_folder_path + pth for pth in next(os.walk(models_folder_path))[2]]
+			obj_files = next(os.walk(models_folder_path))[2]
+			obj_files = sorted(obj_files, key=natural_key)
+			new_obj_objects = []
+			for path in obj_files:
+				bpy.ops.wm.obj_import(filepath=models_folder_path + path, global_scale=new_global_scale)
+				new_obj = bpy.context.view_layer.objects.active
+				new_obj_objects.append(new_obj)
+
+
+			[obj.select_set(True) for obj in new_obj_objects]
+			# bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
+			bpy.ops.object.rotation_clear()
+			bpy.ops.object.transform_apply(location=False)
+			bpy.ops.object.select_all(action='DESELECT')
+
+			already_merged = []
+
+			for mesh_data in meshes_to_merge:
+				if not mesh_data:
+					continue
+				
+				primary_mesh = mesh_data[0][0]
+				new_obj_name = primary_mesh[:-4]
+
+				# existing_object = bpy.data.objects.get(new_obj_name)
+				# if existing_object is not None:
+				# 	if existing_object.type == 'MESH':
+				# 		continue
+
+				if new_obj_name in already_merged:
+					continue
+				
+				if len(mesh_data) != 1:
+					objs_to_merge = [new_obj_objects[mesh_path[1]] for mesh_path in mesh_data]
+					bpy.context.view_layer.objects.active = objs_to_merge[0]
+					[obj.select_set(True) for obj in objs_to_merge]
+					bpy.ops.object.join()
+					new_obj = bpy.context.view_layer.objects.active
+				else:
+					#bpy.context.view_layer.objects.active = new_obj_objects[mesh_data[0][1]]
+					new_obj = new_obj_objects[mesh_data[0][1]]
+
+				new_obj.name = new_obj_name
+				new_obj.data.name = new_obj_name
+
+				# print(new_obj.name, new_obj_name)
+				if new_obj.name != new_obj_name:
+					print("OH OH")
+					return ""
+
+				scene_collection.objects.unlink(new_obj)
+
+				already_merged.append(new_obj_name)
+
+
+
+			# print("aaaaaaaa")
+			# return "aaaaaaaaa"
+
+
+		elif obj_file_import_mode == 1:
+			already_merged = []
+
+			for mesh_data in meshes_to_merge:
+				#print(mesh_data)
+				if not mesh_data:
+					continue
+				
+				primary_mesh = mesh_data[0][0]
+				new_obj_name = primary_mesh[:-4]
+
+				existing_object = bpy.data.objects.get(new_obj_name)
+				if existing_object is not None:
+					if existing_object.type == 'MESH':
+						continue
+
+				if new_obj_name in already_merged:
 					continue
 
-			if new_obj_name in already_merged:
-				continue
+				initial_obj_count = len(bpy.data.objects)
+				new_obj_count = 0
 
-			initial_obj_count = len(bpy.data.objects)
-			new_obj_count = 0
+				objs_to_merge = []
+				for mesh_path in mesh_data:
+					bpy.ops.wm.obj_import(filepath=models_folder_path + mesh_path[0], global_scale=new_global_scale)
 
-			new_objs = []
-			for mesh_path in mesh_data:
-				bpy.ops.wm.obj_import(filepath=models_folder_path + mesh_path[0])
-
-				if len(bpy.data.objects) != initial_obj_count + new_obj_count:
-					# new_obj = bpy.context.active_object
 					new_obj = bpy.context.view_layer.objects.active
-					new_obj.scale = new_obj.scale / 100
-					bpy.ops.object.rotation_clear(clear_delta=False)
-					bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 					active_collection.objects.unlink(new_obj)
-					new_obj_count += 1
-				else:
-					print(f"ERROR!!! Invalid .obj file {models_folder_path + mesh_path[0]}")
-					return "OH OH"
-					#new_obj = bpy.data.objects.new(f"mesh{i:03d}_{new_obj_name}"[:], None)
 
-				new_objs.append(new_obj)
+					# if len(bpy.data.objects) != initial_obj_count + new_obj_count:
+					# 	new_obj = bpy.context.view_layer.objects.active
+					# 	active_collection.objects.unlink(new_obj)
+					# 	new_obj_count += 1
+					# else:
+					# 	print(f"ERROR!!! Invalid .obj file {models_folder_path + mesh_path[0]}")
+					# 	return "OH OH"
 
-				scene_collection.objects.link(new_obj)
+					objs_to_merge.append(new_obj)
 
-			if len(mesh_data) != 1:
-				bpy.context.view_layer.objects.active = new_objs[0]
-				for obj in new_objs:
-					obj.select_set(True)
-				bpy.ops.object.join()
+					scene_collection.objects.link(new_obj)
 
-			new_obj = bpy.context.view_layer.objects.active
-			new_obj.name = new_obj_name
-			new_obj.data.name = new_obj_name
+				if len(objs_to_merge) != 1:
+					bpy.context.view_layer.objects.active = objs_to_merge[0]
+					# for obj in new_objs:
+					# 	obj.select_set(True)
+					[obj.select_set(True) for obj in objs_to_merge]
+					bpy.ops.object.join()
 
-			scene_collection.objects.unlink(new_obj)
+				new_obj = bpy.context.view_layer.objects.active
+				new_obj.name = new_obj_name
+				new_obj.data.name = new_obj_name
+				bpy.ops.object.rotation_clear()
+				bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-			already_merged.append(new_obj_name)
+				scene_collection.objects.unlink(new_obj)
+
+				already_merged.append(new_obj_name)
+
+		#return "hmm"
 
 		root_layer_collection = bpy.context.view_layer.layer_collection
 		for prefab_collection in prefab_collections:
@@ -1018,7 +1099,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			current_new_objs = []
 			for j, sub_obj in enumerate(prefab_collection[1]):
 				primary_mesh = sub_obj["primary_mesh"]
-				
+
 				if not primary_mesh:
 					mesh = bpy.data.meshes.new("Empty Mesh")
 					new_obj = bpy.data.objects.new("Empty Mesh", mesh)
@@ -1030,17 +1111,19 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					new_obj_name = primary_mesh[:-4]
 					new_obj = bpy.data.objects.get(new_obj_name)
 
+				# print("   ", primary_mesh, new_obj_name, new_obj.name, new_prefab_collection.name)
+
 				current_new_objs.append(new_obj)
 
-				print("parent_idx:  --- ", sub_obj["parent_idx"])
-				print("flags:  --- ", sub_obj["flags"])
-				print("animation:  --- ", sub_obj["animation"])
-				print("primary_mesh:  --- ", sub_obj["primary_mesh"])
-				print("position:  --- ", sub_obj["position"])
-				print("rotation:  --- ", sub_obj["rotation"])
-				print("scale:  --- ", sub_obj["scale"])
-				print("include_animation:  --- ", sub_obj["include_animation"])
-				print("include_matrix:  --- ", sub_obj["include_matrix"])
+				# print("parent_idx:  --- ", sub_obj["parent_idx"])
+				# print("flags:  --- ", sub_obj["flags"])
+				# print("animation:  --- ", sub_obj["animation"])
+				# print("primary_mesh:  --- ", sub_obj["primary_mesh"])
+				# print("position:  --- ", sub_obj["position"])
+				# print("rotation:  --- ", sub_obj["rotation"])
+				# print("scale:  --- ", sub_obj["scale"])
+				# print("include_animation:  --- ", sub_obj["include_animation"])
+				# print("include_matrix:  --- ", sub_obj["include_matrix"])
 
 				if sub_obj["include_matrix"]:
 					new_obj.location = Vector(sub_obj["position"]) / 100 # WorldScale
@@ -1059,9 +1142,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			layer_collection = get_layer_collection(root_layer_collection, new_prefab_collection.name)
 			layer_collection.exclude = True
-			#layer_collection.hide_viewport = True
+			# #layer_collection.hide_viewport = True # not needed
 
-
+		# return ""
 
 
 		### Import Instances
@@ -1558,7 +1641,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 	def execute(self, context):
 		
-		WORLD_IMPORT_TIME_START = time.time()
+		import_time_start = time.time()
 		if bpy.context.mode != 'OBJECT':
 			bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
@@ -1576,6 +1659,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			project_mode = "JSON"
 
 			test = self.import_json()
+
+			print("seconds:", time.time() - import_time_start)
 
 			self.report({'INFO'}, "Imported")
 

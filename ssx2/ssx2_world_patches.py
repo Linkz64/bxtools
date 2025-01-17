@@ -2,12 +2,10 @@ import bpy, bmesh
 from bpy.utils import register_class, unregister_class
 from mathutils import Vector, Matrix
 
-from ..external.ex_utils import prop_split
-from ..general.blender_get_data import get_uvs_per_verts#get_uvs
+# from ..general.blender_get_data import get_uvs_per_verts
 from ..general.blender_set_data import set_patch_material, set_patch_object, set_patch_control_grid
 from ..general.bx_utils import *
 
-from ..panels import SSX2_Panel
 from .ssx2_world_io_in import *
 
 
