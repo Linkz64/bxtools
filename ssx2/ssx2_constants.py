@@ -179,3 +179,12 @@ indices_for_control_grid = [ # 4x4 grid (3x3 faces)
 	(4, 8, 9, 5), (5, 9, 10, 6), (6, 10, 11, 7),
 	(8, 12, 13, 9), (9, 13, 14, 10), (10, 14, 15, 11),
 ]
+
+
+### Prefabs & Instances
+
+enum_ssx2_instance_group = (
+	('NONE',  "None",  "No grouping"),
+	('BATCH', "Batch", "Group into collections by a set amount"),
+	('NAME',  "Name",  "Group into collections by name")
+)
