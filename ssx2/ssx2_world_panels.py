@@ -219,7 +219,7 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 
 		col.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
 		
-		col.operator(SSX2_OP_Patch_Slide_V.bl_idname, text="Slide V", icon='ADD')
+		col.operator(SSX2_OP_Patch_Slide_V.bl_idname, text="Slide V", icon='ARROW_LEFTRIGHT')
 
 		#layout.label(text="Other")
 		col.separator()
