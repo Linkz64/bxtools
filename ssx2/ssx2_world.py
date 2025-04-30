@@ -986,9 +986,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		print("\nImporting .obj files")
 
-		obj_file_import_mode = 0
+		obj_file_import_mode = 1
 
 		if obj_file_import_mode == 0:
+
+			import_obj_files_time_start = time.time()
 
 			# obj_files = next(os.walk(models_folder_path))[2]
 			# len(obj_files) == 0: ERROR!!!
@@ -1006,12 +1008,14 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_obj = bpy.context.view_layer.objects.active
 				new_obj_objects.append(new_obj)
 
+			print("importing .obj files took", import_obj_files_time_start - time.time())
 
 			[obj.select_set(True) for obj in new_obj_objects]
 			# bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
 			bpy.ops.object.rotation_clear()
 			bpy.ops.object.transform_apply(location=False)
 			bpy.ops.object.select_all(action='DESELECT')
+			
 
 			already_merged = []
 
@@ -1051,12 +1055,6 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				scene_collection.objects.unlink(new_obj)
 
 				already_merged.append(new_obj_name)
-
-
-
-			# print("aaaaaaaa")
-			# return "aaaaaaaaa"
-
 
 		elif obj_file_import_mode == 1:
 			already_merged = []
@@ -1116,10 +1114,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				already_merged.append(new_obj_name)
 
-		#return "hmm"
 
 
-		print("\nBXT Linking models to prefab collections")
+
+		print("\nLinking models to prefab collections")
 
 		root_layer_collection = bpy.context.view_layer.layer_collection
 
@@ -1697,6 +1695,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 	def execute(self, context):
 		
 		import_time_start = time.time()
+
 		if bpy.context.mode != 'OBJECT':
 			bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 

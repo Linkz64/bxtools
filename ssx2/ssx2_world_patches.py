@@ -1,6 +1,9 @@
 import bpy, bmesh
 from bpy.utils import register_class, unregister_class
 from mathutils import Vector, Matrix
+import gpu
+from gpu_extras.batch import batch_for_shader
+from bpy_extras import view3d_utils
 
 # from ..general.blender_get_data import get_uvs_per_verts
 from ..general.blender_set_data import set_patch_material, set_patch_object, set_patch_control_grid
@@ -286,7 +289,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 	# 	active_object = context.active_object
 	# 	return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
 	# 	(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
-   	# 	or active_object.ssx2_CurveMode == 'CAGE'))
+	# 	or active_object.ssx2_CurveMode == 'CAGE'))
 	
 	def execute(self, context):
 		global glob_obj_pch
@@ -1682,7 +1685,7 @@ class SSX2_OP_CopyMaterialToSelected(bpy.types.Operator):
 		active_object = context.active_object
 		return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
 		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
-   		or active_object.ssx2_CurveMode == 'CAGE'))
+		or active_object.ssx2_CurveMode == 'CAGE'))
 	
 	def execute(self, context):
 		active_object = context.active_object
@@ -1746,7 +1749,7 @@ class SSX2_OP_CopyPatchUVsToSelected(bpy.types.Operator):
 		active_object = context.active_object
 		return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
 		(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
-   		or active_object.ssx2_CurveMode == 'CAGE'))
+		or active_object.ssx2_CurveMode == 'CAGE'))
 
 	def execute(self, context):
 		active_object = context.active_object
@@ -1784,7 +1787,7 @@ class SSX2_OP_AddCageVGuide(bpy.types.Operator):
 		active_object = context.active_object
 		# return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
 		# (active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
-   		# or active_object.ssx2_CurveMode == 'CAGE'))
+		# or active_object.ssx2_CurveMode == 'CAGE'))
 		return ((len(bpy.context.selected_objects) != 0) and 
 			(active_object is not None) and 
 			(active_object.ssx2_CurveMode == 'CAGE'))
@@ -1939,6 +1942,353 @@ class SSX2_OP_AddCageVGuide(bpy.types.Operator):
 
 
 
+class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
+	bl_idname = "object.ssx2_slide_v"
+	bl_label = "Slide V"
+	bl_description = ""
+	bl_options = {'REGISTER', 'UNDO'}
+
+	def __init__(self):
+		self._handle = None
+		self.all_coords = []
+		
+		self.sel_co = Vector() # selected point coordinate
+		self.tar_co = Vector() # target point coordinate
+		self.preview_co = Vector()
+
+		self.selected_uv = None
+		self.target_spline_idx = None
+		
+		self.cursor_initial = Vector()
+		self.cursor_offset = Vector()
+		self.cur_init_x = 0
+		self.cur_global_x = 0.0
+		self.CUR_SPEED_DEFAULT = 0.02
+		self.CUR_SPEED_SLOWED = 0.002
+		self.cur_speed = self.CUR_SPEED_DEFAULT
+		self.flip_offset = 1.0
+		
+		self.obj = None
+		self.dat = None
+		self.mtx = Matrix()
+		
+		self.clamp_mode = False
+		self.header_string = ""
+
+	def invoke(self, context, event):
+		
+		# invoke is also like init but happens right after __init__
+		# and has context and event
+		
+		self.obj = bpy.context.active_object
+		self.mtx = self.obj.matrix_world
+		
+		if not self.obj.type == 'CURVE':
+			self.report({'WARNING'}, "Not a curve object!")
+			return {'CANCELLED'}
+		
+		self.dat = self.obj.data
+		self.all_coords = [self.mtx @ p.co for spline in self.dat.splines for p in spline.bezier_points]
+		
+		
+		if not self.all_coords:
+			self.report({'WARNING'}, "No Bézier points found!")
+			return {'CANCELLED'}
+		
+		num_splines = len(self.dat.splines)
+		num_u = len(self.dat.splines[0].bezier_points)
+		#num_total = num_splines * num_u
+		
+
+		# todo: give error if multiple are selected
+		# or allow multiple
+		found_selected = False
+		for i, spline in enumerate(self.dat.splines):
+			for j, p in enumerate(spline.bezier_points):
+				if p.select_control_point:
+					self.sel_co = p.co
+					self.selected_uv = [i, j]
+					
+					if i == 0:
+						self.tar_co = self.dat.splines[1].bezier_points[j].co
+						self.target_spline_idx = 1
+					elif i == 1:
+						self.tar_co = self.dat.splines[0].bezier_points[j].co
+						self.target_spline_idx = 0
+					elif i == 2:
+						self.tar_co = self.dat.splines[3].bezier_points[j].co
+						self.target_spline_idx = 3
+					elif i == 3:
+						self.tar_co = self.dat.splines[2].bezier_points[j].co
+						self.target_spline_idx = 2
+					else:
+						print("!!! too many splines")
+						return {'CANCELLED'}
+
+					
+					found_selected = True
+					break
+				
+			if found_selected:
+				break
+		
+		if not found_selected:
+			self.report({'WARNING'}, "No points selected!")
+			return {'CANCELLED'}
+		
+		print(self.sel_co, self.tar_co)
+		
+
+
+		context.area.header_text_set("(C) Clamp: False")
+
+
+		# for window in bpy.context.window_manager.windows:
+		# 	self.screen_width, self.screen_height = window.width, window.height
+		# 	print(self.screen_width, self.screen_height)
+		self.screen_width = context.window.width
+		self.screen_height = context.window.height
+		context.window.cursor_warp(self.screen_width//2, self.screen_height//2)
+
+		#context.window.cursor_modal_set("SCROLL_X") # this only works in object mode
+		# maybe limit it to object mode
+
+		#self.cursor_initial = Vector((event.mouse_x, event.mouse_y, 0.0))
+		self.cursor_initial = Vector((self.screen_width // 2, self.screen_height // 2, 0.0))
+		#self.cur_init_x = event.mouse_x
+		#self.cur_global_x = self.cur_init_x - event.mouse_x
+		#self.prev_x = event.mouse_x
+
+		
+		if context.area.type == 'VIEW_3D':
+			args = (self, )
+			self._handle = bpy.types.SpaceView3D.draw_handler_add(self.draw_callback, args, 'WINDOW', 'POST_VIEW')
+			context.window_manager.modal_handler_add(self)
+			context.area.tag_redraw()
+			return {'RUNNING_MODAL'}
+		else:
+			self.report({'ERROR'}, "3D Viewport not found")
+			return {'CANCELLED'}
+
+
+
+	def modal(self, context, event):
+		if event.type in {'MOUSEMOVE', 'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'NDOF_MOTION'}:
+			self.cursor_offset = (self.cursor_initial - Vector((event.mouse_x, event.mouse_y, 0.0))) * self.cur_speed#0.02
+			context.area.tag_redraw()
+
+			print(self.cursor_offset.x)
+
+
+			if False:
+				window = context.window
+				screen_width = window.width
+				screen_height = window.height
+				mouse_x = event.mouse_x
+				mouse_y = event.mouse_y
+				warp_margin = 2
+
+				new_x, new_y = mouse_x, mouse_y
+				wrapped = False
+
+				if mouse_x <= warp_margin:
+					new_x = screen_width - warp_margin - 1
+					wrapped = True
+				elif mouse_x >= screen_width - warp_margin:
+					new_x = warp_margin + 1
+					wrapped = True
+
+				if mouse_y <= warp_margin:
+					new_y = screen_height - warp_margin - 1
+					wrapped = True
+				elif mouse_y >= screen_height - warp_margin:
+					new_y = warp_margin + 1
+					wrapped = True
+
+				if wrapped:
+					context.window.cursor_warp(new_x, new_y)
+				else:
+
+					# this method seems to have inconsistent speeds
+					# either revert to the old method or find a new one
+
+					# maybe every time theres a warp i should add the screen width to it
+
+					# if event.mouse_x > self.prev_x:
+					# 	self.cur_global_x += 1
+					# elif event.mouse_x < self.prev_x:
+					# 	self.cur_global_x -= 1
+					# self.prev_x = event.mouse_x
+					pass
+
+			return {'PASS_THROUGH'}
+		
+		if event.type == 'C' and event.value == 'RELEASE':
+			self.clamp_mode = not self.clamp_mode
+			self.header_string = f"(C) Clamp: {self.clamp_mode}"
+
+			# context.window.cursor_warp(self.screen_width//2, self.screen_height//2)
+			#self.cursor_initial = Vector((self.screen_width // 2, self.screen_height // 2, 0.0))
+
+			print("Clamp:", self.clamp_mode)
+
+			context.area.header_text_set(self.header_string)
+
+		if event.type == 'LEFT_SHIFT':
+			if event.value == 'PRESS':
+				self.cur_speed = self.CUR_SPEED_SLOWED
+			elif event.value == 'RELEASE':
+				self.cur_speed = self.CUR_SPEED_DEFAULT
+
+		if event.type == 'RIGHTMOUSE' or event.type == 'ESC':
+			self.clean_up(context)
+			print("Cancelled")
+			return {'CANCELLED'}
+
+		if event.type == 'LEFTMOUSE' and event.value == 'RELEASE':
+			self.clean_up(context)
+			self.finish(context)
+			return {'FINISHED'}
+
+		return {'RUNNING_MODAL'}
+
+	def finish(self, context):                             # FINISH FINISH FINISH FINISH FISH FISHING A FINISH FISH
+		#print(self.selected_uv, self.target_spline_idx)
+		#print(self.preview_co, self.tar_co)
+
+		target_u = self.selected_uv[1]
+
+		if False:
+			distance = ((self.mtx @ self.tar_co) - self.preview_co).length
+			direction = (self.tar_co - self.sel_co).normalized()
+
+			target_u = self.selected_uv[1]
+			bez_B = self.dat.splines[self.target_spline_idx].bezier_points[target_u]
+			tar_left_handle = bez_B.handle_left
+			tar_right_handle = bez_B.handle_right
+
+			bez_A = self.dat.splines[self.selected_uv[0]].bezier_points[self.selected_uv[1]]
+			bez_A.co = self.mtx.inverted() @ self.preview_co
+
+			direction_left = (bez_A.handle_left - tar_left_handle).normalized() * distance
+			direction_right = (bez_A.handle_right - tar_right_handle).normalized() * distance
+
+			bez_A.handle_left = tar_left_handle + direction_left
+			bez_A.handle_right = tar_right_handle + direction_right
+
+
+
+		A = self.sel_co
+		B = self.mtx.inverted() @ self.preview_co
+		C = self.tar_co
+
+		AC = C - A
+		AB = B - A
+
+		t = AB.dot(AC) / AC.length_squared
+
+		bez_A = self.dat.splines[self.selected_uv[0]].bezier_points[self.selected_uv[1]]
+		bez_B = self.dat.splines[self.target_spline_idx].bezier_points[target_u]
+
+		left_mode_initial =  bez_A.handle_left_type
+		right_mode_initial =  bez_A.handle_right_type
+		bez_A.handle_left_type = 'FREE'
+		bez_A.handle_right_type = 'FREE'
+
+		bez_A.co = self.mtx.inverted() @ self.preview_co
+
+		new_left_local = bez_A.handle_left - bez_B.handle_left
+		bez_A.handle_left = bez_A.handle_left + (-new_left_local * t)
+
+		new_right_local = bez_A.handle_right - bez_B.handle_right
+		bez_A.handle_right = bez_A.handle_right + (-new_right_local * t)
+
+
+		
+		# have to switch to FREE and back otherwise blender
+		# places the handles wherever it wants.
+
+		bez_A.handle_left_type = left_mode_initial
+		bez_A.handle_right_type = right_mode_initial
+
+
+		print("Finished")
+
+
+	def clean_up(self, context):
+		context.area.header_text_set(None)
+		#context.window.cursor_modal_set("DEFAULT")
+		context.window.cursor_modal_restore()
+
+		if self._handle:
+			bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+			self._handle = None
+		context.area.tag_redraw()
+
+	def calc_flip_offset(self, context):
+		region = context.region
+		rv3d = context.region_data
+
+		if region and rv3d:
+			sel_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.sel_co)
+			tar_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.tar_co)
+
+			if sel_screen_co and tar_screen_co:
+				if sel_screen_co.x > tar_screen_co.x:
+					return 1.0
+
+		# maybe i should make it so moving right is always towards target
+
+		return -1.0
+
+
+	def draw_callback(self, context):
+		shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+		
+		if True:
+			#batch = batch_for_shader(shader, 'POINTS', {"pos": self.all_coords})
+			batch = batch_for_shader(shader, 'POINTS', {"pos": [self.mtx @ self.sel_co, self.mtx @ self.tar_co]})
+			gpu.state.blend_set('ALPHA')
+			gpu.state.point_size_set(6.0)
+			shader.bind()
+			shader.uniform_float("color", (0.0, 1.0, 0.0, 1.0)) # green
+			batch.draw(shader)
+		
+		
+		#cur_offset = (self.cur_global_x * self.cur_speed) * (-self.calc_flip_offset(bpy.context))
+		cur_offset = self.cursor_offset.x * self.calc_flip_offset(bpy.context)
+
+		direction = (self.tar_co - self.sel_co).normalized()
+		self.preview_co = self.sel_co + (direction * cur_offset)
+		
+		# if self.clamp_mode == 1:
+		# 	distance_to_target = (self.tar_co - self.sel_co).length
+		# 	clamped_offset = min(cur_offset, distance_to_target)
+		# 	self.preview_co = self.sel_co + direction * clamped_offset
+		
+		if self.clamp_mode:
+			distance_to_target = (self.tar_co - self.sel_co).length
+			clamped_offset = max(min(cur_offset, distance_to_target), 0)
+			self.preview_co = self.sel_co + direction * clamped_offset
+
+		
+		self.preview_co = self.mtx @ self.preview_co
+		
+		preview_coords = [self.preview_co]
+		preview_batch = batch_for_shader(shader, 'POINTS', {"pos": preview_coords})
+		gpu.state.point_size_set(12.0)
+		shader.bind()
+		shader.uniform_float("color", (1.0, 0.0, 0.0, 1.0)) # red
+		preview_batch.draw(shader)
+		
+		gpu.state.blend_set('NONE')
+
+
+
+
+
+
+
 ### PropertyGroups
 
 class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
@@ -1983,7 +2333,9 @@ classes = (
 	SSX2_OP_AddSplineCage,
 	SSX2_OP_AddPatchMaterial,
 	SSX2_OP_AddCageVGuide,
+	SSX2_OP_Patch_Slide_V,
 	SSX2_OP_SendMaterialToModifier,
+
 
 	SSX2_PatchPropGroup,
 

@@ -28,6 +28,7 @@ from .ssx2_world_patches import (
 	SSX2_OP_AddPatchMaterial,
 	SSX2_OP_AddCageVGuide,
 	SSX2_OP_SendMaterialToModifier,
+	SSX2_OP_Patch_Slide_V,
 	SSX2_OP_ToggleControlGrid,
 	SSX2_OP_CageToPatch,
 	SSX2_OP_FlipSplineOrder,
@@ -218,6 +219,8 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 
 		col.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
 		
+		col.operator(SSX2_OP_Patch_Slide_V.bl_idname, text="Slide V", icon='ADD')
+
 		#layout.label(text="Other")
 		col.separator()
 		prop_split(col, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
