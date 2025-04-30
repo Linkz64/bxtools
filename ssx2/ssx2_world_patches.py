@@ -1951,40 +1951,30 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 	def __init__(self):
 		self._handle = None
 		self.all_coords = []
-		
-		self.sel_co = Vector() # selected point coordinate
-		self.tar_co = Vector() # target point coordinate
-		self.preview_co = Vector()
-
 		self.all_selected_co = []
 		self.all_target_co = []
 		self.all_slide_co = []
 		self.all_selected_indices = []
 
-		self.selected_uv = None
 		self.target_spline_idx = None
+		self.num_selected = -1
 		
 		self.cursor_initial = Vector()
 		self.cursor_offset = Vector()
-		self.cur_init_x = 0
-		self.cur_global_x = 0.0
+		#self.cur_init_x = 0
+		#self.cur_global_x = 0.0
 		self.CUR_SPEED_DEFAULT = 0.02
 		self.CUR_SPEED_SLOWED = 0.002
 		self.cur_speed = self.CUR_SPEED_DEFAULT
-		self.flip_offset = 1.0
 		
 		self.obj = None
 		self.dat = None
 		self.mtx = Matrix()
 		
-		self.clamp_mode = False
-		self.header_string = ""
+		self.clamp_mode = True
 
 	def invoke(self, context, event):
 		print("\nStarting")
-		
-		# invoke is also like init but happens right after __init__
-		# and has context and event
 		
 		self.obj = bpy.context.active_object
 		self.mtx = self.obj.matrix_world
@@ -2003,47 +1993,35 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		
 		num_splines = len(self.dat.splines)
 		num_u = len(self.dat.splines[0].bezier_points)
-		#num_total = num_splines * num_u
-		
 
-		# todo: give error if multiple are selected
-		# or allow multiple
 		found_selected = False
 		for i, spline in enumerate(self.dat.splines):
 			for j, p in enumerate(spline.bezier_points):
 				if p.select_control_point:
-					self.all_selected_co.append(p.co) # self.sel_co = p.co
+					self.all_selected_co.append(p.co)
 					self.all_selected_indices.append(j)
 					self.selected_spline_index = i
-					#self.selected_uv = [i, j]
 					
 					if i == 0:
-						#self.tar_co = self.dat.splines[1].bezier_points[j].co
 						self.all_target_co.append(self.dat.splines[1].bezier_points[j].co)
 						self.target_spline_idx = 1
 					elif i == 1:
-						# self.tar_co = self.dat.splines[0].bezier_points[j].co
 						self.all_target_co.append(self.dat.splines[0].bezier_points[j].co)
 						self.target_spline_idx = 0
 					elif i == 2:
-						# self.tar_co = self.dat.splines[3].bezier_points[j].co
 						self.all_target_co.append(self.dat.splines[3].bezier_points[j].co)
 						self.target_spline_idx = 3
 					elif i == 3:
-						# self.tar_co = self.dat.splines[2].bezier_points[j].co
 						self.all_target_co.append(self.dat.splines[2].bezier_points[j].co)
 						self.target_spline_idx = 2
 					else:
 						self.report({'WARNING'}, "Too many splines. Not supported yet.")
 						return {'CANCELLED'}
 
-					
 					found_selected = True
-					#break
 
 				if found_selected and j == num_u - 1:
 					break
-
 			
 			if found_selected:
 				break
@@ -2053,8 +2031,9 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 			return {'CANCELLED'}
 		
 		self.all_slide_co = [co for co in self.all_selected_co]
+		self.num_selected = len(self.all_selected_co)
 
-		context.area.header_text_set("(C) Clamp: False")
+		context.area.header_text_set(f"(C) Clamp: {self.clamp_mode}")
 		context.window.cursor_modal_set("SCROLL_X")
 
 		# for window in bpy.context.window_manager.windows:
@@ -2076,16 +2055,19 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		for i, sel_co in enumerate(self.all_selected_co):
 			tar_co = self.all_target_co[i]
 
-			distance = (tar_co - self.sel_co).length
-			print("    DISTANCE:", distance)
+			distance = (tar_co - sel_co).length
+			print("temp distance:", distance)
 			if distance > biggest_distance:
-				print("Yeah")
 				biggest_distance = distance
 				self.biggest_distance_index = i
+				print("Set new biggest")
 
 		self.biggest_selected = self.all_selected_co[self.biggest_distance_index]
 		self.biggest_target = self.all_target_co[self.biggest_distance_index]
-		self.direction = (self.biggest_target - self.biggest_selected).normalized()
+		self.biggest_direction = (self.biggest_target - self.biggest_selected).normalized()
+
+		print("\tDistance:", biggest_distance)
+		print("\tDirection:", self.biggest_direction)
 
 		
 		if context.area.type == 'VIEW_3D':
@@ -2101,54 +2083,24 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 
 
 	def modal(self, context, event):
+		context.window.cursor_modal_set("SCROLL_X")
+
 		if event.type in {'MOUSEMOVE', 'MIDDLEMOUSE', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE', 'NDOF_MOTION'}:
 			self.cursor_offset = (self.cursor_initial - Vector((event.mouse_x, event.mouse_y, 0.0))) * self.cur_speed#0.02
 			
-
-
-
-			cur_offset = self.cursor_offset.x * -self.calc_flip_offset(bpy.context)
+			cur_offset = self.cursor_offset.x * self.calc_flip_offset(bpy.context)
 			
-			# old method without squeezing
-			if False:
-				for i, sel_co in enumerate(self.all_selected_co):
-
-					tar_co = self.all_target_co[i]
-
-					direction = (tar_co - sel_co).normalized()
-
-					temp_co = sel_co + (direction * cur_offset)
-					
-					if self.clamp_mode:
-						distance_to_target = (tar_co - sel_co).length
-						clamped_offset = max(min(cur_offset, distance_to_target), 0)
-						temp_co = sel_co + direction * clamped_offset
-
-					self.all_slide_co[i] = self.mtx @ temp_co
-
-
-
-			
-			
-
-			
-
-			
-			temp_co = self.biggest_selected + (self.direction * cur_offset)
+			temp_slide = self.biggest_selected + (self.biggest_direction * cur_offset)
 
 			if self.clamp_mode:
 				distance_to_target = (self.biggest_target - self.biggest_selected).length
-				clamped_offset = max(min(cur_offset, distance_to_target), 0)
-				temp_co = self.biggest_selected + self.direction * clamped_offset
-
-			self.all_slide_co[self.biggest_distance_index] = self.mtx @ temp_co
-
-
-			biggest_slide = self.all_slide_co[self.biggest_distance_index]
+				#clamped_offset = max(min(cur_offset, distance_to_target), 0)
+				clamped_offset = min(cur_offset, distance_to_target)
+				temp_slide = self.biggest_selected + self.biggest_direction * clamped_offset
 
 
 			A = self.biggest_selected
-			B = self.mtx.inverted() @ biggest_slide
+			B = temp_slide
 			C = self.biggest_target
 
 			AC = C - A
@@ -2157,30 +2109,19 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 			t = AB.dot(AC) / AC.length_squared
 
 
-			for i, sel_co in enumerate(self.all_selected_co):
-
+			for i in range(self.num_selected):
 				selected_index = self.all_selected_indices[i]
 
 				bez_A = self.dat.splines[self.selected_spline_index].bezier_points[selected_index]
 				bez_B = self.dat.splines[self.target_spline_idx].bezier_points[selected_index]
 				
 				new_co_local = bez_A.co - bez_B.co
-				self.all_slide_co[i] = self.mtx @ bez_A.co + (-new_co_local * t)
+				self.all_slide_co[i] = self.mtx @ (bez_A.co + (-new_co_local * t))
 
 
-
-
-
-
-
-
-
-			context.window.cursor_modal_set("SCROLL_X")
-			context.area.tag_redraw()
-
-			#print(self.cursor_offset.x)
 			
-
+			context.area.tag_redraw()
+			
 
 			# mouse cursor wrap around screen
 			if False:
@@ -2189,8 +2130,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 				# try the ctypes method.
 				# may be able to get the blender window position and size with
 				# context.window
-
-
+				
 				window = context.window
 				screen_width = window.width
 				screen_height = window.height
@@ -2235,14 +2175,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		
 		if event.type == 'C' and event.value == 'RELEASE':
 			self.clamp_mode = not self.clamp_mode
-			self.header_string = f"(C) Clamp: {self.clamp_mode}"
-
-			# context.window.cursor_warp(self.screen_width//2, self.screen_height//2)
-			#self.cursor_initial = Vector((self.screen_width // 2, self.screen_height // 2, 0.0))
-
-			print("Clamp:", self.clamp_mode)
-
-			context.area.header_text_set(self.header_string)
+			context.area.header_text_set(f"(C) Clamp: {self.clamp_mode}")
 
 		if event.type == 'LEFT_SHIFT':
 			if event.value == 'PRESS':
@@ -2262,32 +2195,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 
 		return {'RUNNING_MODAL'}
 
-	def finish(self, context):                             # FINISH FINISH FINISH FINISH FISH FISHING A FINNISH FISH
-
-
-		
-
-		if False:
-			target_u = self.selected_uv[1]
-			distance = ((self.mtx @ self.tar_co) - self.preview_co).length
-			direction = (self.tar_co - self.sel_co).normalized()
-
-			target_u = self.selected_uv[1]
-			bez_B = self.dat.splines[self.target_spline_idx].bezier_points[target_u]
-			tar_left_handle = bez_B.handle_left
-			tar_right_handle = bez_B.handle_right
-
-			bez_A = self.dat.splines[self.selected_uv[0]].bezier_points[self.selected_uv[1]]
-			bez_A.co = self.mtx.inverted() @ self.preview_co
-
-			direction_left = (bez_A.handle_left - tar_left_handle).normalized() * distance
-			direction_right = (bez_A.handle_right - tar_right_handle).normalized() * distance
-
-			bez_A.handle_left = tar_left_handle + direction_left
-			bez_A.handle_right = tar_right_handle + direction_right
-
-
-		
+	def finish(self, context):		
 		self.biggest_selected = self.all_selected_co[self.biggest_distance_index]
 		self.biggest_target = self.all_target_co[self.biggest_distance_index]
 		biggest_slide = self.all_slide_co[self.biggest_distance_index]
@@ -2350,8 +2258,8 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		rv3d = context.region_data
 
 		if region and rv3d:
-			sel_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.sel_co)
-			tar_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.tar_co)
+			sel_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.biggest_selected)
+			tar_screen_co = view3d_utils.location_3d_to_region_2d(region, rv3d, self.mtx @ self.biggest_target)
 
 			if sel_screen_co and tar_screen_co:
 				if sel_screen_co.x > tar_screen_co.x:
@@ -2365,16 +2273,14 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 	def draw_callback(self, context):
 		shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
 		
-		if True:
-			#combined = [self.mtx @ co for co in self.all_selected_co] + [self.mtx @ co for co in self.all_target_co]
-			combined = [self.mtx @ co for co in self.all_target_co]
-			batch = batch_for_shader(shader, 'POINTS', {"pos": combined})
-			gpu.state.blend_set('ALPHA')
-			gpu.state.point_size_set(5.0)
-			shader.bind()
-			shader.uniform_float("color", (0.0, 1.0, 0.0, 1.0)) # green
-			batch.draw(shader)
-		
+		#combined = [self.mtx @ co for co in self.all_selected_co] + [self.mtx @ co for co in self.all_target_co]
+		combined = [self.mtx @ co for co in self.all_target_co]
+		batch = batch_for_shader(shader, 'POINTS', {"pos": combined})
+		gpu.state.blend_set('ALPHA')
+		gpu.state.point_size_set(5.0)
+		shader.bind()
+		shader.uniform_float("color", (0.0, 1.0, 0.0, 1.0)) # green
+		batch.draw(shader)
 		
 		preview_batch = batch_for_shader(shader, 'POINTS', {"pos": self.all_slide_co})
 		gpu.state.point_size_set(5.0)
