@@ -1948,7 +1948,8 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 	bl_description = ""
 	bl_options = {'REGISTER', 'UNDO'}
 
-	def __init__(self):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 		self._handle = None
 		self.all_coords = []
 		self.all_selected_co = []
@@ -2281,7 +2282,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 
 
 	def draw_callback(self, context):
-		shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+		shader = gpu.shader.from_builtin('UNIFORM_COLOR')
 		
 		#combined = [self.mtx @ co for co in self.all_selected_co] + [self.mtx @ co for co in self.all_target_co]
 		combined = [self.mtx @ co for co in self.all_target_co]
