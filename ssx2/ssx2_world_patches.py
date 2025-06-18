@@ -2106,7 +2106,12 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 			AC = C - A
 			AB = B - A
 
-			t = AB.dot(AC) / AC.length_squared
+			_lensquared = AC.length_squared
+
+			if _lensquared == 0.0:
+				_lensquared = 1.0
+
+			t = AB.dot(AC) / _lensquared
 
 
 			for i in range(self.num_selected):
@@ -2207,7 +2212,12 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		AC = C - A
 		AB = B - A
 
-		t = AB.dot(AC) / AC.length_squared
+		_lensquared = AC.length_squared
+
+		if _lensquared == 0.0:
+			_lensquared = 1.0
+
+		t = AB.dot(AC) / _lensquared
 
 
 		for i, sel_co in enumerate(self.all_selected_co):

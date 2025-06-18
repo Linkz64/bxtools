@@ -342,6 +342,9 @@ def patch_points_encode(raw):
 
 	return encoded
 
+def calc_opposite_point_co(a, b):
+	return a + (-(b - a))
+
 ## Splines
 
 def calc_spline_segments(num_points): # segments of 4

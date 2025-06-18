@@ -1540,14 +1540,6 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		if io.importSplines: # <------------------------------- Import Splines
 			print("Importing Splines")
 
-			def opposite_point_co(middle, second):
-				# mx,my,mz = middle
-				# sx,sy,sz = second
-
-				# subtracted = Vector((sx - mx, .......))
-
-				return middle + (-(second - middle)) # current point + vector to second
-
 			collection = bpy.data.collections.get('Splines')
 			if collection is None:
 				collection = bpy.data.collections.new('Splines')
@@ -1637,7 +1629,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 								pt['right_co'] = point_next
 
 							if j+1 == len_merged_points:					# Final Point
-								pt['right_co'] = opposite_point_co(point_curr, point_prev)
+								pt['right_co'] = calc_opposite_point_co(point_curr, point_prev)
 								pt['left_co'] = point_prev
 
 								if point_prev == point_curr:
@@ -1647,7 +1639,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 									pt['left_type'] = 'ALIGNED'
 
 							if j == 0:											# First Point
-								pt['left_co'] = opposite_point_co(point_curr, point_next)
+								pt['left_co'] = calc_opposite_point_co(point_curr, point_next)
 								pt['right_type'] = 'ALIGNED'
 								pt['left_type'] = 'ALIGNED'
 
