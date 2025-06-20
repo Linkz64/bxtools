@@ -458,29 +458,24 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 		scene = bpy.context.scene
 		scene_collection = scene.collection
 
-		layout = bpy.data.screens.get("Layout")
-		outliner = None
-		if layout is not None:
-			for area in layout.areas:
+		for screen in bpy.data.screens:
+			for area in screen.areas:
 				if area.type == "OUTLINER":
-					outliner = area.spaces[0]
-					outliner.show_restrict_column_render = False
-					outliner.show_restrict_column_select = True
+					for space in area.spaces:
+						if space.type == 'OUTLINER':
+							space.show_restrict_column_render = False
+							space.show_restrict_column_select = True
 
-				if area.type == "VIEW_3D":
-					view = area.spaces[0]
-					view.clip_start = 0.5#0.1
-					view.clip_end = 2000
-					view.overlay.display_handle = 'ALL'
+				elif area.type == "VIEW_3D":
+					for space in area.spaces:
+						if space.type == 'VIEW_3D':
+							space.clip_start = 0.5
+							space.clip_end = 2000
+							space.overlay.display_handle = 'ALL'
 
-		#world = getset_collection_to_target("World", scene_collection)
 		getset_collection_to_target("Patches", scene_collection)
 		getset_collection_to_target("Splines", scene_collection)
 		getset_collection_to_target("Paths", scene_collection)
-
-		# view.clip_start = 0.5#0.1
-		# view.clip_end = 2000
-		# view.overlay.display_handle = 'ALL'
 
 		return {'FINISHED'}
 
