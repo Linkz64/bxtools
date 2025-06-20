@@ -672,8 +672,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			(s.bx_PlatformChoice == 'XBX' or s.bx_PlatformChoice == 'NGC' or\
 			s.bx_PlatformChoice == 'PS2' or s.bx_PlatformChoice == 'ICE')
 
-	def __init__(self, json_patches=[]):
-		self.json_patches = json_patches
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.json_patches = []
 		self.images = []
 
 		append_path = templates_append_path
@@ -2143,18 +2144,21 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						
 						if length != len(raw[1]):
 							self.report({'ERROR'}, f"Number of points must match on both splines {obj_name}")
+							bpy.ops.object.mode_set(mode="OBJECT")
 							bpy.ops.object.select_all(action='DESELECT')
 							set_active(obj)
 							return {'CANCELLED'}
 						elif length < 4:
 							# continue
 							self.report({'ERROR'}, f"Not enough bezier points in {obj_name}")
+							bpy.ops.object.mode_set(mode="OBJECT")
 							bpy.ops.object.select_all(action='DESELECT')
 							set_active(obj)
 							return {'CANCELLED'}
 						elif len(raw) == 0:
 							# continue
 							self.report({'ERROR'}, f"No bezier points in {obj_name}")
+							bpy.ops.object.mode_set(mode="OBJECT")
 							bpy.ops.object.select_all(action='DESELECT')
 							set_active(obj)
 							return {'CANCELLED'}
