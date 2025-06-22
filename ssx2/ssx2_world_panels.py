@@ -50,7 +50,7 @@ class SSX2_WorldPanel(SSX2_Panel):
 	def draw(self, context):
 		col = self.layout.column()
 		col.scale_y = 1.0
-		prop_split(col, context.scene, "bx_WorldScale", "World Scale")
+		#prop_split(col, context.scene, "bx_WorldScale", "World Scale")
 
 		io = context.scene.ssx2_WorldImportExportProps
 		if context.scene.bx_PlatformChoice != 'ICE':
