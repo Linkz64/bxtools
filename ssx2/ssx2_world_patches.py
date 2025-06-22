@@ -2323,8 +2323,6 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 	shrink           "Shrink UV"
 	fix_uv_repeat    "Fix UV repeat"
 	"""
-	# texMap: bpy.props.BoolProperty(name="Manual UVs", default=False,
-	# 	description="Manually enter UV values. Cannot be previewed")
 	texMap: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0),
 		min=-3.14159265359,
 		max=3.14159265359,
@@ -2337,7 +2335,7 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 	fixU: bpy.props.BoolProperty(name="Fix U Seam",default=False,description="")
 	fixV: bpy.props.BoolProperty(name="Fix V Seam",default=False,description="")
 	useManualUV: bpy.props.BoolProperty(name="Manual UVs", default=False,
-		description="Manually enter UV values. Cannot be previewed!")
+		description="Manually enter UV values.")
 	manualUV0: bpy.props.FloatVectorProperty(default=(0.0, 0.0),size=2,subtype='XYZ', precision=4)
 	manualUV1: bpy.props.FloatVectorProperty(default=(0.0, 1.0),size=2,subtype='XYZ', precision=4)
 	manualUV2: bpy.props.FloatVectorProperty(default=(1.0, 0.0),size=2,subtype='XYZ', precision=4)
