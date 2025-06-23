@@ -918,9 +918,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
 					prefabs_collection.children.link(new_group_col)
 
-
-			fab_collection["Unknown3"] = json_fab["Unknown3"]
-			fab_collection["AnimTime"] = json_fab["AnimTime"]
+			fab_collection.ssx2_PrefabCollectionProps.unknown3 = json_fab["Unknown3"]
+			fab_collection.ssx2_PrefabCollectionProps.anim_time = json_fab["AnimTime"]
 
 			sub_objs = []
 
@@ -1148,6 +1147,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				# print("scale:  --- ", sub_obj["scale"])
 				# print("include_animation:  --- ", sub_obj["include_animation"])
 				# print("include_matrix:  --- ", sub_obj["include_matrix"])
+
+				new_obj.ssx2_PrefabObjectProps.flags = sub_obj["flags"]
+				new_obj.ssx2_PrefabObjectProps.animated = sub_obj["include_animation"]
+				#if sub_obj["IncludeAnimation"]:
+					#sub_obj.ssx2_PrefabObjectProps.animation = sub_obj["Animation"]
 
 				if sub_obj["include_matrix"]:
 					new_obj.location = Vector(sub_obj["position"]) / 100 # WorldScale
@@ -2549,6 +2553,15 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
 	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
 
+class SSX2_WorldPrefabCollectionPropGroup(bpy.types.PropertyGroup):
+	unknown3: bpy.props.IntProperty(name="Unknown3")
+	anim_time: bpy.props.FloatProperty(name="AnimTime")
+
+class SSX2_WorldPrefabObjectPropGroup(bpy.types.PropertyGroup):
+	flags: bpy.props.BoolProperty(name="Flags")
+	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
+	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
+
 class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
 	# name: bpy.props.StringProperty(name="", subtype='NONE',
 	# 	description="Name of the event")
@@ -2613,6 +2626,8 @@ class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class 
 classes = (
 	SSX2_WorldImportExportPropGroup,
 	SSX2_WorldUIPropGroup,
+	SSX2_WorldPrefabCollectionPropGroup,
+	SSX2_WorldPrefabObjectPropGroup,
 	SSX2_WorldSplinePropGroup,
 	SSX2_WorldPathEventPropGroup,
 	SSX2_WorldPathPropGroup,
@@ -2643,6 +2658,8 @@ def ssx2_world_register():
 
 	bpy.types.Scene.ssx2_WorldImportExportProps = bpy.props.PointerProperty(type=SSX2_WorldImportExportPropGroup)
 	bpy.types.Scene.ssx2_WorldUIProps = bpy.props.PointerProperty(type=SSX2_WorldUIPropGroup)
+	bpy.types.Collection.ssx2_PrefabCollectionProps = bpy.props.PointerProperty(type=SSX2_WorldPrefabCollectionPropGroup)
+	bpy.types.Object.ssx2_PrefabObjectProps = bpy.props.PointerProperty(type=SSX2_WorldPrefabObjectPropGroup)
 	bpy.types.Object.ssx2_SplineProps = bpy.props.PointerProperty(type=SSX2_WorldSplinePropGroup)
 	bpy.types.Object.ssx2_PathProps = bpy.props.PointerProperty(type=SSX2_WorldPathPropGroup)
 	bpy.types.Object.ssx2_EmptyMode = bpy.props.EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
@@ -2657,6 +2674,8 @@ def ssx2_world_unregister():
 
 	del bpy.types.Scene.ssx2_WorldImportExportProps
 	del bpy.types.Scene.ssx2_WorldUIProps
+	del bpy.types.Collection.ssx2_PrefabCollectionProps
+	del bpy.types.Object.ssx2_PrefabObjectProps
 	del bpy.types.Object.ssx2_SplineProps
 	del bpy.types.Object.ssx2_PathProps
 
