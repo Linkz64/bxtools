@@ -67,26 +67,26 @@ enum_ssx2_spline_cage_type = (
 # )
 
 enum_ssx2_surface_type = ( # ? = to be checked # used by patches and splines
-	('0', "Reset",             "Resets the player position back to the nearest path point", 'FILE_REFRESH',           0),
-	('1', "Snow Main",         "Track Snow",                                                'FREEZE',                 1),
-	('2', "Snow Side",         "Snow Particles",                                            'FREEZE',                 2), # very faint sound, mainly on entry. i think
-	('3', "Snow Powder",       "Many Snow Particles, Player Sinks Slightly",                'VOLUME_DATA',            3),
-	('4', "Snow Powder Heavy", "Many Snow Particles, Player Sinks, Speed Decrease",         'OUTLINER_OB_VOLUME',     4), #BOIDS
-	('5', "Ice",               "Speed Increase, Slippery",                                  'META_CUBE',              5),
-	('6', "Rebound",           "Unrideable. Causes the player to bounce off",               'INDIRECT_ONLY_ON',       6),
-	('7', "Ice/Water",         "No Trail",                                                  'MOD_FLUIDSIM',           7), # MOD_FLUIDSIM MOD_OCEAN
-	('8', "Snow 5",            "Many Snow Particles",                                       'FREEZE',                 8),
-	('9', "Rock",              "Speed Decrease, Spark Particles. Rock Grinding Sounds",     'RNDCURVE',               9),
-	('10', "Rebound Rock",     "Unrideable. Causes the player to bounce off",               'INDIRECT_ONLY_ON',       10),
-	('11', "Unknown",          "No Trail, Ice Scraping Sound",                              'QUESTION',               11), # ?
-	('12', "Wood",             "No Trail, Wood Sounds?",                                    'SEQ_STRIP_DUPLICATE',    12),
-	('13', "Metal",            "Slippery, Speed Decrease, Metal Sounds, Spark Particles",   'OUTLINER_OB_LIGHTPROBE', 13),
-	('14', "Unknown 2",        "No Trail, Speed Increase, Scraping Sound",                  'QUESTION',               14),
-	('15', "Snow 6",           "Like standard snow?",                                       'FREEZE',                 15),
-	('16', "Sand",             "Standard Sand",                                             'SPHERECURVE',            16),
-	('17', "No Collision",     "Player passes through",                                     'GIZMO',                  17), # GIZMO GHOST_ENABLED # ghost confuses with invis
-	('18', "Metal/Ramp",       "Metal Sounds",                                              'OUTLINER_OB_LIGHTPROBE', 18),
-	('19', "Metal/Ramp 2",     "Metal Sounds",                                              'OUTLINER_OB_LIGHTPROBE', 19),
+	('0', "0 Reset",             "Resets the player position back to the nearest path point", 'FILE_REFRESH',           0),
+	('1', "1 Snow Main",         "Track Snow",                                                'FREEZE',                 1),
+	('2', "2 Snow Side",         "Snow Particles",                                            'FREEZE',                 2), # very faint sound, mainly on entry. i think
+	('3', "3 Snow Powder",       "Many Snow Particles, Player Sinks Slightly",                'VOLUME_DATA',            3),
+	('4', "4 Snow Powder Heavy", "Many Snow Particles, Player Sinks, Speed Decrease",         'OUTLINER_OB_VOLUME',     4), #BOIDS
+	('5', "5 Ice",               "Speed Increase, Slippery",                                  'META_CUBE',              5),
+	('6', "6 Rebound",           "Unrideable. Causes the player to bounce off",               'INDIRECT_ONLY_ON',       6),
+	('7', "7 Ice/Water",         "No Trail",                                                  'MOD_FLUIDSIM',           7), # MOD_FLUIDSIM MOD_OCEAN
+	('8', "8 Snow 5",            "Many Snow Particles",                                       'FREEZE',                 8),
+	('9', "9 Rock",              "Speed Decrease, Spark Particles. Rock Grinding Sounds",     'RNDCURVE',               9),
+	('10', "10 Rebound Rock",     "Unrideable. Causes the player to bounce off",               'INDIRECT_ONLY_ON',       10),
+	('11', "11 Unknown",          "No Trail, Ice Scraping Sound",                              'QUESTION',               11), # ?
+	('12', "12 Wood",             "No Trail, Wood Sounds?",                                    'SEQ_STRIP_DUPLICATE',    12),
+	('13', "13 Metal",            "Slippery, Speed Decrease, Metal Sounds, Spark Particles",   'OUTLINER_OB_LIGHTPROBE', 13),
+	('14', "14 Unknown 2",        "No Trail, Speed Increase, Scraping Sound",                  'QUESTION',               14),
+	('15', "15 Snow 6",           "Like standard snow?",                                       'FREEZE',                 15),
+	('16', "16 Sand",             "Standard Sand",                                             'SPHERECURVE',            16),
+	('17', "17 No Collision",     "Player passes through",                                     'GIZMO',                  17), # GIZMO GHOST_ENABLED # ghost confuses with invis
+	('18', "18 Metal/Ramp",       "Metal Sounds",                                              'OUTLINER_OB_LIGHTPROBE', 18),
+	('19', "19 Metal/Ramp 2",     "Metal Sounds",                                              'OUTLINER_OB_LIGHTPROBE', 19),
 )
 enum_ssx2_surface_type_spline = enum_ssx2_surface_type + (\
 	('-1', "[None]",           "None", 'X', -1), ) # BLANK1

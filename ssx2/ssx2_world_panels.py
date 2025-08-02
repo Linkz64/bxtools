@@ -366,7 +366,15 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 
 			elif obj.ssx2_CurveMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_EVENT':
 				path_props = obj.ssx2_PathProps
-				events = path_props.events
+
+				for mod in context.active_object.modifiers:
+					if mod.type == 'NODES' and mod.node_group:
+						if mod.node_group.name.startswith("PathLinesAppend"):
+							break
+
+				row = layout.row()
+				row.prop(mod, '["Input_2"]', text="Show Points")
+				row.prop(mod, '["Input_3"]', text="Show Event")
 
 				if obj.ssx2_CurveMode == 'PATH_AI':
 					layout.prop(path_props, "reset", text="Reset Target")
@@ -385,7 +393,7 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 				evt_box_header.operator(SSX2_OP_PathEventAdd.bl_idname, text="Add", icon="ADD")
 				evt_box_header.operator(SSX2_OP_PathEventRemove.bl_idname, text="Remove", icon="REMOVE")
 
-				for event in events:
+				for event in path_props.events:
 					row = events_box.row(align=True)
 					evt_header_row = row
 

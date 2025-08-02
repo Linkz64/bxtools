@@ -116,7 +116,13 @@ def update_prefab_for_inst(self, context):
 		self.instance_collection = None
 		self.show_instancer_for_viewport = True
 
-
+def update_event_start_end(self, context):
+	for mod in context.active_object.modifiers:
+		if mod.type == 'NODES' and mod.node_group:
+			if mod.node_group.name.startswith("PathLinesAppend"):
+				mod["Input_4"] = self.u2
+				mod["Input_5"] = self.u3
+			break
 
 ## Operators
 
@@ -418,33 +424,38 @@ class SSX2_OP_PathEventAdd(bpy.types.Operator):
 class SSX2_OP_PathEventRemove(bpy.types.Operator):
 	bl_idname = "object.ssx2_remove_path_event"
 	bl_label = "Remove Event"
+	bl_options = {'REGISTER', 'UNDO'}
 
 	def execute(self, context):
 		obj = bpy.context.active_object 
 		events = obj.ssx2_PathProps.events
+		at_least_one_checked = False
 
 		new_list = []
 
-		for i, event in enumerate(events):
+		for event in events:
 			if event.checked == False:
 				new_list.append((
-					#event.name, 
 					event.u0, 
 					event.u1, 
 					event.u2, 
 					event.u3,
 					event.checked))
+			else:
+				at_least_one_checked = True
+
+		if not at_least_one_checked:
+			return {'CANCELLED'}
 
 		events.clear()
 
-		for new in new_list:
+		for val in new_list:
 			new_event = events.add()
-			#new_event.name = new[0]
-			new_event.u0 = new[1]
-			new_event.u1 = new[2]
-			new_event.u2 = new[3]
-			new_event.u3 = new[4]
-			new_event.checked = new[5]
+			new_event.u0 = val[0]
+			new_event.u1 = val[1]
+			new_event.u2 = val[2]
+			new_event.u3 = val[3]
+			new_event.checked = val[4]
 
 		return {'FINISHED'}
 
@@ -2562,6 +2573,8 @@ class SSX2_WorldPrefabObjectPropGroup(bpy.types.PropertyGroup):
 	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
 	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
 
+
+
 class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
 	# name: bpy.props.StringProperty(name="", subtype='NONE',
 	# 	description="Name of the event")
@@ -2573,8 +2586,8 @@ class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
 		description="",
 		min=-1,
 		max=1000)
-	u2: bpy.props.FloatProperty(name="u2")
-	u3: bpy.props.FloatProperty(name="u3")
+	u2: bpy.props.FloatProperty(name="u2", min=0.0, update=update_event_start_end)
+	u3: bpy.props.FloatProperty(name="u3", min=0.0, update=update_event_start_end)
 
 	checked: bpy.props.BoolProperty(name="", default=False)
 
