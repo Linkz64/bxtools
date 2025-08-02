@@ -18,6 +18,7 @@ from .ssx2_world import (
 	SSX2_OP_WorldExport,
 
 	SSX2_OP_SelectPrefab,
+	SSX2_OP_ChooseMultitoolExe,
 )
 
 from .ssx2_world_patches import (
@@ -140,6 +141,7 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		io = context.scene.ssx2_WorldImportExportProps
 		col = self.layout.column()
 		prop_split(col, io, 'exportFolderPath', 'Export Folder', spacing=0.4)
+
 		
 		patches_box = col.box()
 		patches_box = patches_box.row()
@@ -161,6 +163,14 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		paths_box_split.label(text="Paths")
 		paths_box_split.prop(io, "exportPathsGeneral", text="General")
 		paths_box_split.prop(io, "exportPathsShowoff", text="Showoff")
+
+		row = col.row()
+		row.prop(io, 'exportAutoBuild')
+		if io.exportAutoBuild:
+			row.operator(SSX2_OP_ChooseMultitoolExe.bl_idname, icon='FILEBROWSER')
+			# row.prop(io, "exportMultitoolExePath", text="")
+
+			
 
 		col.operator(SSX2_OP_WorldExport.bl_idname)
 

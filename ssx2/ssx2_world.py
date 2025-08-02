@@ -1,7 +1,9 @@
 import bpy
 from bpy.utils import register_class, unregister_class
+from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Matrix
 from math import ceil
+from subprocess import Popen
 import json
 import time
 import os
@@ -1743,7 +1745,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		scale = bpy.context.scene.bx_WorldScale
 
 		if len(bpy.path.abspath(io.exportFolderPath)) == 0:
-			self.report({'ERROR'}, "'Project Folder' property is empty")
+			self.report({'ERROR'}, "'Export Folder' property is empty")
+			return {"CANCELLED"}
+		if len(bpy.path.abspath(io.exportMultitoolExePath)) == 0:
+			self.report({'ERROR'}, "'Multitool EXE' property is empty. Choose the exe file first")
 			return {"CANCELLED"}
 
 
@@ -2368,20 +2373,15 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 							(props.manualUV3[0], -props.manualUV3[1]),
 						]
 
+					tex = "0000.png"
 					if len(obj.material_slots) != 0:
 						mat = bpy.data.materials.get(obj.material_slots[0].name)
-
 						if mat is not None:
-							# tex_node = mat.node_tree.get("Image texture")
 							tex_node = mat.node_tree.nodes.get("Image Texture")
 							if tex_node is not None:
-								tex = mat.node_tree.nodes["Image Texture"].image.name
-								if not tex.endswith(".png") or len(tex) < 5:
-									tex = "0022.png"
-							else:
-								tex = "0024.png"
-					else:
-						tex = "0024.png"
+								tex_image = tex_node.image
+								if tex_image is not None:
+									tex = tex_image.name
 
 					if 'lightmap_uvs' in obj.keys():
 						lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
@@ -2425,17 +2425,15 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					else:
 						patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
 						
+					tex = "0000.png"
 					if len(obj.material_slots) != 0:
 						mat = bpy.data.materials.get(obj.material_slots[0].name)
 						if mat is not None:
 							tex_node = mat.node_tree.nodes.get("Image Texture")
-							# tex_node = mat.node_tree.get("Image texture")
 							if tex_node is not None:
-								tex = mat.node_tree.nodes["Image Texture"].image.name
-								if not tex.endswith(".png") or len(tex) < 5:
-									tex = "0022.png"
-					else:
-						tex = "0000.png"
+								tex_image = tex_node.image
+								if tex_image is not None:
+									tex = tex_image.name
 
 					if 'lightmap_uvs' in obj.keys(): # and ('lightmap_id' in obj.keys())
 						lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
@@ -2471,6 +2469,14 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				#json.dump(temp_json, f, indent=2)
 
 
+		if io.exportAutoBuild:
+			# subprocess_run(
+			# 	[io.exportMultitoolExePath, "trickylevel", "trickybuild", io.exportFolderPath], 
+			# 	capture_output=False
+			# )
+			Popen(
+				[io.exportMultitoolExePath, "trickylevel", "trickybuild", io.exportFolderPath]
+			)
 
 		print("Time taken:", time.time() - time_export_star, "seconds")
 		self.report({'INFO'}, "Exported")
@@ -2516,6 +2522,17 @@ class SSX2_OP_SelectPrefab(bpy.types.Operator):
 		self.report({"WARNING"}, "Collection not found")
 		return {'CANCELLED'}
 
+class SSX2_OP_ChooseMultitoolExe(bpy.types.Operator, ImportHelper):
+	bl_idname = "scene.ssx2_choose_multitool_exe"
+	bl_label = "Multitool EXE"
+	# bl_options = {'UNDO'}
+
+	filter_glob: bpy.props.StringProperty(default="*.exe", options={'HIDDEN'})
+
+	def execute(self, context):
+		io = context.scene.ssx2_WorldImportExportProps
+		io.exportMultitoolExePath = self.filepath
+		return {'FINISHED'}
 
 ### PropertyGroups
 
@@ -2552,8 +2569,12 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	expandImportPaths: bpy.props.BoolProperty(default=False)
 
 	# export
-	exportFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', default="",
+	exportFolderPath: bpy.props.StringProperty(subtype='DIR_PATH', default="",
 		description="Export folder path")
+	exportMultitoolExePath: bpy.props.StringProperty(default="",
+		description="Multitoool .exe file path")
+	exportAutoBuild: bpy.props.BoolProperty(name="Auto Build", default=False)
+
 	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)
 	exportPatchesCages: bpy.props.BoolProperty(name="Cages", default=True)
 	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=True)
@@ -2658,6 +2679,7 @@ classes = (
 	SSX2_OP_PathEventRemove,
 
 	SSX2_OP_SelectPrefab,
+	SSX2_OP_ChooseMultitoolExe,
 
 )
 
