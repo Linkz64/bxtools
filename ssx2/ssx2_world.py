@@ -124,7 +124,7 @@ def update_event_start_end(self, context):
 				mod["Input_5"] = self.u3
 			break
 
-## Operators
+### Operators
 
 class SSX2_OP_AddInstance(bpy.types.Operator): # change this to use collection instead of model object
 	bl_idname = 'object.ssx2_add_instance'
@@ -2572,8 +2572,6 @@ class SSX2_WorldPrefabObjectPropGroup(bpy.types.PropertyGroup):
 	flags: bpy.props.BoolProperty(name="Flags")
 	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
 	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
-
-
 
 class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
 	# name: bpy.props.StringProperty(name="", subtype='NONE',

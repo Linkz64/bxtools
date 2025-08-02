@@ -335,10 +335,10 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 			row.operator(SSX2_OP_SelectPrefab.bl_idname, text="Select Prefab (Add)").add_mode = True
 			prop_split(col, context.object, 'ssx2_PrefabForInstance', "Prefab", spacing=0.2)
 			row = col.row()
-			row.prop(context.object, 'show_instancer_for_viewport', text='Show Instancer')
-			row.prop(context.object, 'show_in_front')#, text='Show in Front')
-			
-			
+			row.prop(context.object, 'show_instancer_for_viewport', text='Show Instancer', \
+					icon="HIDE_OFF" if context.object.show_instancer_for_viewport else "HIDE_ON")
+			row.prop(context.object, 'show_in_front', \
+					icon="HIDE_OFF" if context.object.show_in_front else "HIDE_ON")
 
 class SSX2_CurvePropPanel(SSX2_Panel):
 	bl_label = "BX Spline Curve"
@@ -373,8 +373,10 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 							break
 
 				row = layout.row()
-				row.prop(mod, '["Input_2"]', text="Show Points")
-				row.prop(mod, '["Input_3"]', text="Show Event")
+				row.prop(mod, '["Input_2"]', text="Show Points", \
+					icon="HIDE_OFF" if mod["Input_2"] else "HIDE_ON")
+				row.prop(mod, '["Input_3"]', text="Show Event", \
+					icon="HIDE_OFF" if mod["Input_3"] else "HIDE_ON")
 
 				if obj.ssx2_CurveMode == 'PATH_AI':
 					layout.prop(path_props, "reset", text="Reset Target")
