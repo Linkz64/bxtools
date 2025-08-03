@@ -272,6 +272,62 @@ def update_patch_uv_preset(self, context):
 
 ## Operators
 
+class SSX2_OP_PatchUVTransform(bpy.types.Operator):
+	bl_idname = "scene.ssx2_patch_uv_transform"
+	bl_label = "Transform Patch UVs"
+	bl_description = "Transforms the patches UVs"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	xform: bpy.props.IntProperty()
+
+	def execute(self, context):
+		objs = bpy.context.selected_objects
+		patches = []
+
+		for obj in objs:
+			if obj.ssx2_PatchProps.isControlGrid:
+				patches.append(obj)
+			elif obj.type == 'SURFACE':
+				patches.append(obj)
+			elif obj.type == 'CURVE' and obj.ssx2_CurveMode == 'CAGE':
+				patches.append(obj)
+
+		if len(patches) == 0:
+			BXT.warn(self, "No patches selected")
+			return {'CANCELLED'}
+
+		rotate_rl_enum = {'3': '1', '1': '4', '2': '3', '4': '2', '0': '6', '7': '5', '5': '0', '6': '7'}
+		rotate_rr_enum = {'3': '2', '1': '3', '2': '4', '4': '1', '0': '5', '7': '6', '5': '7', '6': '0'}
+		flipped_u_enum = {'3': '5', '1': '0', '2': '7', '4': '6', '0': '1', '7': '2', '5': '3', '6': '4'}
+		flipped_v_enum = {'3': '6', '1': '7', '2': '0', '4': '5', '0': '2', '7': '1', '5': '4', '6': '3'}
+
+		if self.xform == 0:
+			print("Rotate -90")
+			for obj in objs:
+				flipped_preset = rotate_rl_enum[obj.ssx2_PatchProps.texMapPreset]
+				obj.ssx2_PatchProps.texMapPreset = flipped_preset
+		elif self.xform == 1:
+			print("Rotate 90")
+			for obj in objs:
+				flipped_preset = rotate_rr_enum[obj.ssx2_PatchProps.texMapPreset]
+				obj.ssx2_PatchProps.texMapPreset = flipped_preset
+		elif self.xform == 2:
+			print("Flip U")
+			for obj in objs:
+				flipped_preset = flipped_u_enum[obj.ssx2_PatchProps.texMapPreset]
+				obj.ssx2_PatchProps.texMapPreset = flipped_preset
+		elif self.xform == 3:
+			print("Flip V")
+			for obj in objs:
+				flipped_preset = flipped_v_enum[obj.ssx2_PatchProps.texMapPreset]
+				obj.ssx2_PatchProps.texMapPreset = flipped_preset
+		else:
+			print("Oops")
+			{'CANCELLED'}
+
+
+		return {'FINISHED'}
+
 class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 	bl_idname = "object.patch_uv_editor"
 	bl_label = "Patch UV Editor"
@@ -2375,6 +2431,7 @@ classes = (
 	SSX2_OP_SelectSplineCageV,
 	SSX2_OP_CopyMaterialToSelected,
 	SSX2_OP_CopyPatchUVsToSelected,
+	SSX2_OP_PatchUVTransform,
 )
 
 def ssx2_world_patches_register():

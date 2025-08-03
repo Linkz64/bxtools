@@ -39,6 +39,7 @@ from .ssx2_world_patches import (
 	SSX2_OP_CopyPatchUVsToSelected,
 	SSX2_OP_CopyMaterialToSelected,
 	SSX2_OP_PatchUVEditor,
+	SSX2_OP_PatchUVTransform,
 )
 
 
@@ -231,6 +232,17 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		
 		col.operator(SSX2_OP_Patch_Slide_V.bl_idname, text="Slide V", icon='ARROW_LEFTRIGHT')
 
+		col.separator()
+		box = col.box()
+		box.label(text="UV Transform")
+		col_b = box.column(align=True)
+		row = col_b.row(align=True)
+		row.operator(SSX2_OP_PatchUVTransform.bl_idname, text="Rotate -90", icon='LOOP_BACK').xform = 0
+		row.operator(SSX2_OP_PatchUVTransform.bl_idname, text="Rotate 90", icon='LOOP_FORWARDS').xform = 1
+		row = col_b.row(align=True)
+		row.operator(SSX2_OP_PatchUVTransform.bl_idname, text="Flip U", icon='SORT_DESC').xform = 2
+		row.operator(SSX2_OP_PatchUVTransform.bl_idname, text="Flip V", icon='FORWARD').xform = 3
+		
 		#layout.label(text="Other")
 		col.separator()
 		prop_split(col, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
