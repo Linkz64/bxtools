@@ -206,12 +206,12 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 
 		col.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
 		row = col.row(align=True)
-		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVS to")
+		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVs to")
 		row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
-		if glob_obj_proxy is None:
-			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor", icon='WINDOW')
-		else:
-			col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="Apply UV Edits", icon='CHECKMARK')
+		# if glob_obj_proxy is None:
+		# 	col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor", icon='WINDOW')
+		# else:
+		# 	col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="Apply UV Edits", icon='CHECKMARK')
 			#col.label(text="")
 
 		#col.label(text="Spline Cage")
@@ -463,17 +463,20 @@ class SSX2_PatchPropPanel(SSX2_Panel):
 		if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
 			prop_split(col, obj.ssx2_PatchProps, 'type', "Patch Type")
 			col.prop(obj.ssx2_PatchProps, 'showoffOnly', text="Showoff Only")
-			col.prop(obj.ssx2_PatchProps, 'fixU', text="Fix U Seam")
-			col.prop(obj.ssx2_PatchProps, 'fixV', text="Fix V Seam")
-			col.prop(obj.ssx2_PatchProps, 'useManualUV', text="Manual Mapping")
+			box = col.box()
+			box.label(text="UV Mapping")
+			row = box.row()
+			row.prop(obj.ssx2_PatchProps, 'fixU', text="Fix U Seam")
+			row.prop(obj.ssx2_PatchProps, 'fixV', text="Fix V Seam")
+			box.prop(obj.ssx2_PatchProps, 'useManualUV', text="Use Manual UVs")
 			if not obj.ssx2_PatchProps.useManualUV:
-				prop_split(col, obj.ssx2_PatchProps, 'texMapPreset', "Mapping Preset")
+				prop_split(box, obj.ssx2_PatchProps, 'texMapPreset', "UV Preset")
 				
 			if obj.ssx2_PatchProps.useManualUV:
-				col_split = col.split(factor=0.5)
+				col_split = box.split(factor=0.5)
 				col_split.prop(obj.ssx2_PatchProps, "manualUV1", text="")
 				col_split.prop(obj.ssx2_PatchProps, "manualUV3", text="")
-				col_split = col.split(factor=0.5)
+				col_split = box.split(factor=0.5)
 				col_split.prop(obj.ssx2_PatchProps, "manualUV0", text="")
 				col_split.prop(obj.ssx2_PatchProps, "manualUV2", text="")
 				# col.label(text="")

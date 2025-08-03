@@ -122,6 +122,9 @@ def update_event_start_end(self, context):
 	for mod in context.active_object.modifiers:
 		if mod.type == 'NODES' and mod.node_group:
 			if mod.node_group.name.startswith("PathLinesAppend"):
+				if self.u3 < self.u2:
+					self.u3 = self.u2
+
 				mod["Input_4"] = self.u2
 				mod["Input_5"] = self.u3
 			break

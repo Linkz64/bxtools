@@ -4,6 +4,7 @@ from mathutils import Vector, Matrix
 import gpu
 from gpu_extras.batch import batch_for_shader
 from bpy_extras import view3d_utils
+import functools
 
 # from ..general.blender_get_data import get_uvs_per_verts
 from ..general.blender_set_data import set_patch_material, set_patch_object, set_patch_control_grid
@@ -73,9 +74,6 @@ def create_imported_patches(self, context, path, images, map_info=None):
 	world_scale = context.scene.bx_WorldScale
 
 	patch_grouping = io_props.patchImportGrouping
-
-	def info(string):
-		self.report({'INFO'}, string)
 
 	if bpy.data.collections.get('Patches') is None:
 		bpy.context.collection.children.link(bpy.data.collections.new('Patches'))
@@ -212,6 +210,7 @@ def reset_proxy_state():
 		set_active(obj_pch)
 
 def live_uv_update():
+	print("hmmm")
 	global glob_obj_pch
 	global glob_obj_proxy
 	global glob_bm
@@ -264,9 +263,12 @@ def live_uv_update():
 	return 0.005
 
 def update_patch_uv_preset(self, context):
-	self.texMap = patch_tex_maps[int(self.texMapPreset)]
-	# update manual uvs too
+	known_uvs = patch_known_uvs_blender[patch_tex_map_equiv_uvs[int(self.texMapPreset)]]
 
+	self.manualUV0 = known_uvs[0]
+	self.manualUV1 = known_uvs[2]
+	self.manualUV2 = known_uvs[1]
+	self.manualUV3 = known_uvs[3]
 
 ## Operators
 
@@ -290,6 +292,10 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 	# 	return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
 	# 	(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
 	# 	or active_object.ssx2_CurveMode == 'CAGE'))
+
+	def test(self, context):
+		print("hmmmmmmmmmm", self.obj_pch)
+		return 0.8
 	
 	def execute(self, context):
 		global glob_obj_pch
@@ -303,6 +309,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 			return {'FINISHED'}
 
 		glob_obj_pch = bpy.context.active_object
+		self.obj_pch = bpy.context.active_object
 		props = glob_obj_pch.ssx2_PatchProps
 		
 		if (
@@ -408,6 +415,7 @@ class SSX2_OP_PatchUVEditor(bpy.types.Operator):
 		print("\nstarting bpy timer")
 		#bpy.app.timers.register(functools.partial(live_uv_update, [glob_obj_pch, glob_obj_proxy, glob_bm]))
 		bpy.app.timers.register(live_uv_update)
+		bpy.app.timers.register(functools.partial(self.test, [context]))
 		return {'FINISHED'}
 
 class SSX2_OP_SelectSplineCageU(bpy.types.Operator):
@@ -2312,7 +2320,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
 	showoffOnly: bpy.props.BoolProperty(name="Showoff Only", default=False,
-		description="Only shows up in Showoff modes.")
+		description="Only shows up in Showoff modes")
 	"""
 	adjust_scale	 "Adjust UV scale"
 	correct_border	 "Correct UV border"
@@ -2323,19 +2331,22 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 	shrink           "Shrink UV"
 	fix_uv_repeat    "Fix UV repeat"
 	"""
-	texMap: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0),
-		min=-3.14159265359,
-		max=3.14159265359,
-		subtype='EULER')
+	# texMap: bpy.props.FloatVectorProperty(default=(0.0, 0.0, 0.0),
+	# 	min=-3.14159265359,
+	# 	max=3.14159265359,
+	# 	subtype='EULER')
 	texMapPreset: bpy.props.EnumProperty(name='Mapping Preset', items=enum_ssx2_patch_uv_preset, 
 		update=update_patch_uv_preset,
 		default='0')
 	# patchFixUVRepeat: bpy.props.BoolProperty(name="Fix UV Repeat", default=False,
 	# 	description="Scales up the UVs on export in order to remove the visible outline")
-	fixU: bpy.props.BoolProperty(name="Fix U Seam",default=False,description="")
-	fixV: bpy.props.BoolProperty(name="Fix V Seam",default=False,description="")
+	fixU: bpy.props.BoolProperty(name="Fix U Seam",default=False,
+		description="If there's a visible seam between the neighbor, this should hide it")
+	fixV: bpy.props.BoolProperty(name="Fix V Seam",default=False,
+		description="If there's a visible seam between the neighbor, this should hide it")
 	useManualUV: bpy.props.BoolProperty(name="Manual UVs", default=False,
-		description="Manually enter UV values.")
+		description="Manually enter UV values",
+		update=update_patch_uv_preset)
 	manualUV0: bpy.props.FloatVectorProperty(default=(0.0, 0.0),size=2,subtype='XYZ', precision=4)
 	manualUV1: bpy.props.FloatVectorProperty(default=(0.0, 1.0),size=2,subtype='XYZ', precision=4)
 	manualUV2: bpy.props.FloatVectorProperty(default=(1.0, 0.0),size=2,subtype='XYZ', precision=4)
