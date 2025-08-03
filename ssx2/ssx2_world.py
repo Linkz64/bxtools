@@ -199,8 +199,8 @@ class SSX2_OP_AddSplineBezier(bpy.types.Operator):
 			collection = bpy.context.collection
 
 		bpy.ops.curve.primitive_bezier_curve_add(
-			radius=bpy.context.scene.bx_WorldScale/100, 
-			enter_editmode=False, 
+			radius=bpy.context.scene.bx_WorldScale/100,
+			enter_editmode=False,
 			align='CURSOR')
 
 		curve_obj = bpy.context.object
@@ -1755,6 +1755,11 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 			return {"CANCELLED"}
 
 
+		do_json_indend = True
+
+
+
+
 		if io.exportPathsGeneral or io.exportPathsShowoff: # <------------------------- Export Paths
 			print("Exporting Paths")
 
@@ -1892,9 +1897,12 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					temp_json["RaceLines"].append(new_data)
 
 				with open(json_export_path, 'w') as f:
-					json.dump(temp_json, f, separators=(',', ':'))
-					# json.dump(temp_json, f, indent=2)
+					if do_json_indend:
+						json.dump(temp_json, f, indent=2)
+					else:
+						json.dump(temp_json, f, separators=(',', ':'))
 
+			# ENDOF Export Paths
 
 
 		if io.exportSplines: # <------------------------------------------------------ Export Splines
@@ -1937,9 +1945,15 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					if s.type == 'BEZIER':
 
-						if len(s.bezier_points) == 1:
-							print(f"Not enough points in {obj.name} spline {i}")
-							continue
+						#if len(s.bezier_points) == 1:
+						if len(s.bezier_points) < 2:
+							# print(f"Not enough points in {obj.name} spline {i}")
+							BXT.error(self, f"Not enough points in {obj.name} spline index {i}")
+							bpy.ops.object.select_all(action='DESELECT')
+							obj.select_set(True)
+							set_active(obj)
+							return {'CANCELLED'}
+							#continue
 
 						for j, p in enumerate(s.bezier_points):
 							if j == 0: # first
@@ -2064,10 +2078,12 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					# json.dump(new_json, f, indent=2)
 			
 			with open(json_export_path, 'w') as f:
-				#json.dump(new_json, f, indent=2)
-				#json.dump(new_json, f)
-				json.dump(new_json, f, separators=(',', ':'))
+				if do_json_indend:
+					json.dump(new_json, f, indent=2)
+				else:
+					json.dump(new_json, f, separators=(',', ':'))
 
+			# ENDOF Export Splines
 
 		if io.exportPatches: #                                        <--- Export Patches
 			print("Exporting Patches")
@@ -2467,10 +2483,12 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 
 			with open(json_export_path, 'w') as f:
-				json.dump(temp_json, f)
-				#json.dumps(separators=(',', ':'))
-				#json.dump(temp_json, f, indent=2)
+				if do_json_indend:
+					json.dump(temp_json, f, indent=2)
+				else:
+					json.dump(temp_json, f)
 
+			# ENDOF Export Patches
 
 		if io.exportAutoBuild:
 			# subprocess_run(
