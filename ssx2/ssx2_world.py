@@ -1750,7 +1750,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		if len(bpy.path.abspath(io.exportFolderPath)) == 0:
 			self.report({'ERROR'}, "'Export Folder' property is empty")
 			return {"CANCELLED"}
-		if len(bpy.path.abspath(io.exportMultitoolExePath)) == 0:
+		if io.exportAutoBuild and len(bpy.path.abspath(io.exportMultitoolExePath)) == 0:
 			self.report({'ERROR'}, "'Multitool EXE' property is empty. Choose the exe file first")
 			return {"CANCELLED"}
 
