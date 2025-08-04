@@ -11,6 +11,8 @@ import sys
 import time
 import requests
 import importlib
+import functools
+import zipfile
 
 import addon_utils
 
@@ -93,22 +95,34 @@ class BXT_OP_Update(bpy.types.Operator):
         if seconds_difference <= 4:
             self.report({'WARNING'}, f"Wait {round(4 - seconds_difference, 2)} seconds before trying again.")
             return {"CANCELLED"}
+        bxt_update_last_press_time = time.time()
+        # ^ does this even work after update?
+        #
+        #
+        #
+        #
+        #
+        #
         
+        bxt_name = bl_info.get("name")
         for mod in addon_utils.modules():
             name = mod.bl_info.get("name")
-            if name == bl_info.get("name"):
+            if name == bxt_name:
                 bxt_folder_path = os.path.split(mod.__file__)[0]
                 break
 
-        # blender_addon_dir = os.path.join(bpy.utils.user_resource('SCRIPTS'), "addons")
-        # blender_addon_dir = os.path.join(bpy.utils.script_path_user(), "addons")
+        blender_scripts_dir = bpy.utils.user_resource('SCRIPTS')
+        # blender_addons_dir = os.path.join(bpy.utils.user_resource('SCRIPTS'), "addons")
+        # blender_addons_dir = os.path.join(bpy.utils.script_path_user(), "addons")
 
-        # blender_addon_dir, bxt_folder_name = os.path.split(bxt_folder_path)
+        blender_addons_dir, bxt_folder_name = os.path.split(bxt_folder_path)
 
+        
         # print(bxt_folder_name)
 
         url = "https://github.com/Linkz64/bxtools/archive/refs/heads/main.zip"
-        output_path = f"{bxt_folder_path}.zip"
+        output_path = os.path.join(blender_scripts_dir, bxt_folder_name)
+        output_path += ".zip"
 
         response = requests.get(url, stream=True)
 
@@ -122,13 +136,56 @@ class BXT_OP_Update(bpy.types.Operator):
             print(f"Failed to download zip file. Status code: {response.status_code}")
             self.report({'ERROR'}, f"Failed to download zip file. See info window. {response.status_code}")
             return {"CANCELLED"}
+        
 
-        # bpy.ops.preferences.addon_install(filepath = output_path, overwrite=True)
-        # bpy.ops.preferences.addon_enable(module=bl_info.get("name"))
 
-        bxt_update_last_press_time = time.time()
+        with zipfile.ZipFile(output_path, 'r') as zip_ref:
+            main_zip_content = zip_ref.namelist()[0]
+            main_zip_content = main_zip_content.replace('/', '')
+        
+
+            if main_zip_content != bxt_folder_name:
+                zip_ref.extractall(blender_scripts_dir)
+                
+        if main_zip_content != bxt_folder_name:
+            # os.remove(output_path)
+            new_temp_folder = os.path.join(blender_scripts_dir, bxt_folder_name)
+
+            try_rename = os.rename(
+                os.path.join(blender_scripts_dir, main_zip_content),
+                new_temp_folder
+            )
+
+            print(new_temp_folder)
+            
+            zip_directory(
+                new_temp_folder, 
+                output_path
+            )
+        
+
+        bpy.app.timers.register(functools.partial(install_and_reload, [output_path]), first_interval=0.5)
         return {"FINISHED"}
 
+def install_and_reload(output_path):
+    try:
+        bpy.ops.preferences.addon_install(filepath=output_path[0], overwrite=True)
+        bpy.ops.script.reload()
+    except Exception as e:
+        print(e)
+
+def zip_directory(folder_path, zip_path):
+    folder_path = os.path.abspath(folder_path)
+    root_folder_name = os.path.basename(folder_path)
+
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.join(root_folder_name, os.path.relpath(file_path, folder_path))
+                zipf.write(file_path, arcname)
+
+    print(f"BXT Zipped '{folder_path}' to '{zip_path}' with root folder '{root_folder_name}'")
 
 ### Panels
 
