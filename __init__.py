@@ -183,6 +183,7 @@ class BXT_OP_Update(bpy.types.Operator):
             shutil.rmtree(new_temp_folder)
 
         bpy.app.timers.register(functools.partial(install_and_reload, [output_path]), first_interval=0.5)
+        self.report({"INFO"}, "Updated")
         return {"FINISHED"}
 
 
