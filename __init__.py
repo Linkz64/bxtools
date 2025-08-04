@@ -180,7 +180,7 @@ class BXT_OP_Update(bpy.types.Operator):
             
             zip_directory(new_temp_folder, output_path)
 
-        shutil.rmtree(new_temp_folder)
+            shutil.rmtree(new_temp_folder)
 
         bpy.app.timers.register(functools.partial(install_and_reload, [output_path]), first_interval=0.5)
         return {"FINISHED"}
