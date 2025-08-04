@@ -1948,7 +1948,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						#if len(s.bezier_points) == 1:
 						if len(s.bezier_points) < 2:
 							# print(f"Not enough points in {obj.name} spline {i}")
-							BXT.error(self, f"Not enough points in {obj.name} spline index {i}")
+							BXT.error(self, f"Not enough points in object '{obj.name}'. Spline index {i}")
 							bpy.ops.object.select_all(action='DESELECT')
 							obj.select_set(True)
 							set_active(obj)

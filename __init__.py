@@ -6,8 +6,14 @@ This is done because Blender only reloads the main __init__.py (this one)
 Note: lines in *_register() functions do not get reloaded.
 """
 
+import os
 import sys
+import time
+import requests
 import importlib
+
+import addon_utils
+
 
 module_names = ( # for reloading
     'general.blender_get_data',
@@ -67,6 +73,64 @@ enum_platform = (
     ('ICE', "JSON", "GlitcherOG's Level files"), # Level only
 )
 
+bxt_update_last_press_time = 0
+
+### Operators
+
+class BXT_OP_Update(bpy.types.Operator):
+    bl_idname = 'preferences.bxtools_update'
+    bl_label = "Update"
+    bl_description = "Updates the addon"
+
+    def execute(self, context):
+        global bxt_update_last_press_time
+        current_time = time.time()
+
+        print("\n\n\n")
+        seconds_difference = current_time - bxt_update_last_press_time
+        print(seconds_difference)
+
+        if seconds_difference <= 4:
+            self.report({'WARNING'}, f"Wait {round(4 - seconds_difference, 2)} seconds before trying again.")
+            return {"CANCELLED"}
+        
+        for mod in addon_utils.modules():
+            name = mod.bl_info.get("name")
+            if name == bl_info.get("name"):
+                bxt_folder_path = os.path.split(mod.__file__)[0]
+                break
+
+        # blender_addon_dir = os.path.join(bpy.utils.user_resource('SCRIPTS'), "addons")
+        # blender_addon_dir = os.path.join(bpy.utils.script_path_user(), "addons")
+
+        # blender_addon_dir, bxt_folder_name = os.path.split(bxt_folder_path)
+
+        # print(bxt_folder_name)
+
+        url = "https://github.com/Linkz64/bxtools/archive/refs/heads/main.zip"
+        output_path = f"{bxt_folder_path}.zip"
+
+        response = requests.get(url, stream=True)
+
+        if response.status_code == 200:
+            with open(output_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            print(f"Downloaded zip file. Path:\n{output_path}\n")
+        else:
+            print(f"Failed to download zip file. Status code: {response.status_code}")
+            self.report({'ERROR'}, f"Failed to download zip file. See info window. {response.status_code}")
+            return {"CANCELLED"}
+
+        # bpy.ops.preferences.addon_install(filepath = output_path, overwrite=True)
+        # bpy.ops.preferences.addon_enable(module=bl_info.get("name"))
+
+        bxt_update_last_press_time = time.time()
+        return {"FINISHED"}
+
+
+### Panels
 
 class BXT_Panel(bpy.types.Panel):
     bl_idname = 'BXT_PT_main'
@@ -81,6 +145,7 @@ class BXT_Panel(bpy.types.Panel):
         col.scale_y = 1.1
         prop_split(col, context.scene, 'bx_GameChoice', "Game")
         prop_split(col, context.scene, 'bx_PlatformChoice', "Platform")
+        col.operator(BXT_OP_Update.bl_idname)
         extras_box = col.box()
         extras_box.label(text="Extras")
         extras_box.operator(SSX2_OP_BakeTest.bl_idname, text="Lightmap Bake Test")
@@ -124,6 +189,8 @@ def update_choice(self, context):
     """
 
 classes = (
+    BXT_OP_Update,
+
     BXT_Panel,
     BXT_PanelInProperties
 )
