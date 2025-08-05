@@ -1756,9 +1756,13 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 
 		do_json_indend = True
-
-
-
+		export_counts = dict(
+			paths_general = 0, # todo
+			paths_showoff = 0, # todo
+			splines = 0, # incomplete
+			patch_objects = 0, # todo
+			patch_segments = 0, # todo
+		)
 
 		if io.exportPathsGeneral or io.exportPathsShowoff: # <------------------------- Export Paths
 			print("Exporting Paths")
@@ -1915,167 +1919,167 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 			spline_objects = spline_collection.all_objects
 
-			if len(spline_objects) == 0:
-				self.report({'ERROR'}, "No splines found in 'Splines' collection")
-				return {'CANCELLED'}
-
 			json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath))+'/Splines.json'
-
+			
 			if not os.path.isfile(json_export_path):
 				self.report({'ERROR'}, f"'Splines.json' not found.\n{json_export_path}")
 				return {'CANCELLED'}
 
-			final_splines = []
-			names = []
+			new_json = {}
 
-			print()
-			for obj in spline_objects:
-				props = obj.ssx2_SplineProps
-				m = obj.matrix_world
+			if len(spline_objects) == 0:
+				new_json['Splines'] = []
+			else:
+				final_splines = []
+				names = []
 
-				print("    ", obj.name)
+				for obj in spline_objects:
+					props = obj.ssx2_SplineProps
+					m = obj.matrix_world
 
-				all_points = []
-				segments = [] # from all_points to segments of 4
-				#segments_unknowns = []
+					print("\n    ", obj.name)
 
-				get_name = False
-				for i, s in enumerate(obj.data.splines):
-					current_points = []
+					all_points = []
+					segments = [] # from all_points to segments of 4
+					#segments_unknowns = []
 
-					if s.type == 'BEZIER':
+					get_name = False
+					for i, s in enumerate(obj.data.splines):
+						current_points = []
 
-						#if len(s.bezier_points) == 1:
-						if len(s.bezier_points) < 2:
-							# print(f"Not enough points in {obj.name} spline {i}")
-							BXT.error(self, f"Not enough points in object '{obj.name}'. Spline index {i}")
-							bpy.ops.object.select_all(action='DESELECT')
-							obj.select_set(True)
-							set_active(obj)
-							return {'CANCELLED'}
-							#continue
+						if s.type == 'BEZIER':
 
-						for j, p in enumerate(s.bezier_points):
-							if j == 0: # first
-								current_points.append( (m @ p.co) * scale)
-								current_points.append( (m @ p.handle_right) * scale)
-							elif j == len(s.bezier_points)-1: # last
-								current_points.append( (m @ p.handle_left) * scale)
-								current_points.append( (m @ p.co) * scale)
-							elif (j != 0) and (j != len(s.bezier_points)-1): # mids
-								current_points.append( (m @ p.handle_left) * scale)
-								current_points.append( (m @ p.co) * scale)
-								current_points.append( (m @ p.handle_right) * scale)
+							#if len(s.bezier_points) == 1:
+							if len(s.bezier_points) < 2:
+								# print(f"Not enough points in {obj.name} spline {i}")
+								BXT.error(self, f"Not enough points in object '{obj.name}'. Spline index {i}")
+								bpy.ops.object.select_all(action='DESELECT')
+								obj.select_set(True)
+								set_active(obj)
+								return {'CANCELLED'}
+								#continue
 
-					elif s.type == 'NURBS':
-						continue
-						# if len(s.points) % 4 != 0:
-						# 	self.report({'ERROR'}, f"NURBS Spline in object {obj.name} is invalid\nPoint count must be divisible by 4")
-						# 	return {'CANCELLED'}
-						# for j, p in enumerate(s.points):
-						# 	current_points.append( (m @ p.co) * scale)
+							for j, p in enumerate(s.bezier_points):
+								if j == 0: # first
+									current_points.append( (m @ p.co) * scale)
+									current_points.append( (m @ p.handle_right) * scale)
+								elif j == len(s.bezier_points)-1: # last
+									current_points.append( (m @ p.handle_left) * scale)
+									current_points.append( (m @ p.co) * scale)
+								elif (j != 0) and (j != len(s.bezier_points)-1): # mids
+									current_points.append( (m @ p.handle_left) * scale)
+									current_points.append( (m @ p.co) * scale)
+									current_points.append( (m @ p.handle_right) * scale)
 
-						# check if points divide by 4
-						# if not cancel and error
-						pass
-					else:
-						continue
+						elif s.type == 'NURBS':
+							continue
+							# if len(s.points) % 4 != 0:
+							# 	self.report({'ERROR'}, f"NURBS Spline in object {obj.name} is invalid\nPoint count must be divisible by 4")
+							# 	return {'CANCELLED'}
+							# for j, p in enumerate(s.points):
+							# 	current_points.append( (m @ p.co) * scale)
 
-					# for pt in current_points:
-					# 	print(pt)
+							# check if points divide by 4
+							# if not cancel and error
+							pass
+						else:
+							continue
 
-					# if 'unknowns' in obj.keys(): [0.0, 0.0, 0.0, 0.0]
-					# 	pass
+						# for pt in current_points:
+						# 	print(pt)
+
+						# if 'unknowns' in obj.keys(): [0.0, 0.0, 0.0, 0.0]
+						# 	pass
 
 
-					if len(current_points) != 0:
-						all_points += current_points
-						get_name = True
-					else:
-						print(f"No points in {obj.name} spline {i}")
+						if len(current_points) != 0:
+							all_points += current_points
+							get_name = True
+						else:
+							print(f"No points in {obj.name} spline {i}")
 
-				if get_name:
-					names.append(obj.name)
+					if get_name:
+						names.append(obj.name)
 
-				for i in range(0, len(all_points), 3):
-					segment_points = all_points[i:i + 4]
+					for i in range(0, len(all_points), 3):
+						segment_points = all_points[i:i + 4]
 
-					if i == len(all_points)-1:
-						break
+						if i == len(all_points)-1:
+							break
 
-					#print(segment_points, segment_points, segment_points, segment_points)
+						#print(segment_points, segment_points, segment_points, segment_points)
 
-					#print()
+						#print()
 
-					#print(segment_points)
+						#print(segment_points)
 
-					spline_segments_json_obj = {
-						"Points": [pt.to_tuple() for pt in segment_points],
-						"U0": 0.0001,
-						"U1": 0.0001,
-						"U2": 0.0001,
-						"U3": 0.0001,
+						spline_segments_json_obj = {
+							"Points": [pt.to_tuple() for pt in segment_points],
+							"U0": 0.0001,
+							"U1": 0.0001,
+							"U2": 0.0001,
+							"U3": 0.0001,
+						}
+
+						segments.append(spline_segments_json_obj)
+
+					spline_json_obj = {
+						"SplineName": obj.name,
+						"U0": 1,
+						"U1": 1,
+						"SplineStyle": int(obj.ssx2_SplineProps.type),
+						"Segments": segments
 					}
 
-					segments.append(spline_segments_json_obj)
-
-				spline_json_obj = {
-					"SplineName": obj.name,
-					"U0": 1,
-					"U1": 1,
-					"SplineStyle": int(obj.ssx2_SplineProps.type),
-					"Segments": segments
-				}
-
-				final_splines.append(spline_json_obj)
+					final_splines.append(spline_json_obj)
 
 
-			new_json = {}
-			if io.exportSplinesOverride:
-				
-				overriden_indices = []
-				with open(json_export_path, 'r') as f:
-					new_json = json.load(f)
+				if io.exportSplinesOverride:
+					
+					overriden_indices = []
+					with open(json_export_path, 'r') as f:
+						new_json = json.load(f)
 
-					for i, spline in enumerate(new_json['Splines']):
-						try:
-							index = names.index(spline['SplineName'])
+						for i, spline in enumerate(new_json['Splines']):
+							try:
+								index = names.index(spline['SplineName'])
 
-							# final_splines[index]['U0'] = spline['U0']
-							# final_splines[index]['U1'] = spline['U1']
+								# final_splines[index]['U0'] = spline['U0']
+								# final_splines[index]['U1'] = spline['U1']
 
-							#spline['Segments'] = final_splines[index]['Segments']
+								#spline['Segments'] = final_splines[index]['Segments']
 
-							# i shouldve just gone through json.load(f), changed points then appended extra points and splines
+								# i shouldve just gone through json.load(f), changed points then appended extra points and splines
 
-							for j, seg in enumerate(spline['Segments']):
-								final_splines[index]['Segments'][j]['U0'] = seg['U0']
-								final_splines[index]['Segments'][j]['U1'] = seg['U1']
-								final_splines[index]['Segments'][j]['U2'] = seg['U2']
-								final_splines[index]['Segments'][j]['U3'] = seg['U3']
-							
-							spline['Segments'] = final_splines[index]['Segments']
+								for j, seg in enumerate(spline['Segments']):
+									final_splines[index]['Segments'][j]['U0'] = seg['U0']
+									final_splines[index]['Segments'][j]['U1'] = seg['U1']
+									final_splines[index]['Segments'][j]['U2'] = seg['U2']
+									final_splines[index]['Segments'][j]['U3'] = seg['U3']
+								
+								spline['Segments'] = final_splines[index]['Segments']
 
-							overriden_indices.append(index)
-						except Exception:
-							#print(f"{spline['SplineName']} is missing in Blender. Skipping.")
-							print(Exception)
-							print("BXT Error occurred. Skipping.")
+								overriden_indices.append(index)
+							except Exception:
+								#print(f"{spline['SplineName']} is missing in Blender. Skipping.")
+								print(Exception)
+								print("BXT Error occurred. Skipping.")
 
-					for i, spline in enumerate(final_splines):
-						if i not in overriden_indices:
-							print(i, final_splines[i]['SplineName'])
-							new_json['Splines'].append(final_splines[i])
+						for i, spline in enumerate(final_splines):
+							if i not in overriden_indices:
+								print(i, final_splines[i]['SplineName'])
+								new_json['Splines'].append(final_splines[i])
 
-			else:
-				with open(json_export_path, 'w') as f:
-					new_json = {}
-					new_json['Splines'] = []
+				else:
+					with open(json_export_path, 'w') as f:
+						new_json = {}
+						new_json['Splines'] = []
 
-					for spline in final_splines:
-						new_json['Splines'].append(spline)
 
-					# json.dump(new_json, f, indent=2)
+						for spline in final_splines:
+							new_json['Splines'].append(spline)
+
+						export_counts['splines'] = len(final_splines)
 			
 			with open(json_export_path, 'w') as f:
 				if do_json_indend:
