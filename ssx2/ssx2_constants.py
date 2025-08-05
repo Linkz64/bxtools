@@ -107,14 +107,14 @@ enum_ssx2_patch_group = (
 )
 
 enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices
-	('3', "Default"            , "Default"            ),
-	('1', "Rot Left"           , "Rot Left"           ),
-	('2', "Rot Right"          , "Rot Right"          ),
-	('4', "Rot 180"            , "Rot 180"            ),
-	('0', "Mirror X, Rot Right", "Mirror X, Rot Right"),
-	('7', "Mirror X, Rot Left" , "Mirror X, Rot Left" ),
-	('5', "Mirror Y"           , "Mirror Y"           ),
-	('6', "Mirror X"           , "Mirror X"           ),
+	('3', "Default"               , "Default"            ),
+	('1', "Rotate Left"           , "Rotate Left"        ),
+	('2', "Rotate Right"          , "Rotate Right"       ),
+	('4', "Rotate 180"            , "Rotate 180"         ),
+	('0', "Mirror X, Rotate Right", "Mirror X, Rotate Right"),
+	('7', "Mirror X, Rotate Left" , "Mirror X, Rotate Left" ),
+	('5', "Mirror Y"              , "Mirror Y"           ),
+	('6', "Mirror X"              , "Mirror X"           ),
 )
 
 # enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices

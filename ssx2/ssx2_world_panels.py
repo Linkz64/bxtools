@@ -482,7 +482,7 @@ class SSX2_PatchPropPanel(SSX2_Panel):
 			row.prop(obj.ssx2_PatchProps, 'fixV', text="Fix V Seam")
 			box.prop(obj.ssx2_PatchProps, 'useManualUV', text="Use Manual UVs")
 			if not obj.ssx2_PatchProps.useManualUV:
-				prop_split(box, obj.ssx2_PatchProps, 'texMapPreset', "UV Preset")
+				prop_split(box, obj.ssx2_PatchProps, 'texMapPreset', "UV Preset", spacing=0.3)
 				
 			if obj.ssx2_PatchProps.useManualUV:
 				col_split = box.split(factor=0.5)
