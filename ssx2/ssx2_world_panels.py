@@ -473,40 +473,41 @@ class SSX2_PatchPropPanel(SSX2_Panel):
 		obj = context.object
 		
 		if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
-			prop_split(col, obj.ssx2_PatchProps, 'type', "Patch Type")
-			col.prop(obj.ssx2_PatchProps, 'showoffOnly', text="Showoff Only")
+			props = obj.ssx2_PatchProps
+			prop_split(col, props, 'type', "Patch Type")
+			col.prop(props, 'showoffOnly', text="Showoff Only")
 			box = col.box()
 			box.label(text="UV Mapping")
 			row = box.row()
-			row.prop(obj.ssx2_PatchProps, 'fixU', text="Fix U Seam")
-			row.prop(obj.ssx2_PatchProps, 'fixV', text="Fix V Seam")
-			box.prop(obj.ssx2_PatchProps, 'useManualUV', text="Use Manual UVs")
-			if not obj.ssx2_PatchProps.useManualUV:
-				prop_split(box, obj.ssx2_PatchProps, 'texMapPreset', "UV Preset", spacing=0.3)
+			row.prop(props, 'fixU', text="Fix U Seam")
+			row.prop(props, 'fixV', text="Fix V Seam")
+			box.prop(props, 'useManualUV', text="Use Manual UVs")
+			if not props.useManualUV:
+				prop_split(box, props, 'texMapPreset', "UV Preset", spacing=0.3)
 				
-			if obj.ssx2_PatchProps.useManualUV:
+			if props.useManualUV:
 				col_split = box.split(factor=0.5)
-				col_split.prop(obj.ssx2_PatchProps, "manualUV1", text="")
-				col_split.prop(obj.ssx2_PatchProps, "manualUV3", text="")
+				col_split.prop(props, "manualUV1", text="")
+				col_split.prop(props, "manualUV3", text="")
 				col_split = box.split(factor=0.5)
-				col_split.prop(obj.ssx2_PatchProps, "manualUV0", text="")
-				col_split.prop(obj.ssx2_PatchProps, "manualUV2", text="")
+				col_split.prop(props, "manualUV0", text="")
+				col_split.prop(props, "manualUV2", text="")
 				# col.label(text="")
 				# ali_col = col.column(align=True)
 				# a = ali_col.split(factor=0.5, align=True)
-				# a.prop(obj.ssx2_PatchProps, "manualUV1", text="")
-				# a.prop(obj.ssx2_PatchProps, "manualUV3", text="")
+				# a.prop(props, "manualUV1", text="")
+				# a.prop(props, "manualUV3", text="")
 				# a = ali_col.split(factor=0.5, align=True)
-				# a.prop(obj.ssx2_PatchProps, "manualUV0", text="")
-				# a.prop(obj.ssx2_PatchProps, "manualUV2", text="")
+				# a.prop(props, "manualUV0", text="")
+				# a.prop(props, "manualUV2", text="")
 				# col.label(text="")
 				# ali_col = col.column(align=True)
 				# a = ali_col.row(align=True)
-				# a.prop(obj.ssx2_PatchProps, "manualUV1", text="")
-				# a.prop(obj.ssx2_PatchProps, "manualUV3", text="")
+				# a.prop(props, "manualUV1", text="")
+				# a.prop(props, "manualUV3", text="")
 				# a = ali_col.row(align=True)
-				# a.prop(obj.ssx2_PatchProps, "manualUV0", text="")
-				# a.prop(obj.ssx2_PatchProps, "manualUV2", text="")
+				# a.prop(props, "manualUV0", text="")
+				# a.prop(props, "manualUV2", text="")
 
 
 ### Menus

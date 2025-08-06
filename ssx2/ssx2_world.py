@@ -100,9 +100,6 @@ def update_select_by_surface_type(self, context):
 		pass
 		#bx_report("None found", title="Info", icon='INFO')
 
-def poll_mat_for_add_patch(self, context):
-	return context.use_nodes
-	#return context.name.startswith('surf') or context.name.startswith('patch')
 
 def poll_prefab_for_inst(self, context):
 	# if collection.ssx2 collection type/mode == 'PREFAB':
@@ -2669,15 +2666,7 @@ class SSX2_WorldSplinePropGroup(bpy.types.PropertyGroup): # ssx2_SplineProps
 class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class definition
 	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
 	patchSelectByType: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
-		description="Test")
-	patchMaterialChoice: bpy.props.PointerProperty(type=bpy.types.Material, poll=poll_mat_for_add_patch)
-	patchTypeChoice: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type, default='1')
-
-	# expandImportSplines: bpy.props.BoolProperty(default=False)
-	# expandImportPatches: bpy.props.BoolProperty(default=False)
-	# expandImportPaths: bpy.props.BoolProperty(default=False)
-
-	expandToolsPatches: bpy.props.BoolProperty(default=False)
+		description="Select all patches with the same type")
 
 
 classes = (

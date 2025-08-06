@@ -1369,7 +1369,7 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 
 		props = grid.ssx2_PatchProps
 
-		props.type = bpy.context.scene.ssx2_WorldUIProps.patchTypeChoice #'1'
+		props.type = '1'
 		props.isControlGrid = True
 		props.texMapPreset = '3'
 		props.useManualUV = True
