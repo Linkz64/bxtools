@@ -28,6 +28,7 @@ module_names = ( # for reloading
     'ssx2.ssx2_world_io_in',
     'ssx2.ssx2_world_patches',
     'ssx2.ssx2_world_panels',
+    'ssx2.ssx2_world_lightmaps',
     'ssx2.ssx2_constants',
 )
 

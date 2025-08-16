@@ -8,19 +8,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
     def execute(self, context):
-        print("Clicked: Bake Lightmaps")
+        print("\nClicked: Bake Lightmaps")
 
         import time
         time_start = time.time()
         print("Timer started")
 
-        def pd(func):
-            print(dir(func))
-        def ph(func):
-            print(help(func))
-
-        def rep(string):
-            self.report({'INFO'}, str(string))
 
         def find_layer_collection(layer_collection, name):
             """Find collection in the outliner/layer"""
@@ -105,16 +98,16 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         if collection is None:
             self.report({'WARNING'}, "No 'Patches' Collection found!")
             return {'CANCELLED'}
-        else:
-            patches = [i for i in collection.all_objects if i.type == 'SURFACE']
+        
+        patches = [i for i in collection.all_objects if i.type == 'SURFACE']
 
         
 
-        method = 1 # smoothing bounding normals
+        method = 0 # smoothing bounding normals
 
         length = len(patches)
-        cap = length #length    # temp patch count limit for testing
-        res = 128 # texture resolution 
+        cap = 10 #length    # temp patch count limit for testing
+        res = 128 # texture resolution
         uv_scale = 0.0625#*4 # lightmap uv scale. for scaling down to fill 8x8 pixels
         uvs = setup_lightmap_uvs(uv_scale, cap)
 
@@ -163,7 +156,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             bpy.ops.mesh.remove_doubles() # calculate threshold=* according to world scale
             bpy.ops.object.mode_set(mode='OBJECT')
 
-            obj = collection.objects[0]
+            obj = patches[0]
             mesh = obj.data
             uv_layer = mesh.uv_layers.new(name="UVMap.Lightmap")
             #uv_layer.active_render = True
@@ -177,7 +170,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if i % num_fittable == 0:
                     map_width += res
                     num_maps += 1
-            image = getset_image(f"bakery", int(map_width), res)
+            image = getset_image(f"0.2.bake", int(map_width), res)
             uv_rescale = 1.0 / num_maps
             print(map_width, num_maps, uv_rescale, num_fittable)
 
@@ -218,9 +211,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     uv_layer.data[loop_idx].uv.x *= uv_rescale
 
 
-            #self.report({'INFO'}, f"Baking lightmaps. This may take a while.")
-            #print(f"Baking lightmaps. This may take a while.")
-            #bpy.ops.object.bake(type='DIFFUSE')
+            # self.report({'INFO'}, f"Baking lightmaps. This may take a while.")
+            print(f"Baking lightmaps. This may take a while.")
+            bpy.ops.object.bake(type='DIFFUSE')
 
             #return {'FINISHED'}
         
@@ -246,7 +239,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     #     patch.hide_set(True)        # and do the new mesh in another collection
 
                     if i % res*2 == 0:
-                        image = getset_image(f"bake{current_map_index}", res, res)
+                        image = getset_image(f"0.1.bake{current_map_index}", res, res)
                         current_map_index += 1
 
                     mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
@@ -295,6 +288,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
         if method == 0: # one at a time
+
+
+            # instead of baking then saving to disk per-object i should bake to internal images first.
+
+
+
             for i, obj in enumerate(patches):
 
                 
@@ -307,8 +306,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                 if i < cap:
 
-                    if obj.visible_get() == True:
-                        obj.hide_set(True)
+                    obj.hide_set(True)
+                    # if obj.visible_get() == True:
+                    #     obj.hide_set(True)
 
                     #bpy.ops.object.convert(target='MESH')
                     #a = obj.data.copy()
@@ -341,19 +341,27 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     bake_node.select = True
                     nodes.active = bake_node
 
-                    #image = bake_node.image
+                    image = getset_image(f"0.0.bake", 8, 8)
+                    bake_node.image = image
+
+                    # image = bake_node.image
+
+                    print(image)
+
+
+                    # return {'FINISHED'}
 
                     #print("Baking rn")
                     bpy.ops.object.bake(type='DIFFUSE')
                     #print("Baking DONE")
 
-                    #pd(image)
                     #print("Saving rn")
                     #image.type = {'RENDER_RESULT'}
-                    image.save_render(f"X:/Downloads/bx_test/lightmaps/bake{i}.png") # this one
+
+                    from pathlib import Path
+                    image.save_render(f"{str(Path.home())}/Downloads/BXTools_Lightmap/bake{i}.png")
                     #image.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
                     #image.save()
-                    #pd(image.save)
                     #print("Saving DONE")
 
                 else:
