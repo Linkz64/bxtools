@@ -1151,6 +1151,13 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				current_new_objs.append(new_obj)
 
+				for key in sub_obj:
+					# if key in [
+					# 	"position",
+					# 	"rotation"]:
+					# 	continue
+					new_obj[key] = sub_obj[key]
+
 				# print("parent_idx:  --- ", sub_obj["parent_idx"])
 				# print("flags:  --- ", sub_obj["flags"])
 				# print("animation:  --- ", sub_obj["animation"])
@@ -1250,15 +1257,18 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				# i could create a list of unique prefab_collections names and another list with
 				# indices to names in that list. then use json_inst["ModelID"] to get the corresponding name here
 
-				#new_group_name = re.sub(r'_\d+$', '_', json_inst["InstanceName"]) # removes only the last number
-				new_group_name = "Inst " + remove_trailing_numbers(json_inst["InstanceName"]).removeprefix("Mdl_") # more accurate
-				#new_group_name = "Inst " + ''.join([char for char in json_inst["InstanceName"] if not char.isdigit()]).removeprefix("Mdl_")
+				new_group_name = re.sub(r'_\d+$', '_', json_inst["InstanceName"]) # removes only the last number
+				# new_group_name = "Ins_" + remove_trailing_numbers(json_inst["InstanceName"]).removeprefix("Mdl_") # more accurate
+				#new_group_name = "Ins_" + ''.join([char for char in json_inst["InstanceName"] if not char.isdigit()]).removeprefix("Mdl_")
 				#new_group_name = new_group_name[:-1] if new_group_name.endswith('_') else new_group_name
 				new_group_col = getset_collection(new_group_name)
 				new_group_col.objects.link(empty)
 
 				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
 					instances_collection.children.link(new_group_col)
+
+			# elif io.instanceImportGrouping == 'MESH':
+				#TODO: Implement!
 
 
 	def import_json(self):
@@ -1279,10 +1289,13 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		if io.importPatches: # <------------------------------- Import Patches
 			getset_collection_to_target('Patches', scene_collection)
 
+			temp_time_start = time.time()
 			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
 			self.images = get_images_from_folder(self.folder_path+'/Textures/')
 
 			run_without_update(self.create_patches_json)
+
+			print("importing patches took:", time.time() - temp_time_start, "seconds")
 
 
 		if io.importPrefabs: # <------------------------------- Import Prefabs & Instances

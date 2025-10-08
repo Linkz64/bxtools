@@ -78,7 +78,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         bpy.context.scene.cycles.device = 'GPU'
         bpy.context.scene.cycles.bake_type = 'DIFFUSE'
         bpy.context.scene.render.bake.use_pass_color = False
-        #bpy.context.scene.render.bake.use_clear = False
+        #bpy.context.scene.render.bake.use_clear = False      # may speed things up
         #bpy.context.scene.render.bake.margin_type = 'EXTEND'
         bpy.context.scene.render.bake.margin = 4
 
@@ -103,7 +103,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         
 
-        method = 0 # smoothing bounding normals
+        method = 2 # smoothing bounding normals
 
         length = len(patches)
         cap = 10 #length    # temp patch count limit for testing
@@ -112,7 +112,24 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         uvs = setup_lightmap_uvs(uv_scale, cap)
 
 
+
+        # for i, obj in enumerate(patches):
+        #     obj.select_set(True)
+
+        # bpy.context.view_layer.objects.active = patches[0]
+        # bpy.ops.object.convert(target='MESH')
+
+
+
         if method == 2: # select all, merge
+
+
+            # TODO:
+            # - duplicate the patches and eval to mesh
+            # - remove materials from duplicates
+            # - merge all duplicates
+            # - make a new material type that's only for the final bake mesh 
+
 
             bpy.context.scene.render.bake.margin = 0
 
@@ -218,7 +235,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             #return {'FINISHED'}
         
 
-
         if method == 1: # convert one at a time, setup uvs, merge
 
             new_collection = bpy.data.collections.get("meshes_for_lightmaps")
@@ -286,13 +302,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             #return {'FINISHED'}
         
 
-
         if method == 0: # one at a time
 
-
-            # instead of baking then saving to disk per-object i should bake to internal images first.
-
-
+            images_to_save = []
 
             for i, obj in enumerate(patches):
 
@@ -300,7 +312,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 # obj.hide_viewport = False
                 # obj.hide_render = False
                 
-                bpy.ops.object.select_all(action = "DESELECT")
+                # bpy.ops.object.select_all(action = "DESELECT")
 
                 print(i, 'of', cap, 'time elapsed:', round(time.time() - time_start, 2))
 
@@ -316,12 +328,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                     graph = bpy.context.evaluated_depsgraph_get()
                     obj_eval = obj.evaluated_get(graph)
-
                     mesh = bpy.data.meshes.new_from_object(obj_eval)
 
                     new_obj = bpy.data.objects.new(obj.name+'.lightmapper', mesh)
                     new_obj.matrix_world = obj.matrix_world
-                    new_obj.color = obj.color
+                    # new_obj.color = obj.color
                     collection.objects.link(new_obj)
 
                     new_obj.select_set(True)
@@ -341,33 +352,32 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     bake_node.select = True
                     nodes.active = bake_node
 
-                    image = getset_image(f"0.0.bake", 8, 8)
+                    image = getset_image(f"0.0.bake{i}", 8, 8)
                     bake_node.image = image
 
                     # image = bake_node.image
 
-                    print(image)
-
-
-                    # return {'FINISHED'}
-
-                    #print("Baking rn")
+                    print(image.name)
                     bpy.ops.object.bake(type='DIFFUSE')
-                    #print("Baking DONE")
+                    images_to_save.append(image)
 
-                    #print("Saving rn")
-                    #image.type = {'RENDER_RESULT'}
-
-                    from pathlib import Path
-                    image.save_render(f"{str(Path.home())}/Downloads/BXTools_Lightmap/bake{i}.png")
-                    #image.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
-                    #image.save()
-                    #print("Saving DONE")
+                    
 
                 else:
                     print("STOPPED")
                     break
-                    return {'CANCELLED'}
+                    # return {'CANCELLED'}
+
+            from pathlib import Path
+
+            print("\nSaving to disk")
+            for i, image in enumerate(images_to_save):
+                print(image.name)
+                image.save_render(f"{str(Path.home())}/Downloads/BXTools_Lightmap/bake{i}.png")
+                #image.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
+                #image.save()
+
+
 
         time_taken = round(time.time() - time_start, 5)
         print(f"Finished in {time_taken} seconds.")
