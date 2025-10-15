@@ -2036,7 +2036,7 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 		self.dat = None
 		self.mtx = Matrix()
 		
-		self.clamp_mode = True
+		self.clamp_mode = False
 
 	def invoke(self, context, event):
 		print("\nStarting")
