@@ -1957,22 +1957,28 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				names = []
 
 				for obj in spline_objects:
+					if obj.type != 'CURVE':
+						continue
+
+					if len(obj.data.splines) == 0:
+						continue
+
+					if obj.data.splines[0].type != 'BEZIER':
+						continue
+
 					props = obj.ssx2_SplineProps
 					m = obj.matrix_world
 
 					print("\n    ", obj.name)
 
 					all_points = []
-					segments = [] # from all_points to segments of 4
-					#segments_unknowns = []
+					segments = [] # from all_points to split segments of 4
 
 					get_name = False
 					for i, s in enumerate(obj.data.splines):
 						current_points = []
 
 						if s.type == 'BEZIER':
-
-							#if len(s.bezier_points) == 1:
 							if len(s.bezier_points) < 2:
 								# print(f"Not enough points in {obj.name} spline {i}")
 								BXT.error(self, f"Not enough points in object '{obj.name}'. Spline index {i}")
@@ -1993,9 +1999,8 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 									current_points.append( (m @ p.handle_left) * scale)
 									current_points.append( (m @ p.co) * scale)
 									current_points.append( (m @ p.handle_right) * scale)
-
-						elif s.type == 'NURBS':
-							continue
+						# elif s.type == 'NURBS':
+						# 	continue
 							# if len(s.points) % 4 != 0:
 							# 	self.report({'ERROR'}, f"NURBS Spline in object {obj.name} is invalid\nPoint count must be divisible by 4")
 							# 	return {'CANCELLED'}
@@ -2004,15 +2009,9 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 							# check if points divide by 4
 							# if not cancel and error
-							pass
+						# 	pass
 						else:
 							continue
-
-						# for pt in current_points:
-						# 	print(pt)
-
-						# if 'unknowns' in obj.keys(): [0.0, 0.0, 0.0, 0.0]
-						# 	pass
 
 
 						if len(current_points) != 0:
@@ -2029,12 +2028,6 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 						if i == len(all_points)-1:
 							break
-
-						#print(segment_points, segment_points, segment_points, segment_points)
-
-						#print()
-
-						#print(segment_points)
 
 						spline_segments_json_obj = {
 							"Points": [pt.to_tuple() for pt in segment_points],
@@ -2086,7 +2079,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 							except Exception:
 								#print(f"{spline['SplineName']} is missing in Blender. Skipping.")
 								print(Exception)
-								print("BXT Error occurred. Skipping.")
+								self.report({'WARNING'}, "BXT Error occurred. Skipping.")
 
 						for i, spline in enumerate(final_splines):
 							if i not in overriden_indices:
