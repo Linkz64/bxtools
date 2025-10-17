@@ -1757,13 +1757,26 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		io = bpy.context.scene.ssx2_WorldImportExportProps
 		scale = bpy.context.scene.bx_WorldScale
 
-		if len(bpy.path.abspath(io.exportFolderPath)) == 0:
+		export_folder = bpy.path.abspath(io.exportFolderPath)
+
+		if len(export_folder) == 0:
 			self.report({'ERROR'}, "'Export Folder' property is empty")
 			return {"CANCELLED"}
-		if io.exportAutoBuild and len(bpy.path.abspath(io.exportMultitoolExePath)) == 0:
-			self.report({'ERROR'}, "'Multitool EXE' property is empty. Choose the exe file first")
+
+		if not os.path.isdir(export_folder):
+			self.report({'ERROR'}, "The chosen 'Export Folder' doesn't exist")
 			return {"CANCELLED"}
 
+		if io.exportAutoBuild:
+			multitool_path = bpy.context.preferences.addons['bxtools'].preferences.multitool_path
+
+			if len(multitool_path) == 0:
+				self.report({'ERROR'}, "'Multitool Executable' property is empty. Choose the exe path first")
+				return {"CANCELLED"}
+
+			if not os.path.isfile(bpy.path.abspath(multitool_path)):
+				self.report({'ERROR'}, "The chosen Multitool path doesn't exist")
+				return {"CANCELLED"}
 
 		do_json_indend = True
 		export_counts = dict(
@@ -2506,11 +2519,11 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 		if io.exportAutoBuild:
 			# subprocess_run(
-			# 	[io.exportMultitoolExePath, "trickylevel", "trickybuild", io.exportFolderPath], 
+			# 	[multitool_path, "trickylevel", "trickybuild", export_folder], 
 			# 	capture_output=False
 			# )
 			Popen(
-				[io.exportMultitoolExePath, "trickylevel", "trickybuild", io.exportFolderPath]
+				[multitool_path, "trickylevel", "trickybuild", export_folder]
 			)
 
 		print("Time taken:", time.time() - time_export_star, "seconds")
@@ -2559,14 +2572,13 @@ class SSX2_OP_SelectPrefab(bpy.types.Operator):
 
 class SSX2_OP_ChooseMultitoolExe(bpy.types.Operator, ImportHelper):
 	bl_idname = "scene.ssx2_choose_multitool_exe"
-	bl_label = "Multitool EXE"
-	# bl_options = {'UNDO'}
+	bl_label = "Set Multitool Path"
 
 	filter_glob: bpy.props.StringProperty(default="*.exe", options={'HIDDEN'})
 
 	def execute(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
-		io.exportMultitoolExePath = self.filepath
+		bpy.context.preferences.addons['bxtools'].preferences.multitool_path = self.filepath
 		return {'FINISHED'}
 
 ### PropertyGroups
@@ -2606,8 +2618,6 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	# export
 	exportFolderPath: bpy.props.StringProperty(subtype='DIR_PATH', default="",
 		description="Export folder path")
-	exportMultitoolExePath: bpy.props.StringProperty(default="",
-		description="Multitoool .exe file path")
 	exportAutoBuild: bpy.props.BoolProperty(name="Auto Build", default=False)
 
 	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)

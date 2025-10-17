@@ -102,6 +102,21 @@ def zip_directory(folder_path, zip_path):
 
 
 
+### Preferences
+
+class BXT_Preferences(bpy.types.AddonPreferences):
+    bl_idname = __name__
+
+    multitool_path: bpy.props.StringProperty(
+        subtype='FILE_PATH',
+        options={'HIDDEN'},
+    )
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.prop(self, "multitool_path", text="Multitool Executable")
+
 
 ### Operators
 
@@ -249,6 +264,7 @@ def update_choice(self, context):
     """
 
 classes = (
+    BXT_Preferences,
     BXT_OP_Update,
 
     BXT_Panel,

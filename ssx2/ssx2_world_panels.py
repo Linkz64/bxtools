@@ -165,11 +165,10 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		paths_box_split.prop(io, "exportPathsGeneral", text="General")
 		paths_box_split.prop(io, "exportPathsShowoff", text="Showoff")
 
-		row = col.row()
+		row = col.row().split(factor=0.36)
 		row.prop(io, 'exportAutoBuild')
 		if io.exportAutoBuild:
 			row.operator(SSX2_OP_ChooseMultitoolExe.bl_idname, icon='FILEBROWSER')
-			# row.prop(io, "exportMultitoolExePath", text="")
 
 			
 
