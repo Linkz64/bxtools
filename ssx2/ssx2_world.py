@@ -1940,7 +1940,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				self.report({'ERROR'}, "'Splines' collection not found")#spline_collection = bpy.context.collection
 				return {'CANCELLED'}
 
-			spline_objects = spline_collection.all_objects
+			
 
 			json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath))+'/Splines.json'
 			
@@ -1948,23 +1948,31 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				self.report({'ERROR'}, f"'Splines.json' not found.\n{json_export_path}")
 				return {'CANCELLED'}
 
+			spline_objects = []
+			for obj in spline_collection.all_objects:
+				if obj.type != 'CURVE':
+					continue
+
+				if len(obj.data.splines) == 0:
+					continue
+
+				if obj.data.splines[0].type != 'BEZIER':
+					continue
+
+				spline_objects.append(obj)
+
 			new_json = {}
 
 			if len(spline_objects) == 0:
-				new_json['Splines'] = []
+				if io.exportSplinesOverride:
+					new_json['Splines'] = []
+				else:
+					self.report({'ERROR'}, "'Splines' collection is empty. Disable 'Splines' export or enable 'Override' to delete the JSON content")
 			else:
 				final_splines = []
 				names = []
 
 				for obj in spline_objects:
-					if obj.type != 'CURVE':
-						continue
-
-					if len(obj.data.splines) == 0:
-						continue
-
-					if obj.data.splines[0].type != 'BEZIER':
-						continue
 
 					props = obj.ssx2_SplineProps
 					m = obj.matrix_world
