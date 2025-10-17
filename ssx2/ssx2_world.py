@@ -2626,7 +2626,8 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=True)
 
 	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=True)
-	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=True)
+	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=True,
+		description="Overrides existing JSON splines. Will delete JSON contents if 'Splines' collection is empty")
 
 	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
 	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
