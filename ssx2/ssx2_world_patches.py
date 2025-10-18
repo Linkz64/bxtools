@@ -2012,6 +2012,15 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 	bl_description = ""
 	bl_options = {'REGISTER', 'UNDO'}
 
+	@classmethod
+	def poll(self, context):
+		obj = context.active_object
+		if obj is None:
+			return False
+		elif context.active_object.mode == 'EDIT':
+			if obj.type == 'CURVE':
+				return True
+
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self._handle = None
@@ -2067,6 +2076,10 @@ class SSX2_OP_Patch_Slide_V(bpy.types.Operator):
 					self.all_selected_indices.append(j)
 					self.selected_spline_index = i
 					
+					if len(self.dat.splines) < 2:
+						self.report({'WARNING'}, "Needs at least 2 Bézier splines to work.")
+						return {'CANCELLED'}
+
 					if i == 0:
 						self.all_target_co.append(self.dat.splines[1].bezier_points[j].co)
 						self.target_spline_idx = 1
