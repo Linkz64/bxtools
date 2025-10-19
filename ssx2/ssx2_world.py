@@ -690,6 +690,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		self.json_patches = []
 		self.images = []
 
+		self.scene_collection = None
+		self.io = None
+
 		append_path = templates_append_path
 		material_name = "PatchMaterialAppend"
 		material = bpy.data.materials.get(material_name)
@@ -1270,12 +1273,156 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			# elif io.instanceImportGrouping == 'MESH':
 				#TODO: Implement!
 
+	def create_splines_json(self):
+		print("Importing Splines")
+
+		collection = bpy.data.collections.get('Splines')
+		if collection is None:
+			collection = bpy.data.collections.new('Splines')
+			self.scene_collection.children.link(collection)
+
+
+		file_path = self.folder_path + '/Splines.json'
+		if not os.path.isfile(file_path):
+			self.report({'ERROR'}, f"File 'Splines.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+
+		with open(file_path, 'r') as f:
+			data = json.load(f)
+
+			for i, json_spline in enumerate(data["Splines"]):
+
+				print("\nSpline", i, json_spline["SplineName"])
+				
+				merged_points = []
+				for j, segment in enumerate(json_spline["Segments"]):
+
+					for k in range(3):
+						x,y,z = segment["Points"][k]
+						merged_points.append((x/100, y/100, z/100)) # world scale
+						# print((x/100, y/100, z/100))
+
+					# 	x,y,z = segment["Points"][k]
+					# 	if self.io.splineImportAsNURBS:
+					# 		merged_points.append((x/100, y/100, z/100, 1.0))
+					# 	else:
+					# 		merged_points.append((x/100, y/100, z/100))
+
+				last = json_spline["Segments"][-1]["Points"][3]
+				merged_points.append((last[0] / 100, last[1] / 100, last[2] / 100)) # world scale
+
+				len_merged_points = len(merged_points)
+
+				name = json_spline["SplineName"]
+				# curve = bpy.data.curves.get(name)
+				# if curve is None:
+				# 	curve = bpy.data.curves.new(name, 'CURVE')
+
+				curve = bpy.data.curves.new(name, 'CURVE')
+				curve.dimensions = '3D'
+
+				if self.io.splineImportAsNURBS: 			# NURBS Spline Curve
+
+					spline = curve.splines.new(type='NURBS')
+					points_to_add = len_merged_points-1
+
+					if len(spline.points)-1 == points_to_add:
+						self.report({'WARN'}, "AHHHHHHHHHHHHHHHHH")
+						pass
+					else:
+						spline.points.add(points_to_add)
+
+					for j, point in enumerate(spline.points):
+						point.co = merged_points[j]
+
+					spline.use_endpoint_u = True
+					spline.use_bezier_u = True
+					spline.order_u = 4
+					spline.resolution_u = 12
+
+					curve_obj = bpy.data.objects.new(name, curve)
+					curve_obj.ssx2_CurveMode = "SPLINE"
+					curve_obj.ssx2_SplineProps.type = json_spline["SplineStyle"]
+					collection.objects.link(curve_obj)
+
+				else:										# Bézier Spline Curve
+					new_bezier_points = []
+					for j in range(0, len_merged_points, 3):
+						point_curr = Vector(merged_points[j]) # Current Point
+
+						pt = {'co': point_curr,
+							   'left_co': None,
+							   'right_co': None,
+							   'left_type': 'FREE',
+							   'right_type': 'FREE'}
+
+						if j != 0:									# Previous Point
+							point_prev = Vector(merged_points[j-1])
+
+						if j+1 != len_merged_points:					# Next Point
+							point_next = Vector(merged_points[j+1])
+							pt['right_co'] = point_next
+
+						if j+1 == len_merged_points:					# Final Point
+							pt['right_co'] = calc_opposite_point_co(point_curr, point_prev)
+							pt['left_co'] = point_prev
+
+							if point_prev == point_curr:
+								pass # type = 'FREE'
+							else:
+								pt['right_type'] = 'ALIGNED'
+								pt['left_type'] = 'ALIGNED'
+
+						if j == 0:											# First Point
+							pt['left_co'] = calc_opposite_point_co(point_curr, point_next)
+							pt['right_type'] = 'ALIGNED'
+							pt['left_type'] = 'ALIGNED'
+
+						if (j != 0) and (j+1 != len_merged_points): # Middle Points
+							point_prev = Vector(merged_points[j-1])
+							point_next = Vector(merged_points[j+1])
+
+							# pt['right_type'] = 'ALIGNED'
+							# pt['left_type'] = 'ALIGNED'
+							pt['right_type'] = 'FREE'
+							pt['left_type'] = 'FREE'
+							
+							pt['right_co'] = point_next
+							pt['left_co'] = point_prev
+
+						# print("	left", pt['left_co'])
+						# print("	curr", pt['co'])
+						# print("	right", pt['right_co'])
+
+						new_bezier_points.append(pt)
+						
+					spline = curve.splines.new(type='BEZIER')
+					spline.bezier_points.add(len(new_bezier_points)-1)
+					
+					for j, bez_point in enumerate(new_bezier_points):
+						point = spline.bezier_points[j]
+
+						point.co = bez_point['co']
+						point.handle_left = bez_point['left_co']
+						point.handle_right = bez_point['right_co']
+						point.handle_left_type  = bez_point['left_type']	#'FREE'
+						point.handle_right_type = bez_point['right_type']	#'FREE'
+
+					curve_obj = bpy.data.objects.new(name, curve)
+					curve_obj.ssx2_CurveMode = "SPLINE"
+					curve_obj.ssx2_SplineProps.type = str(json_spline["SplineStyle"])
+
+					collection.objects.link(curve_obj)
+
+		# SELECT ALL AT THE END AND SET ORIGIN
+		#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
 	def import_json(self):
 		scene = bpy.context.scene
-		scene_collection = scene.collection
+		self.scene_collection = scene.collection
 
 		io = scene.ssx2_WorldImportExportProps
+		self.io = io
 		#io.importNames
 		#io.importTextures
 		#io.patchImportGrouping
@@ -1287,7 +1434,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			return {'CANCELLED'}
 
 		if io.importPatches: # <------------------------------- Import Patches
-			getset_collection_to_target('Patches', scene_collection)
+			getset_collection_to_target('Patches', self.scene_collection)
 
 			temp_time_start = time.time()
 			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
@@ -1564,149 +1711,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 
 		if io.importSplines: # <------------------------------- Import Splines
-			print("Importing Splines")
-
-			collection = bpy.data.collections.get('Splines')
-			if collection is None:
-				collection = bpy.data.collections.new('Splines')
-				scene_collection.children.link(collection)
-
-
-			file_path = self.folder_path + '/Splines.json'
-			if not os.path.isfile(file_path):
-				self.report({'ERROR'}, f"File 'Splines.json' does not exist in 'Import Folder'")
-				return {'CANCELLED'}
-
-			with open(file_path, 'r') as f:
-				data = json.load(f)
-
-				for i, json_spline in enumerate(data["Splines"]):
-
-					print("\nSpline", i, json_spline["SplineName"])
-					
-					merged_points = []
-					for j, segment in enumerate(json_spline["Segments"]):
-						print("seg")
-
-						for k in range(3):
-							x,y,z = segment["Points"][k]
-							merged_points.append((x/100, y/100, z/100))
-							print((x/100, y/100, z/100))
-
-						# 	x,y,z = segment["Points"][k]
-						# 	if io.splineImportAsNURBS:
-						# 		merged_points.append((x/100, y/100, z/100, 1.0))
-						# 	else:
-						# 		merged_points.append((x/100, y/100, z/100))
-
-					last = json_spline["Segments"][-1]["Points"][3]
-					merged_points.append((last[0] / 100, last[1] / 100, last[2] / 100))
-
-					len_merged_points = len(merged_points)
-
-					name = json_spline["SplineName"]
-					# curve = bpy.data.curves.get(name)
-					# if curve is None:
-					# 	curve = bpy.data.curves.new(name, 'CURVE')
-
-					curve = bpy.data.curves.new(name, 'CURVE')
-					curve.dimensions = '3D'
-
-					if io.splineImportAsNURBS: 			# NURBS Spline Curve
-
-						spline = curve.splines.new(type='NURBS')
-						points_to_add = len_merged_points-1
-
-						if len(spline.points)-1 == points_to_add:
-							self.report({'WARN'}, "AHHHHHHHHHHHHHHHHH")
-							pass
-						else:
-							spline.points.add(points_to_add)
-
-						for j, point in enumerate(spline.points):
-							point.co = merged_points[j]
-
-						spline.use_endpoint_u = True
-						spline.use_bezier_u = True
-						spline.order_u = 4
-						spline.resolution_u = 12
-
-						curve_obj = bpy.data.objects.new(name, curve)
-						curve_obj.ssx2_CurveMode = "SPLINE"
-						curve_obj.ssx2_SplineProps.type = json_spline["SplineStyle"]
-						collection.objects.link(curve_obj)
-
-					else:										# Bézier Spline Curve
-						new_bezier_points = []
-						for j in range(0, len_merged_points, 3):
-							point_curr = Vector(merged_points[j]) # Current Point
-
-							pt = {'co': point_curr,
-								   'left_co': None,
-								   'right_co': None,
-								   'left_type': 'FREE',
-								   'right_type': 'FREE'}
-
-							if j != 0:									# Previous Point
-								point_prev = Vector(merged_points[j-1])
-
-							if j+1 != len_merged_points:					# Next Point
-								point_next = Vector(merged_points[j+1])
-								pt['right_co'] = point_next
-
-							if j+1 == len_merged_points:					# Final Point
-								pt['right_co'] = calc_opposite_point_co(point_curr, point_prev)
-								pt['left_co'] = point_prev
-
-								if point_prev == point_curr:
-									pass # type = 'FREE'
-								else:
-									pt['right_type'] = 'ALIGNED'
-									pt['left_type'] = 'ALIGNED'
-
-							if j == 0:											# First Point
-								pt['left_co'] = calc_opposite_point_co(point_curr, point_next)
-								pt['right_type'] = 'ALIGNED'
-								pt['left_type'] = 'ALIGNED'
-
-							if (j != 0) and (j+1 != len_merged_points): # Middle Points
-								point_prev = Vector(merged_points[j-1])
-								point_next = Vector(merged_points[j+1])
-
-								# pt['right_type'] = 'ALIGNED'
-								# pt['left_type'] = 'ALIGNED'
-								pt['right_type'] = 'FREE'
-								pt['left_type'] = 'FREE'
-								
-								pt['right_co'] = point_next
-								pt['left_co'] = point_prev
-
-							# print("	left", pt['left_co'])
-							# print("	curr", pt['co'])
-							# print("	right", pt['right_co'])
-
-							new_bezier_points.append(pt)
-							
-						spline = curve.splines.new(type='BEZIER')
-						spline.bezier_points.add(len(new_bezier_points)-1)
-						
-						for j, bez_point in enumerate(new_bezier_points):
-							point = spline.bezier_points[j]
-
-							point.co = bez_point['co']
-							point.handle_left = bez_point['left_co']
-							point.handle_right = bez_point['right_co']
-							point.handle_left_type  = bez_point['left_type']	#'FREE'
-							point.handle_right_type = bez_point['right_type']	#'FREE'
-
-						curve_obj = bpy.data.objects.new(name, curve)
-						curve_obj.ssx2_CurveMode = "SPLINE"
-						curve_obj.ssx2_SplineProps.type = str(json_spline["SplineStyle"])
-
-						collection.objects.link(curve_obj)
-
-			# SELECT ALL AT THE END AND SET ORIGIN
-			#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+			run_without_update(self.create_splines_json)
 
 
 
