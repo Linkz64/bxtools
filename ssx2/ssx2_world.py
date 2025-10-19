@@ -1287,6 +1287,12 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"File 'Splines.json' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
 
+		PT_CO = 0
+		PT_LEFT_CO = 1
+		PT_RIGHT_CO = 2
+		PT_LEFT_TYPE = 3
+		PT_RIGHT_TYPE = 4
+
 		with open(file_path, 'r') as f:
 			data = json.load(f)
 
@@ -1348,51 +1354,51 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				else:										# Bézier Spline Curve
 					new_bezier_points = []
 					for j in range(0, len_merged_points, 3):
-						point_curr = Vector(merged_points[j]) # Current Point
+						point_current = Vector(merged_points[j]) # Current Point
+						pt = [point_current, None, None, 'FREE', 'FREE']
 
-						pt = {'co': point_curr,
-							   'left_co': None,
-							   'right_co': None,
-							   'left_type': 'FREE',
-							   'right_type': 'FREE'}
-
-						if j != 0:									# Previous Point
+						# Previous Point
+						if j != 0:
 							point_prev = Vector(merged_points[j-1])
 
-						if j+1 != len_merged_points:					# Next Point
+						# Next Point
+						if j+1 != len_merged_points:
 							point_next = Vector(merged_points[j+1])
-							pt['right_co'] = point_next
+							pt[PT_RIGHT_CO] = point_next
 
-						if j+1 == len_merged_points:					# Final Point
-							pt['right_co'] = calc_opposite_point_co(point_curr, point_prev)
-							pt['left_co'] = point_prev
+						# Final Point
+						if j+1 == len_merged_points:
+							pt[PT_RIGHT_CO] = calc_opposite_point_co(point_current, point_prev)
+							pt[PT_LEFT_CO] = point_prev
 
-							if point_prev == point_curr:
+							if point_prev == point_current:
 								pass # type = 'FREE'
 							else:
-								pt['right_type'] = 'ALIGNED'
-								pt['left_type'] = 'ALIGNED'
+								pt[PT_RIGHT_TYPE] = 'ALIGNED'
+								pt[PT_LEFT_TYPE] = 'ALIGNED'
 
-						if j == 0:											# First Point
-							pt['left_co'] = calc_opposite_point_co(point_curr, point_next)
-							pt['right_type'] = 'ALIGNED'
-							pt['left_type'] = 'ALIGNED'
+						# First Point
+						if j == 0:
+							pt[PT_LEFT_CO] = calc_opposite_point_co(point_current, point_next)
+							pt[PT_RIGHT_TYPE] = 'ALIGNED'
+							pt[PT_LEFT_TYPE] = 'ALIGNED'
 
-						if (j != 0) and (j+1 != len_merged_points): # Middle Points
+						# Middle Points
+						if (j != 0) and (j+1 != len_merged_points): 
 							point_prev = Vector(merged_points[j-1])
 							point_next = Vector(merged_points[j+1])
 
-							# pt['right_type'] = 'ALIGNED'
-							# pt['left_type'] = 'ALIGNED'
-							pt['right_type'] = 'FREE'
-							pt['left_type'] = 'FREE'
+							# pt[PT_RIGHT_TYPE] = 'ALIGNED'
+							# pt[PT_LEFT_TYPE] = 'ALIGNED'
+							pt[PT_RIGHT_TYPE] = 'FREE'
+							pt[PT_LEFT_TYPE] = 'FREE'
 							
-							pt['right_co'] = point_next
-							pt['left_co'] = point_prev
+							pt[PT_RIGHT_CO] = point_next
+							pt[PT_LEFT_CO] = point_prev
 
-						# print("	left", pt['left_co'])
-						# print("	curr", pt['co'])
-						# print("	right", pt['right_co'])
+						# print("	left", pt[PT_LEFT_CO])
+						# print("	curr", pt[PT_CO])
+						# print("	right", pt[PT_RIGHT_CO])
 
 						new_bezier_points.append(pt)
 						
@@ -1402,11 +1408,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					for j, bez_point in enumerate(new_bezier_points):
 						point = spline.bezier_points[j]
 
-						point.co = bez_point['co']
-						point.handle_left = bez_point['left_co']
-						point.handle_right = bez_point['right_co']
-						point.handle_left_type  = bez_point['left_type']	#'FREE'
-						point.handle_right_type = bez_point['right_type']	#'FREE'
+						point.co = bez_point[PT_CO]
+						point.handle_left = bez_point[PT_LEFT_CO]
+						point.handle_right = bez_point[PT_RIGHT_CO]
+						point.handle_left_type  = bez_point[PT_LEFT_TYPE]	#'FREE'
+						point.handle_right_type = bez_point[PT_RIGHT_TYPE]	#'FREE'
 
 					curve_obj = bpy.data.objects.new(name, curve)
 					curve_obj.ssx2_CurveMode = "SPLINE"
