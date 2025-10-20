@@ -50,20 +50,20 @@ def existing_patch_uvs(in_uvs):
 		return None
 
 def round_uvs_for_check(uvs):
-		new_uvs = [list(uv) for uv in uvs]
-		for i, tup in enumerate(uvs):
-			#new_tup = []
-			for j, flt in enumerate(tup):
-				absflt = abs(flt)
-				if absflt <= 0.01:
-					new_uvs[i][j] = round(flt)
-				elif absflt >= 0.99 and absflt < 1.01:
-					new_uvs[i][j] = round(flt)
-				elif absflt >= 1.99 and absflt < 2.01:
-					new_uvs[i][j] = round(flt)
-				else:
-					pass#print("hmmmmmmmmmmmmmm", flt)
-		return new_uvs
+	new_uvs = [list(uv) for uv in uvs]
+	for i, tup in enumerate(uvs):
+		#new_tup = []
+		for j, flt in enumerate(tup):
+			absflt = abs(flt)
+			if absflt <= 0.01:
+				new_uvs[i][j] = round(flt)
+			elif absflt >= 0.99 and absflt < 1.01:
+				new_uvs[i][j] = round(flt)
+			elif absflt >= 1.99 and absflt < 2.01:
+				new_uvs[i][j] = round(flt)
+			else:
+				pass#print("hmmmmmmmmmmmmmm", flt)
+	return new_uvs
 
 def create_imported_patches(self, context, path, images, map_info=None):
 	print("Importing Patches")
@@ -1839,7 +1839,99 @@ class SSX2_OP_CopyPatchUVsToSelected(bpy.types.Operator):
 				obj.ssx2_PatchProps.texMapPreset = texMapPreset
 
 		return {'FINISHED'}
-	
+
+class SSX2_OP_MergePatches(bpy.types.Operator):
+	bl_idname = "object.ssx2_merge_patches"
+	bl_label = "Merge Patches"
+	bl_description = "Join patch objects together and merge the closest points."
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		if active_object:
+			if active_object.mode == 'EDIT':
+				return
+			return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+			(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+			or active_object.ssx2_CurveMode == 'CAGE'))
+
+	def execute(self, context):
+		active_object = context.active_object
+		selected_objects = context.selected_objects
+		patch_props = active_object.ssx2_PatchProps
+
+		selected_object = None
+
+		print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n")
+
+
+		num_objects = len(selected_objects)
+
+		if num_objects < 2:
+			self.report({'WARNING'}, "You need to select 2 objects")
+			return {'CANCELLED'}
+
+		if num_objects > 2:
+			self.report({'WARNING'}, "Can only merge 2 objects")
+			return {'CANCELLED'}
+
+		
+		if selected_objects[0] == active_object:
+			selected_object = selected_objects[1]
+		else:
+			selected_object = selected_objects[0]
+
+
+
+
+		merge_from_end = False
+
+
+
+		def check_valid_spline_cage(obj) -> tuple:
+			num_splines = len(obj.data.splines)
+
+			if num_splines == 0:
+				return False, f"'{obj.name}' is empty"
+
+			if num_splines == 3 or num_splines == 5:
+				return False, f"'{obj.name}' needs to have 2, 4 or 6 splines"
+
+			if num_splines > 6:
+				return False, f"'{obj.name}' has too many splines"
+
+			equal_point_count = len(obj.data.splines[0].bezier_points)
+
+			for spline in obj.data.splines:
+
+				if spline.type != 'BEZIER':
+					return False, f"'{obj.name}' contains non-bezier splines"
+
+				if len(spline.bezier_points) != equal_point_count:
+					return False, f"'{obj.name}': Point count among the splines is not equal"
+
+			return True, ""
+
+
+
+		cage_is_valid = check_valid_spline_cage(active_object)
+		if not cage_is_valid[0]:
+			self.report({'WARNING'}, cage_is_valid[1])
+
+		cage_is_valid = check_valid_spline_cage(selected_object)
+		if not cage_is_valid[0]:
+			self.report({'WARNING'}, cage_is_valid[1])
+		
+
+
+
+
+
+
+
+		return {'FINISHED'}
+
 class SSX2_OP_AddCageVGuide(bpy.types.Operator):
 	bl_idname = "object.ssx2_add_v_guide"
 	bl_label = ""
@@ -2444,6 +2536,7 @@ classes = (
 	SSX2_OP_SelectSplineCageV,
 	SSX2_OP_CopyMaterialToSelected,
 	SSX2_OP_CopyPatchUVsToSelected,
+	SSX2_OP_MergePatches,
 	SSX2_OP_PatchUVTransform,
 )
 

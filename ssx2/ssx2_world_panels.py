@@ -40,6 +40,7 @@ from .ssx2_world_patches import (
 	SSX2_OP_CopyMaterialToSelected,
 	SSX2_OP_PatchUVEditor,
 	SSX2_OP_PatchUVTransform,
+	SSX2_OP_MergePatches,
 )
 
 
@@ -190,10 +191,15 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		self.layout.label(icon='SURFACE_NSURFACE')
 
 	def draw(self, context):
-		from .ssx2_world_patches import glob_obj_proxy
+		# from .ssx2_world_patches import glob_obj_proxy
 		col = self.layout.column()
 
 		obj = bpy.context.active_object
+
+		row = col.row(align=True)
+		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVs to")
+		row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
+
 		if obj is not None:
 			if obj.type == 'SURFACE':
 				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Control Grid")
@@ -205,9 +211,8 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 			col.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 
 		col.operator(SSX2_OP_PatchSplit4x4.bl_idname, text="Split to 4x4")
-		row = col.row(align=True)
-		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVs to")
-		row.operator(SSX2_OP_CopyMaterialToSelected.bl_idname, text="Copy Mat to")
+		col.operator(SSX2_OP_MergePatches.bl_idname)
+		
 		# if glob_obj_proxy is None:
 		# 	col.operator(SSX2_OP_PatchUVEditor.bl_idname, text="UV Editor", icon='WINDOW')
 		# else:
