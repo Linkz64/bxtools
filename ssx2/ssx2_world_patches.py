@@ -278,7 +278,7 @@ class SSX2_OP_PatchUVTransform(bpy.types.Operator):
 	bl_description = "Transforms the patches UVs"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	xform: bpy.props.IntProperty()
+	xform: bpy.props.IntProperty(min=0, max=3, options={'HIDDEN'})
 
 	def execute(self, context):
 		objs = bpy.context.selected_objects
