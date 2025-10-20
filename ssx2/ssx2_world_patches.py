@@ -38,6 +38,30 @@ glob_obj_proxy = None
 glob_obj_proxy_name = "BXT_UV_PROXY"
 glob_bm = None
 
+def check_valid_spline_cage(obj) -> tuple:
+	num_splines = len(obj.data.splines)
+
+	if num_splines == 0:
+		return False, f"'{obj.name}' is empty"
+
+	if num_splines == 3 or num_splines == 5:
+		return False, f"'{obj.name}' needs to have 2, 4 or 6 splines"
+
+	if num_splines > 6:
+		return False, f"'{obj.name}' has too many splines"
+
+	equal_point_count = len(obj.data.splines[0].bezier_points)
+
+	for spline in obj.data.splines:
+
+		if spline.type != 'BEZIER':
+			return False, f"'{obj.name}' contains non-bezier splines"
+
+		if len(spline.bezier_points) != equal_point_count:
+			return False, f"'{obj.name}': Point count among the splines is not equal"
+
+	return True, ""
+
 def existing_patch_uvs(in_uvs):
 	uvs = [tuple(round(flt, 5) for flt in uv) for uv in in_uvs]
 	#uvs = in_uvs
@@ -1889,29 +1913,7 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 
 
 
-		def check_valid_spline_cage(obj) -> tuple:
-			num_splines = len(obj.data.splines)
-
-			if num_splines == 0:
-				return False, f"'{obj.name}' is empty"
-
-			if num_splines == 3 or num_splines == 5:
-				return False, f"'{obj.name}' needs to have 2, 4 or 6 splines"
-
-			if num_splines > 6:
-				return False, f"'{obj.name}' has too many splines"
-
-			equal_point_count = len(obj.data.splines[0].bezier_points)
-
-			for spline in obj.data.splines:
-
-				if spline.type != 'BEZIER':
-					return False, f"'{obj.name}' contains non-bezier splines"
-
-				if len(spline.bezier_points) != equal_point_count:
-					return False, f"'{obj.name}': Point count among the splines is not equal"
-
-			return True, ""
+		
 
 
 
