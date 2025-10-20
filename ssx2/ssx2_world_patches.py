@@ -1945,38 +1945,16 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		print("merge at end:", merge_at_end)
 
 
-		# obj_a_splines = []
-		# for spline in active_object.data.splines:
-		# 	bez_points = []
-		# 	for j in range(1, spline.point_count_u):
-		# 		pt = spline.bezier_points[j]
-
-		# 		bez_points.append(
-		# 			(
-		# 				pt.co + obj_a_pos,
-		# 				pt.handle_left + obj_a_pos,
-		# 				pt.handle_right + obj_a_pos
-		# 			)
-		# 		)
-		# 	obj_a_splines.append(bez_points)
-
-		obj_b_splines = []
+		
 		if merge_at_end:
-			for spline in selected_object.data.splines:
-				bez_points = []
-				for j in range(1, spline.point_count_u):
-					bez_points.append(spline.bezier_points[j])
-				obj_b_splines.append(bez_points)
-
-
-			for i, spline_b in enumerate(obj_b_splines):
+			for i, spline in enumerate(selected_object.data.splines):
 				print("Spline", i)
-
+				
 				active_object.data.splines[i].bezier_points.add(obj_b_num_points - 1)
 
 				for j in range(obj_b_num_points - 1):
 					obj_a_point = active_object.data.splines[i].bezier_points[j + obj_a_num_points]
-					obj_b_point = spline_b[j]
+					obj_b_point = spline.bezier_points[j + 1]
 
 					pt_b_co = obj_b_mtx @ obj_b_point.co
 					pt_b_handle_left = obj_b_mtx @ obj_b_point.handle_left
@@ -1991,6 +1969,20 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 
 			bpy.data.objects.remove(selected_object)
 			active_object.select_set(True)
+
+		else:
+			obj_a_splines = []
+			for spline in active_object.data.splines:
+				bez_points = []
+				for j in range(spline.point_count_u):
+					bez_points.append(spline.bezier_points[j])
+				obj_a_splines.append(bez_points)
+
+			for spline in selected_object.data.splines:
+				bez_points = []
+				for j in range(0, spline.point_count_u - 1):
+					bez_points.append(spline.bezier_points[j])
+				obj_b_splines.append(bez_points)
 		
 
 
