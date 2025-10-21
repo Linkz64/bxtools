@@ -1876,19 +1876,16 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		if active_object:
 			if active_object.mode == 'EDIT':
 				return
+			# return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
+			# (active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
+			# or active_object.ssx2_CurveMode == 'CAGE'))
 			return ((len(bpy.context.selected_objects) != 0) and (active_object is not None) and 
-			(active_object.type == 'SURFACE' or active_object.ssx2_PatchProps.isControlGrid
-			or active_object.ssx2_CurveMode == 'CAGE'))
+			(active_object.ssx2_CurveMode == 'CAGE'))
 
 	def execute(self, context):
 		active_object = context.active_object
 		selected_objects = context.selected_objects
 		patch_props = active_object.ssx2_PatchProps
-
-		selected_object = None
-
-		print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n")
-
 
 		num_objects = len(selected_objects)
 
@@ -1907,16 +1904,6 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 			selected_object = selected_objects[0]
 
 
-
-
-		merge_at_end = False
-
-
-
-		
-
-
-
 		cage_is_valid = check_valid_spline_cage(active_object)
 		if not cage_is_valid[0]:
 			self.report({'WARNING'}, cage_is_valid[1])
@@ -1925,11 +1912,17 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		if not cage_is_valid[0]:
 			self.report({'WARNING'}, cage_is_valid[1])
 
+		if len(active_object.data.splines) != len(selected_object.data.splines):
+			self.report({'WARNING'}, "Both cages need to have the same number of splines")
+			return {'CANCELLED'}
+
+
 		obj_a_pos = active_object.location
 		obj_b_pos = selected_object.location
 
 		obj_a_mtx = active_object.matrix_world
 		obj_b_mtx = selected_object.matrix_world
+		obj_a_mtx_inv = active_object.matrix_world.inverted()
 		
 		obj_a_num_points = len(active_object.data.splines[0].bezier_points)
 		obj_b_num_points = len(selected_object.data.splines[0].bezier_points)
@@ -1941,51 +1934,75 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		
 
 		merge_at_end = (obj_a_pt1 - obj_b_pt0).length < (obj_a_pt0 - obj_b_pt1).length
-
-		print("merge at end:", merge_at_end)
-
+		# end is the last point of the active object's spline
 
 		
 		if merge_at_end:
-			for i, spline in enumerate(selected_object.data.splines):
-				print("Spline", i)
-				
-				active_object.data.splines[i].bezier_points.add(obj_b_num_points - 1)
+			for i, spline_b in enumerate(selected_object.data.splines):
+				spline_a = active_object.data.splines[i]
+				spline_a.bezier_points.add(obj_b_num_points - 1)
 
 				for j in range(obj_b_num_points - 1):
-					obj_a_point = active_object.data.splines[i].bezier_points[j + obj_a_num_points]
-					obj_b_point = spline.bezier_points[j + 1]
+					obj_a_point = spline_a.bezier_points[j + obj_a_num_points]
+					obj_b_point = spline_b.bezier_points[j + 1]
 
 					pt_b_co = obj_b_mtx @ obj_b_point.co
 					pt_b_handle_left = obj_b_mtx @ obj_b_point.handle_left
 					pt_b_handle_right = obj_b_mtx @ obj_b_point.handle_right
 
-					obj_a_point.co = obj_a_mtx.inverted() @ pt_b_co
-					obj_a_point.handle_left = obj_a_mtx.inverted() @ pt_b_handle_left
-					obj_a_point.handle_right = obj_a_mtx.inverted() @ pt_b_handle_right
+					obj_a_point.co = obj_a_mtx_inv @ pt_b_co
+					obj_a_point.handle_left = obj_a_mtx_inv @ pt_b_handle_left
+					obj_a_point.handle_right = obj_a_mtx_inv @ pt_b_handle_right
 					obj_a_point.handle_left_type = obj_b_point.handle_left_type
 					obj_a_point.handle_right_type = obj_b_point.handle_right_type
 
-
-			bpy.data.objects.remove(selected_object)
-			active_object.select_set(True)
-
 		else:
-			obj_a_splines = []
-			for spline in active_object.data.splines:
-				bez_points = []
-				for j in range(spline.point_count_u):
-					bez_points.append(spline.bezier_points[j])
-				obj_a_splines.append(bez_points)
+			for i, spline_a in enumerate(active_object.data.splines):
+				spline_b = selected_object.data.splines[i]
+				combined_bez_points = []
+				for j in range(obj_b_num_points - 1):
+					bez_point = spline_b.bezier_points[j]
 
-			for spline in selected_object.data.splines:
-				bez_points = []
-				for j in range(0, spline.point_count_u - 1):
-					bez_points.append(spline.bezier_points[j])
-				obj_b_splines.append(bez_points)
-		
+					combined_bez_points.append(
+						(
+							obj_a_mtx_inv @ (obj_b_mtx @ bez_point.co),
+							obj_a_mtx_inv @ (obj_b_mtx @ bez_point.handle_left),
+							obj_a_mtx_inv @ (obj_b_mtx @ bez_point.handle_right),
+							bez_point.handle_left_type,
+							bez_point.handle_right_type,
+							bez_point.radius,
+							bez_point.tilt,
+						)
+					)
+
+				for j in range(obj_a_num_points):
+					bez_point = spline_a.bezier_points[j]
+					combined_bez_points.append(
+						(
+							bez_point.co,
+							bez_point.handle_left,
+							bez_point.handle_right,
+							bez_point.handle_left_type,
+							bez_point.handle_right_type,
+							bez_point.radius,
+							bez_point.tilt,
+						)
+					)
+
+				spline_a.bezier_points.add(obj_b_num_points - 1)
+
+				for j, bez_point in enumerate(combined_bez_points):
+					obj_a_point = spline_a.bezier_points[j]
+					obj_a_point.co = bez_point[0]
+					obj_a_point.handle_left = bez_point[1]
+					obj_a_point.handle_right = bez_point[2]
+					obj_a_point.handle_left_type = bez_point[3]
+					obj_a_point.handle_right_type = bez_point[4]
+					obj_a_point.radius = bez_point[5]
+					obj_a_point.tilt = bez_point[6]
 
 
+		bpy.data.objects.remove(selected_object)
 
 		return {'FINISHED'}
 
