@@ -1936,25 +1936,86 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		merge_at_end = (obj_a_pt1 - obj_b_pt0).length < (obj_a_pt0 - obj_b_pt1).length
 		# end is the last point of the active object's spline
 
+
+		keep_overhang_handles = False
+		auto_align_handles = True
+
+		error_threshold = 0.001
 		
 		if merge_at_end:
 			for i, spline_b in enumerate(selected_object.data.splines):
 				spline_a = active_object.data.splines[i]
 				spline_a.bezier_points.add(obj_b_num_points - 1)
 
+				if not keep_overhang_handles:
+
+					print("\nSpline", i)
+
+					if auto_align_handles:
+						a_bez = spline_a.bezier_points[obj_a_num_points - 1]
+						b_bez = spline_b.bezier_points[0]
+						temp = b_bez.handle_right - b_bez.co
+						print(temp.length)
+
+
+						# auto align part. get the direction of the opposite handle (left)
+						# invert it. then a_direction * b_bez_length
+						a_direction = -(a_bez.handle_left - a_bez.co).normalized()
+						print(a_direction * temp.length)
+						a_bez.handle_right = a_bez.co + (a_direction * temp.length)
+						a_bez.handle_right_type = 'ALIGNED'
+
+					else:
+						# temp = obj_a_mtx_inv @ (obj_b_mtx @ spline_b.bezier_points[0].handle_right)
+						# spline_a.bezier_points[obj_a_num_points - 1].handle_right = temp
+
+						a_bez = spline_a.bezier_points[obj_a_num_points - 1]
+						b_bez = spline_b.bezier_points[0]
+
+						a_direction = ((obj_a_mtx @ a_bez.handle_left) - (obj_a_mtx @ a_bez.co)).normalized()
+						b_direction = ((obj_b_mtx @ b_bez.handle_left) - (obj_b_mtx @ b_bez.co)).normalized()
+
+						error_check = 0
+
+						error_check += abs(b_direction.x - a_direction.x) < error_threshold
+						error_check += abs(b_direction.y - a_direction.y) < error_threshold
+						error_check += abs(b_direction.z - a_direction.z) < error_threshold
+
+						if error_check == 3: # close enough for alignment
+
+							temp = b_bez.handle_right - b_bez.co
+							a_direction = -(a_bez.handle_left - a_bez.co).normalized()
+							a_bez.handle_right = a_bez.co + (a_direction * temp.length)
+
+							a_bez.handle_right_type = b_bez.handle_right_type
+
+						else:
+							a_bez.handle_right_type = 'FREE'
+							# a_bez.handle_right = obj_a_mtx_inv @ (obj_b_mtx @ spline_b.bezier_points[0].handle_right)
+
+							temp = (obj_b_mtx @ b_bez.handle_right) - (obj_b_mtx @ b_bez.co)
+							b_direction = temp.normalized()
+							print(temp)
+							print(b_direction)
+
+							a_bez.handle_right = a_bez.co + (b_direction * temp.length)
+
+
+
 				for j in range(obj_b_num_points - 1):
-					obj_a_point = spline_a.bezier_points[j + obj_a_num_points]
-					obj_b_point = spline_b.bezier_points[j + 1]
+					# print(j, "  ", j + 1, "  ", j + obj_a_num_points)
+					a_bez = spline_a.bezier_points[j + obj_a_num_points]
+					b_bez = spline_b.bezier_points[j + 1]
 
-					pt_b_co = obj_b_mtx @ obj_b_point.co
-					pt_b_handle_left = obj_b_mtx @ obj_b_point.handle_left
-					pt_b_handle_right = obj_b_mtx @ obj_b_point.handle_right
+					pt_b_co = obj_b_mtx @ b_bez.co
+					pt_b_handle_left = obj_b_mtx @ b_bez.handle_left
+					pt_b_handle_right = obj_b_mtx @ b_bez.handle_right
 
-					obj_a_point.co = obj_a_mtx_inv @ pt_b_co
-					obj_a_point.handle_left = obj_a_mtx_inv @ pt_b_handle_left
-					obj_a_point.handle_right = obj_a_mtx_inv @ pt_b_handle_right
-					obj_a_point.handle_left_type = obj_b_point.handle_left_type
-					obj_a_point.handle_right_type = obj_b_point.handle_right_type
+					a_bez.co = obj_a_mtx_inv @ pt_b_co
+					a_bez.handle_left = obj_a_mtx_inv @ pt_b_handle_left
+					a_bez.handle_right = obj_a_mtx_inv @ pt_b_handle_right
+					a_bez.handle_left_type = b_bez.handle_left_type
+					a_bez.handle_right_type = b_bez.handle_right_type
 
 		else:
 			for i, spline_a in enumerate(active_object.data.splines):
@@ -1992,14 +2053,14 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 				spline_a.bezier_points.add(obj_b_num_points - 1)
 
 				for j, bez_point in enumerate(combined_bez_points):
-					obj_a_point = spline_a.bezier_points[j]
-					obj_a_point.co = bez_point[0]
-					obj_a_point.handle_left = bez_point[1]
-					obj_a_point.handle_right = bez_point[2]
-					obj_a_point.handle_left_type = bez_point[3]
-					obj_a_point.handle_right_type = bez_point[4]
-					obj_a_point.radius = bez_point[5]
-					obj_a_point.tilt = bez_point[6]
+					a_bez = spline_a.bezier_points[j]
+					a_bez.co = bez_point[0]
+					a_bez.handle_left = bez_point[1]
+					a_bez.handle_right = bez_point[2]
+					a_bez.handle_left_type = bez_point[3]
+					a_bez.handle_right_type = bez_point[4]
+					a_bez.radius = bez_point[5]
+					a_bez.tilt = bez_point[6]
 
 
 		bpy.data.objects.remove(selected_object)
