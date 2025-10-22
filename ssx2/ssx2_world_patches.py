@@ -1870,6 +1870,9 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 	bl_description = "Join patch objects together and merge the closest points."
 	bl_options = {'REGISTER', 'UNDO'}
 
+	keep_overhang_handles: bpy.props.BoolProperty(name="Keep Overhang Handles", default=False)
+	auto_align_handles: bpy.props.BoolProperty(name="Auto Align Handles", default=True)
+
 	@classmethod
 	def poll(self, context):
 		active_object = context.active_object
@@ -1936,10 +1939,6 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 		merge_at_end = (obj_a_pt1 - obj_b_pt0).length < (obj_a_pt0 - obj_b_pt1).length
 		# end is the last point of the active object's spline
 
-
-		keep_overhang_handles = False
-		auto_align_handles = False
-
 		error_threshold = 0.001
 		
 		if merge_at_end:
@@ -1947,11 +1946,11 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 				spline_a = active_object.data.splines[i]
 				spline_a.bezier_points.add(obj_b_num_points - 1)
 
-				if not keep_overhang_handles:
+				if not self.keep_overhang_handles:
 					a_bez = spline_a.bezier_points[obj_a_num_points - 1]
 					b_bez = spline_b.bezier_points[0]
 
-					if auto_align_handles:
+					if self.auto_align_handles:
 						temp = b_bez.handle_right - b_bez.co
 						a_direction = -(a_bez.handle_left - a_bez.co).normalized()
 						a_bez.handle_right = a_bez.co + (a_direction * temp.length)
@@ -2004,11 +2003,11 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 				saved_root_left = ()
 				saved_root_left_type = ()
 
-				if not keep_overhang_handles:
+				if not self.keep_overhang_handles:
 					a_bez = spline_a.bezier_points[0]
 					b_bez = spline_b.bezier_points[obj_b_num_points - 1]
 
-					if auto_align_handles:
+					if self.auto_align_handles:
 						temp = b_bez.handle_left - b_bez.co
 						a_direction = -(a_bez.handle_left - a_bez.co).normalized()
 
@@ -2082,7 +2081,7 @@ class SSX2_OP_MergePatches(bpy.types.Operator):
 					a_bez.tilt = bez_point[6]
 
 
-				if not keep_overhang_handles:
+				if not self.keep_overhang_handles:
 					a_bez = spline_a.bezier_points[obj_b_num_points - 1]
 					a_bez.handle_left_type = saved_root_left_type
 					a_bez.handle_left = saved_root_left
