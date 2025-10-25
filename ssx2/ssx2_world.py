@@ -1470,7 +1470,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			collection_paths = bpy.data.collections.get('Paths')
 			if collection_paths is None:
 				collection_paths = bpy.data.collections.new('Paths')
-				scene_collection.children.link(collection_paths)
+				self.scene_collection.children.link(collection_paths)
 
 
 			# APPEND PATH GEOMETRY NODES
