@@ -2048,12 +2048,14 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						if i == len(all_points)-1:
 							break
 
+						coeffs = calc_coefficients(*segment_points, samples=200)
+
 						spline_segments_json_obj = {
 							"Points": [pt.to_tuple() for pt in segment_points],
-							"U0": 0.0001,
-							"U1": 0.0001,
-							"U2": 0.0001,
-							"U3": 0.0001,
+							"U0": coeffs[0],
+							"U1": coeffs[1],
+							"U2": coeffs[2],
+							"U3": coeffs[3],
 						}
 
 						segments.append(spline_segments_json_obj)

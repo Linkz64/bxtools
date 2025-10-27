@@ -347,6 +347,78 @@ def calc_opposite_point_co(a, b):
 
 ## Splines
 
+def bezier_point(t, P0, P1, P2, P3):
+    u = 1.0 - t
+    return (
+        (u**3) * P0[0] + 3*u*u*t * P1[0] + 3*u*t*t * P2[0] + (t**3) * P3[0],
+        (u**3) * P0[1] + 3*u*u*t * P1[1] + 3*u*t*t * P2[1] + (t**3) * P3[1],
+        (u**3) * P0[2] + 3*u*u*t * P1[2] + 3*u*t*t * P2[2] + (t**3) * P3[2],
+    )
+
+def calc_coefficients(P0, P1, P2, P3, samples=200):
+    ts = [i / (samples - 1) for i in range(samples)]
+    pts = [bezier_point(t, P0, P1, P2, P3) for t in ts]
+
+    dists = [0.0]
+    total = 0.0
+    for i in range(1, samples):
+        dx = pts[i][0] - pts[i - 1][0]
+        dy = pts[i][1] - pts[i - 1][1]
+        dz = pts[i][2] - pts[i - 1][2]
+        total += math.sqrt(dx*dx + dy*dy + dz*dz)
+        dists.append(total)
+
+    # convert to meters
+    lengths = [d * 0.01 for d in dists]
+
+    # fit cubic t = u0*a^3 + u1*a^2 + u2*a + u3
+    n = len(lengths)
+    sx, sx2, sx3, sx4, sx5, sx6 = [0]*6
+    sy, sxy, sx2y, sx3y = [0]*4
+    for i in range(n):
+        x = lengths[i]
+        y = ts[i]
+        x2, x3 = x*x, x*x*x
+        sx += x
+        sx2 += x2
+        sx3 += x3
+        sx4 += x2*x2
+        sx5 += x3*x2
+        sx6 += x3*x3
+        sy += y
+        sxy += x*y
+        sx2y += x2*y
+        sx3y += x3*y
+
+    # solve normal equations for cubic regression
+    A = [
+        [sx6, sx5, sx4, sx3],
+        [sx5, sx4, sx3, sx2],
+        [sx4, sx3, sx2, sx],
+        [sx3, sx2, sx, n]
+    ]
+    B = [sx3y, sx2y, sxy, sy]
+
+    # gaussian elimination
+    for i in range(4):
+        pivot = A[i][i]
+        for j in range(i, 4):
+            A[i][j] /= pivot
+        B[i] /= pivot
+        for k in range(i + 1, 4):
+            factor = A[k][i]
+            for j in range(i, 4):
+                A[k][j] -= factor * A[i][j]
+            B[k] -= factor * B[i]
+
+    u = [0]*4
+    for i in range(3, -1, -1):
+        u[i] = B[i] - sum(A[i][j]*u[j] for j in range(i+1, 4))
+
+    return u
+
+    
+
 def calc_spline_segments(num_points): # segments of 4
 	return ceil((num_points - 1) / 3)
 
