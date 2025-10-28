@@ -992,17 +992,17 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# for mat in materials_to_import:
 		# 	print(mat)
 
+		# return ""
 
 		new_global_scale = 1 / 100 # WorldScale
 
 		print("\nImporting .obj files")
 
-		obj_file_import_mode = 1
+		obj_file_import_mode = 0
+
+		import_obj_files_time_start = time.time()
 
 		if obj_file_import_mode == 0:
-
-			import_obj_files_time_start = time.time()
-
 			# obj_files = next(os.walk(models_folder_path))[2]
 			# len(obj_files) == 0: ERROR!!!
 
@@ -1019,7 +1019,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_obj = bpy.context.view_layer.objects.active
 				new_obj_objects.append(new_obj)
 
-			print("importing .obj files took", import_obj_files_time_start - time.time())
+			print("importing .obj files took", time.time() - import_obj_files_time_start)
 
 			[obj.select_set(True) for obj in new_obj_objects]
 			# bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
@@ -1029,6 +1029,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			
 
 			already_merged = []
+			merging_time_start = time.time()
 
 			for mesh_data in meshes_to_merge:
 				if not mesh_data:
@@ -1066,6 +1067,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				scene_collection.objects.unlink(new_obj)
 
 				already_merged.append(new_obj_name)
+
+			print("merging .obj files took ", time.time() - merging_time_start)
 
 		elif obj_file_import_mode == 1:
 			already_merged = []
@@ -1125,7 +1128,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				already_merged.append(new_obj_name)
 
-
+			print("importing and merging .obj files took", time.time() - import_obj_files_time_start)
 
 
 		print("\nLinking models to prefab collections")
@@ -1426,12 +1429,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 	def import_json(self):
 		scene = bpy.context.scene
 		self.scene_collection = scene.collection
-
-		io = scene.ssx2_WorldImportExportProps
-		self.io = io
-		#io.importNames
-		#io.importTextures
-		#io.patchImportGrouping
+		self.io = scene.ssx2_WorldImportExportProps
 
 		self.folder_path = scene.ssx2_WorldImportExportProps.importFolderPath
 		self.folder_path = os.path.abspath(bpy.path.abspath(self.folder_path))
@@ -1439,23 +1437,26 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"Import Folder does not exist")
 			return {'CANCELLED'}
 
-		if io.importPatches: # <------------------------------- Import Patches
+		if self.io.importPatches or self.io.importPrefabs:
+			self.images = get_images_from_folder(self.folder_path+'/Textures/')
+
+		if self.io.importPatches: # <------------------------------- Import Patches
 			getset_collection_to_target('Patches', self.scene_collection)
 
 			temp_time_start = time.time()
 			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
-			self.images = get_images_from_folder(self.folder_path+'/Textures/')
+			
 
 			run_without_update(self.create_patches_json)
 
 			print("importing patches took:", time.time() - temp_time_start, "seconds")
 
 
-		if io.importPrefabs: # <------------------------------- Import Prefabs & Instances
+		if self.io.importPrefabs: # <------------------------------- Import Prefabs & Instances
 			run_without_update(self.create_prefabs_json)
 
 
-		if io.importPaths: # <------------------------------- Import Paths
+		if self.io.importPaths: # <------------------------------- Import Paths
 			print("Importing Paths")
 
 			aip_file_path = self.folder_path + '/AIP.json'
@@ -1716,7 +1717,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				#break # only general
 
 
-		if io.importSplines: # <------------------------------- Import Splines
+		if self.io.importSplines: # <------------------------------- Import Splines
 			run_without_update(self.create_splines_json)
 
 
@@ -2604,8 +2605,8 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	worldChoice: bpy.props.EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
 	worldChoiceCustom: bpy.props.StringProperty(name="", default="gari", subtype='NONE',
 		description="Name of input file e.g gari, megaple, pipe")
-	importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
-	importNames: bpy.props.BoolProperty(name="Import Names", default=True)
+	# importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
+	# importNames: bpy.props.BoolProperty(name="Import Names", default=True)
 
 	# patches
 	importPatches: bpy.props.BoolProperty(name="Import Patches", default=True)
