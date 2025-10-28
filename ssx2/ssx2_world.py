@@ -98,17 +98,17 @@ def update_select_by_surface_type(self, context):
 		#bx_report("None found", title="Info", icon='INFO')
 
 
-def poll_prefab_for_inst(self, context):
+def poll_model_for_inst(self, context):
 	# if collection.ssx2 collection type/mode == 'PREFAB':
 	return True
 
-def update_prefab_for_inst(self, context):
-	fab = self.ssx2_PrefabForInstance
+def update_model_for_inst(self, context):
+	fab = self.ssx2_ModelForInstance
 	if fab:
 		self.instance_type = 'COLLECTION'
 		self.instance_collection = fab
 	else:
-		print("No prefab specified.")
+		print("No model specified.")
 		self.instance_collection = None
 		self.show_instancer_for_viewport = True
 
@@ -679,7 +679,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			io.importPatches or \
 			io.importSplines or \
 			io.importPaths or \
-			io.importPrefabs\
+			io.importModels\
 			) and \
 			(s.bx_PlatformChoice == 'XBX' or s.bx_PlatformChoice == 'NGC' or\
 			s.bx_PlatformChoice == 'PS2' or s.bx_PlatformChoice == 'ICE')
@@ -693,7 +693,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		self.scene_collection = scene.collection
 		self.io = scene.ssx2_WorldImportExportProps
 
-		if not self.io.importPatches and not self.io.importPrefabs:
+		if not self.io.importPatches and not self.io.importModels:
 			return
 
 		append_path = templates_append_path
@@ -889,7 +889,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# 			new_col.objects.link(patch)
 		# 			patches_collection.objects.unlink(patch)
 
-	def create_prefabs_json(self):
+	def create_models_json(self):
 		scene_collection = bpy.context.scene.collection
 		active_collection = bpy.context.collection
 		io = bpy.context.scene.ssx2_WorldImportExportProps
@@ -904,8 +904,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"File 'Materials.json' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
 
-		prefabs_file_path = self.folder_path + '/Prefabs.json'
-		if not os.path.isfile(prefabs_file_path):
+		models_file_path = self.folder_path + '/Prefabs.json'
+		if not os.path.isfile(models_file_path):
 			self.report({'ERROR'}, f"File 'Prefabs.json' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
 
@@ -914,12 +914,12 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"File 'Instances.json' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
 		
-		prefabs_collection = getset_collection_to_target('Prefabs', scene_collection)
+		models_collection = getset_collection_to_target('Models', scene_collection)
 		instances_collection = getset_collection_to_target('Instances', scene_collection)
 
 		
-		fab_group_mode = 0 # 0:batch 1:names
-		fab_group_size = 400 # make it a scene prop?
+		mdl_group_mode = 0 # 0:batch 1:names
+		mdl_group_size = 400 # make it a scene prop?
 		inst_group_size = 500
 
 		# name_grouping_test = []
@@ -967,38 +967,38 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 
 
-		### Import Prefabs
-		print("\nParsing Prefabs")
+		### Import Models
+		print("\nParsing Models")
 
 		all_surfaces_to_merge = []
 
-		with open(prefabs_file_path, 'r') as f:
+		with open(models_file_path, 'r') as f:
 			data = json.load(f)
 
-		prefab_collections = []
+		model_collections = []
 
 		for i, json_fab in enumerate(data["Prefabs"]):
-			fab_name = json_fab["PrefabName"]
-			# print(fab_name, "sub_objs:", len(json_fab["PrefabObjects"]))
+			mdl_name = json_fab["PrefabName"]
+			# print(mdl_name, "sub_objs:", len(json_fab["PrefabObjects"]))
 
-			fab_collection = bpy.data.collections.new(fab_name)
-			#prefabs_collection.children.link(fab_collection)
+			mdl_collection = bpy.data.collections.new(mdl_name)
+			#models_collection.children.link(mdl_collection)
 
-			if fab_group_mode == 0:
-				new_group_col = collection_grouping(f"Prefab_Group", prefabs_collection, fab_group_size, i)
-				new_group_col.children.link(fab_collection)
+			if mdl_group_mode == 0:
+				new_group_col = collection_grouping(f"Model_Group", models_collection, mdl_group_size, i)
+				new_group_col.children.link(mdl_collection)
 			else:
-				new_group_name = "Prefab " + ''.join([char for char in fab_name if not char.isdigit()])
+				new_group_name = "Model " + ''.join([char for char in mdl_name if not char.isdigit()])
 				new_group_name = new_group_name[:-1] if new_group_name.endswith('_') else new_group_name
 				#print(new_group_name)
 				new_group_col = getset_collection(new_group_name)
-				new_group_col.children.link(fab_collection)
+				new_group_col.children.link(mdl_collection)
 
 				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
-					prefabs_collection.children.link(new_group_col)
+					models_collection.children.link(new_group_col)
 
-			fab_collection.ssx2_PrefabCollectionProps.unknown3 = json_fab["Unknown3"]
-			fab_collection.ssx2_PrefabCollectionProps.anim_time = json_fab["AnimTime"]
+			mdl_collection.ssx2_ModelCollectionProps.unknown3 = json_fab["Unknown3"]
+			mdl_collection.ssx2_ModelCollectionProps.anim_time = json_fab["AnimTime"]
 
 			sub_objs = []
 
@@ -1026,7 +1026,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				sub_objs.append(sub_obj_dict)
 
-			prefab_collections.append((fab_collection, sub_objs))
+			model_collections.append((mdl_collection, sub_objs))
 
 
 		new_global_scale = 1 / 100 # WorldScale
@@ -1168,15 +1168,15 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			print("importing and merging .obj files took", time.time() - import_obj_files_time_start)
 
 
-		print("\nLinking models to prefab collections")
+		print("\nLinking models to model collections")
 
 		root_layer_collection = bpy.context.view_layer.layer_collection
 
-		for prefab_collection in prefab_collections:
-			fab_collection = prefab_collection[0]
+		for model_collection in model_collections:
+			mdl_collection = model_collection[0]
 			
 			current_new_objs = []
-			for sub_obj in prefab_collection[1]:
+			for sub_obj in model_collection[1]:
 				primary_mesh = sub_obj["primary_mesh"]
 
 				if not primary_mesh:
@@ -1190,7 +1190,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					new_obj_name = primary_mesh[:-4]
 					new_obj = bpy.data.objects.get(new_obj_name)
 
-				# print("   ", primary_mesh, new_obj_name, new_obj.name, fab_collection.name)
+				# print("   ", primary_mesh, new_obj_name, new_obj.name, mdl_collection.name)
 
 				current_new_objs.append(new_obj)
 
@@ -1211,10 +1211,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				# print("include_animation:  --- ", sub_obj["include_animation"])
 				# print("include_matrix:  --- ", sub_obj["include_matrix"])
 
-				new_obj.ssx2_PrefabObjectProps.flags = sub_obj["flags"]
-				new_obj.ssx2_PrefabObjectProps.animated = sub_obj["include_animation"]
+				new_obj.ssx2_ModelObjectProps.flags = sub_obj["flags"]
+				new_obj.ssx2_ModelObjectProps.animated = sub_obj["include_animation"]
 				#if sub_obj["IncludeAnimation"]:
-					#sub_obj.ssx2_PrefabObjectProps.animation = sub_obj["Animation"]
+					#sub_obj.ssx2_ModelObjectProps.animation = sub_obj["Animation"]
 
 				if sub_obj["include_matrix"]:
 					new_obj.location = Vector(sub_obj["position"]) / 100 # WorldScale
@@ -1223,7 +1223,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					new_obj.rotation_quaternion = [quat[3], quat[0], quat[1], quat[2]]
 					new_obj.rotation_mode = 'XYZ'
 
-				fab_collection.objects.link(new_obj)
+				mdl_collection.objects.link(new_obj)
 				
 				if sub_obj["parent_idx"] != -1:
 					parent_object = current_new_objs[sub_obj["parent_idx"]]
@@ -1231,7 +1231,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			current_new_objs.clear()
 
 
-			layer_collection = get_layer_collection(root_layer_collection, fab_collection.name)
+			layer_collection = get_layer_collection(root_layer_collection, mdl_collection.name)
 			layer_collection.exclude = True
 			#layer_collection.hide_viewport = True # not needed
 
@@ -1263,9 +1263,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			empty.scale = json_inst["Scale"]
 			empty.instance_type = 'COLLECTION'
 
-			prefab_collection_for_instance = prefab_collections[json_inst["ModelID"]][0]
-			empty.ssx2_PrefabForInstance = prefab_collection_for_instance
-			empty.instance_collection = prefab_collection_for_instance
+			model_collection_for_instance = model_collections[json_inst["ModelID"]][0]
+			empty.ssx2_ModelForInstance = model_collection_for_instance
+			empty.instance_collection = model_collection_for_instance
 			empty.ssx2_EmptyMode = 'INSTANCE'
 
 			# collision mode = enum? (Self, Custom, BBox)
@@ -1289,14 +1289,14 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_group_col = collection_grouping(f"Inst_Group", instances_collection, inst_group_size, i)
 				new_group_col.objects.link(empty)
 			elif io.instanceImportGrouping == 'NAME':
-				### groups by prefab
-				# new_group_col = getset_collection("Inst " + prefab_collection_for_instance.name)
+				### groups by model
+				# new_group_col = getset_collection("Inst " + model_collection_for_instance.name)
 				# new_group_col.objects.link(empty)
 				# if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
 				# 	instances_collection.children.link(new_group_col)
 
 				### groups by name (excluding numbers)
-				# i could create a list of unique prefab_collections names and another list with
+				# i could create a list of unique model_collections names and another list with
 				# indices to names in that list. then use json_inst["ModelID"] to get the corresponding name here
 
 				new_group_name = re.sub(r'_\d+$', '_', json_inst["InstanceName"]) # removes only the last number
@@ -1474,7 +1474,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"Import Folder does not exist")
 			return {'CANCELLED'}
 
-		if self.io.importPatches or self.io.importPrefabs:
+		if self.io.importPatches or self.io.importModels:
 			self.images = get_images_from_folder(self.folder_path+'/Textures/')
 
 		if self.io.importPatches: # <------------------------------- Import Patches
@@ -1490,8 +1490,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			print("importing patches took:", time.time() - temp_time_start, "seconds")
 
 
-		if self.io.importPrefabs: # <------------------------------- Import Prefabs & Instances
-			run_without_update(self.create_prefabs_json)
+		if self.io.importModels: # <------------------------------- Import Models & Instances
+			run_without_update(self.create_models_json)
 
 
 		if self.io.importPaths: # <------------------------------- Import Paths
@@ -1787,7 +1787,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'INFO'}, "Imported")
 
 		
-		# if self.io.importPatches or self.io.importPrefabs:
+		# if self.io.importPatches or self.io.importModels:
 			# bpy.data.materials.remove(self.appended_patch_material)
 			# bpy.data.materials.remove(self.appended_model_material)
 			# bpy.data.materials.remove(self.appended_model_color_material)
@@ -2586,10 +2586,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		self.report({'INFO'}, "Exported")
 		return {'FINISHED'}
 
-class SSX2_OP_SelectPrefab(bpy.types.Operator):
-	bl_idname = "scene.ssx2_select_prefab"
-	bl_label = "Select Prefab"
-	bl_description = "Active selects the Prefab collection and object"
+class SSX2_OP_SelectModel(bpy.types.Operator):
+	bl_idname = "scene.ssx2_select_model"
+	bl_label = "Select Model"
+	bl_description = "Active selects the Model collection and object"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	add_mode: bpy.props.BoolProperty(default=False)
@@ -2599,7 +2599,7 @@ class SSX2_OP_SelectPrefab(bpy.types.Operator):
 		target_collection = active_object.instance_collection
 		target_name = target_collection.name
 
-		layer_collection = get_layer_collection(bpy.context.view_layer.layer_collection, "Prefabs")
+		layer_collection = get_layer_collection(bpy.context.view_layer.layer_collection, "Models")
 		if layer_collection:
 			# layer_collection.exclude = False
 			layer_collection.hide_viewport = False
@@ -2622,7 +2622,7 @@ class SSX2_OP_SelectPrefab(bpy.types.Operator):
 				bpy.context.view_layer.objects.active = first_object
 			return {'FINISHED'}
 		
-		#self.report({"WARNING"}, "Collection not found in 'Prefabs' Collection")
+		#self.report({"WARNING"}, "Collection not found in 'Models' Collection")
 		self.report({"WARNING"}, "Collection not found")
 		return {'CANCELLED'}
 
@@ -2655,10 +2655,10 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	patchImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
 	patchImportAsControlGrid: bpy.props.BoolProperty(default=False)
 
-	# prefabs & instances
-	importPrefabs: bpy.props.BoolProperty(name="Import Prefabs", default=True)
-	expandImportPrefab: bpy.props.BoolProperty(default=False)
-	# prefabImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
+	# models & instances
+	importModels: bpy.props.BoolProperty(name="Import Models", default=True)
+	expandImportModel: bpy.props.BoolProperty(default=False)
+	# modelImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
 	instanceImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='BATCH')
 
 	# splines
@@ -2687,11 +2687,11 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
 	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
 
-class SSX2_WorldPrefabCollectionPropGroup(bpy.types.PropertyGroup):
+class SSX2_WorldModelCollectionPropGroup(bpy.types.PropertyGroup):
 	unknown3: bpy.props.IntProperty(name="Unknown3")
 	anim_time: bpy.props.FloatProperty(name="AnimTime")
 
-class SSX2_WorldPrefabObjectPropGroup(bpy.types.PropertyGroup):
+class SSX2_WorldModelObjectPropGroup(bpy.types.PropertyGroup):
 	flags: bpy.props.BoolProperty(name="Flags")
 	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
 	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
@@ -2752,8 +2752,8 @@ class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class 
 classes = (
 	SSX2_WorldImportExportPropGroup,
 	SSX2_WorldUIPropGroup,
-	SSX2_WorldPrefabCollectionPropGroup,
-	SSX2_WorldPrefabObjectPropGroup,
+	SSX2_WorldModelCollectionPropGroup,
+	SSX2_WorldModelObjectPropGroup,
 	SSX2_WorldSplinePropGroup,
 	SSX2_WorldPathEventPropGroup,
 	SSX2_WorldPathPropGroup,
@@ -2772,7 +2772,7 @@ classes = (
 	SSX2_OP_PathEventAdd,
 	SSX2_OP_PathEventRemove,
 
-	SSX2_OP_SelectPrefab,
+	SSX2_OP_SelectModel,
 	SSX2_OP_ChooseMultitoolExe,
 
 )
@@ -2785,24 +2785,24 @@ def ssx2_world_register():
 
 	bpy.types.Scene.ssx2_WorldImportExportProps = bpy.props.PointerProperty(type=SSX2_WorldImportExportPropGroup)
 	bpy.types.Scene.ssx2_WorldUIProps = bpy.props.PointerProperty(type=SSX2_WorldUIPropGroup)
-	bpy.types.Collection.ssx2_PrefabCollectionProps = bpy.props.PointerProperty(type=SSX2_WorldPrefabCollectionPropGroup)
-	bpy.types.Object.ssx2_PrefabObjectProps = bpy.props.PointerProperty(type=SSX2_WorldPrefabObjectPropGroup)
+	bpy.types.Collection.ssx2_ModelCollectionProps = bpy.props.PointerProperty(type=SSX2_WorldModelCollectionPropGroup)
+	bpy.types.Object.ssx2_ModelObjectProps = bpy.props.PointerProperty(type=SSX2_WorldModelObjectPropGroup)
 	bpy.types.Object.ssx2_SplineProps = bpy.props.PointerProperty(type=SSX2_WorldSplinePropGroup)
 	bpy.types.Object.ssx2_PathProps = bpy.props.PointerProperty(type=SSX2_WorldPathPropGroup)
 	bpy.types.Object.ssx2_EmptyMode = bpy.props.EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
 	bpy.types.Object.ssx2_CurveMode = bpy.props.EnumProperty(name='Curve Mode', items=enum_ssx2_curve_mode)
 
-	bpy.types.Object.ssx2_PrefabForInstance = bpy.props.PointerProperty(type=bpy.types.Collection, poll=poll_prefab_for_inst, update=update_prefab_for_inst)
+	bpy.types.Object.ssx2_ModelForInstance = bpy.props.PointerProperty(type=bpy.types.Collection, poll=poll_model_for_inst, update=update_model_for_inst)
 
 
 def ssx2_world_unregister():
 
-	del bpy.types.Object.ssx2_PrefabForInstance
+	del bpy.types.Object.ssx2_ModelForInstance
 
 	del bpy.types.Scene.ssx2_WorldImportExportProps
 	del bpy.types.Scene.ssx2_WorldUIProps
-	del bpy.types.Collection.ssx2_PrefabCollectionProps
-	del bpy.types.Object.ssx2_PrefabObjectProps
+	del bpy.types.Collection.ssx2_ModelCollectionProps
+	del bpy.types.Object.ssx2_ModelObjectProps
 	del bpy.types.Object.ssx2_SplineProps
 	del bpy.types.Object.ssx2_PathProps
 

@@ -17,7 +17,7 @@ from .ssx2_world import (
 	SSX2_OP_WorldImport,
 	SSX2_OP_WorldExport,
 
-	SSX2_OP_SelectPrefab,
+	SSX2_OP_SelectModel,
 	SSX2_OP_ChooseMultitoolExe,
 )
 
@@ -118,14 +118,14 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 		if io.expandImportPaths:
 			box_col.prop(io, "importPathsAsCurve", text="As Poly Curve")
 
-		# PREFABS
+		# MODELS
 		the_box = col.box()
 		box_row = the_box.row(align=True)
 		box_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
-			icon='DISCLOSURE_TRI_DOWN' if io.expandImportPrefab\
-			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportPrefab'
-		box_row.prop(io, "importPrefabs", text="Prefabs (Experimental)")
-		if io.expandImportPrefab:
+			icon='DISCLOSURE_TRI_DOWN' if io.expandImportModel\
+			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportModel'
+		box_row.prop(io, "importModels", text="Models (Experimental)")
+		if io.expandImportModel:
 			label_row = the_box.row()
 			label_row.scale_y = 0.2
 			label_row.label(text="Instances")
@@ -357,9 +357,9 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 		elif empty_mode == "INSTANCE":
 			col = self.layout.column()
 			row = col.row(align=True)
-			row.operator(SSX2_OP_SelectPrefab.bl_idname, text="Select Prefab").add_mode = False
-			row.operator(SSX2_OP_SelectPrefab.bl_idname, text="Select Prefab (Add)").add_mode = True
-			prop_split(col, context.object, 'ssx2_PrefabForInstance', "Prefab", spacing=0.2)
+			row.operator(SSX2_OP_SelectModel.bl_idname, text="Select Model").add_mode = False
+			row.operator(SSX2_OP_SelectModel.bl_idname, text="Select Model (Add)").add_mode = True
+			prop_split(col, context.object, 'ssx2_ModelForInstance', "Model", spacing=0.2)
 			row = col.row()
 			row.prop(context.object, 'show_instancer_for_viewport', text='Show Instancer', \
 					icon="HIDE_OFF" if context.object.show_instancer_for_viewport else "HIDE_ON")
