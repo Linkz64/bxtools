@@ -943,22 +943,34 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					mat = self.appended_model_color_material.copy()
 				else:
 					mat = self.appended_model_material.copy()
-					mat.node_tree.nodes["Image Texture"].image = bpy.data.images.get(json_mat["TexturePath"])
+					img = bpy.data.images.get(json_mat["TexturePath"])
+
+					has_alpha_channel = img.channels == 4
+					uses_alpha = False
+
+					if has_alpha_channel:
+					    pixels = list(img.pixels)
+					    alphas = pixels[3::4]
+					    uses_alpha = any(a < 1.0 for a in alphas)
+
+					    if uses_alpha:
+					    	mat.blend_method = 'HASHED'
+
+					mat.node_tree.nodes["Image Texture"].image = img
 
 				mat.name = mat_name
 
-			# for key in json_mat:
-			# 	mat[key] = json_mat[key]
+			for key in json_mat:
+				mat[key] = json_mat[key]
 
+			json_materials.append(mat)
 
-		# return ""
 
 
 		### Import Prefabs
 		print("\nParsing Prefabs")
 
-		meshes_to_merge = []
-		material_ids = []
+		all_surfaces_to_merge = []
 
 		with open(prefabs_file_path, 'r') as f:
 			data = json.load(f)
@@ -1010,40 +1022,12 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					"include_matrix": sub_obj["IncludeMatrix"],
 				}
 
-				to_merge = []
-				for mesh_data in sub_obj["MeshData"]:
-					to_merge.append((mesh_data["MeshPath"], mesh_data["MeshID"], mesh_data["MaterialID"]))
-
-					if mesh_data["MaterialID"] not in material_ids:
-						material_ids.append(mesh_data["MaterialID"])
-				meshes_to_merge.append(to_merge)
+				all_surfaces_to_merge.append([(m["MeshPath"], m["MeshID"], m["MaterialID"]) for m in sub_obj["MeshData"]])
 
 				sub_objs.append(sub_obj_dict)
 
-				# meshes_to_merge.append([(m["MeshPath"], m["MaterialID"]) for m in sub_obj["MeshData"]])
-
-			# if i == 250:
-			# 	break
-			
 			prefab_collections.append((fab_collection, sub_objs))
 
-
-		#return ""
-
-
-		
-
-
-
-		# i could apply placeholder materials/material_slots first
-		# material
-		# unknown int 18
-		# unk_18 & 0xFFFF for first 2 bytes
-		# unk_18 >> 16 for the last 2 bytes
-		# for mat in material_ids:
-		# 	print(mat)
-
-		# return ""
 
 		new_global_scale = 1 / 100 # WorldScale
 
@@ -1054,14 +1038,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		import_obj_files_time_start = time.time()
 
 		if obj_file_import_mode == 0:
-			# obj_files = next(os.walk(models_folder_path))[2]
-			# len(obj_files) == 0: ERROR!!!
-
 			bpy.ops.object.select_all(action='DESELECT')
 			view_layer = bpy.context.view_layer
 			view_layer.active_layer_collection = view_layer.layer_collection # "Scene Collection"
 
-			# obj_file_paths = [models_folder_path + pth for pth in next(os.walk(models_folder_path))[2]]
 			obj_files = next(os.walk(models_folder_path))[2]
 			obj_files = sorted(obj_files, key=natural_key)
 			new_obj_objects = []
@@ -1082,11 +1062,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			already_merged = []
 			merging_time_start = time.time()
 
-			for mesh_data in meshes_to_merge:
-				if not mesh_data:
+			for surfaces_to_merge in all_surfaces_to_merge:
+				if not surfaces_to_merge:
 					continue
 				
-				primary_mesh = mesh_data[0][0]
+				primary_mesh = surfaces_to_merge[0][0]
 				new_obj_name = primary_mesh[:-4]
 
 				# existing_object = bpy.data.objects.get(new_obj_name)
@@ -1096,16 +1076,21 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				if new_obj_name in already_merged:
 					continue
-				
-				if len(mesh_data) != 1:
-					objs_to_merge = [new_obj_objects[mesh_path[1]] for mesh_path in mesh_data]
+
+				if len(surfaces_to_merge) != 1:
+					for mesh_data in surfaces_to_merge:
+						new_obj_objects[mesh_data[1]].data.materials.append(json_materials[mesh_data[2]])
+
+					objs_to_merge = [new_obj_objects[mesh_data[1]] for mesh_data in surfaces_to_merge]
+
 					bpy.context.view_layer.objects.active = objs_to_merge[0]
 					[obj.select_set(True) for obj in objs_to_merge]
 					bpy.ops.object.join()
 					new_obj = bpy.context.view_layer.objects.active
 				else:
-					#bpy.context.view_layer.objects.active = new_obj_objects[mesh_data[0][1]]
-					new_obj = new_obj_objects[mesh_data[0][1]]
+					#bpy.context.view_layer.objects.active = new_obj_objects[surfaces_to_merge[0][1]]
+					new_obj = new_obj_objects[surfaces_to_merge[0][1]]
+					new_obj.data.materials.append(json_materials[surfaces_to_merge[0][2]])
 
 				new_obj.name = new_obj_name
 				new_obj.data.name = new_obj_name
@@ -1119,17 +1104,18 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 				already_merged.append(new_obj_name)
 
+				# return {"CANCELLED"}
 			print("merging .obj files took ", time.time() - merging_time_start)
 
 		elif obj_file_import_mode == 1:
 			already_merged = []
 
-			for mesh_data in meshes_to_merge:
-				#print(mesh_data)
-				if not mesh_data:
+			for surfaces_to_merge in all_surfaces_to_merge:
+				#print(surfaces_to_merge)
+				if not surfaces_to_merge:
 					continue
 				
-				primary_mesh = mesh_data[0][0]
+				primary_mesh = surfaces_to_merge[0][0]
 				new_obj_name = primary_mesh[:-4]
 
 				existing_object = bpy.data.objects.get(new_obj_name)
@@ -1144,7 +1130,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_obj_count = 0
 
 				objs_to_merge = []
-				for mesh_path in mesh_data:
+				for mesh_path in surfaces_to_merge:
 					bpy.ops.wm.obj_import(filepath=models_folder_path + mesh_path[0], global_scale=new_global_scale)
 
 					new_obj = bpy.context.view_layer.objects.active
@@ -1323,8 +1309,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
 					instances_collection.children.link(new_group_col)
 
-			# elif io.instanceImportGrouping == 'MESH':
+			# elif io.instanceImportGrouping == 'MESH': # or 'MODEL'/'PREFAB'
 				#TODO: Implement!
+
+			# else:
+			# 	pass
 
 	def create_splines_json(self):
 		print("Importing Splines")

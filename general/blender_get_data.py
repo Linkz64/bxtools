@@ -10,7 +10,7 @@ import os
 
 
 
-def get_images_from_folder(folder_path, extension='.png'):
+def get_images_from_folder(folder_path, extension='.png', check_alpha=False):
     if not os.path.isdir(folder_path):
         return None
 
@@ -20,10 +20,22 @@ def get_images_from_folder(folder_path, extension='.png'):
     folder_path = folder_path+"/"
 
     for i, item in enumerate(contents):
+
         if item[-4:len(item)] == extension:
             img = bpy.data.images.get(item)
             if img is None:
                 img = bpy.data.images.load(folder_path+item, check_existing=False)
+
+
+            if check_alpha:
+                has_alpha_channel = img.channels == 4
+                uses_alpha = False
+
+                if has_alpha_channel:
+                    pixels = list(img.pixels)
+                    alphas = pixels[3::4]
+                    img["uses_alpha"] = any(a < 1.0 for a in alphas)
+
             images.append(img)
 
     return images
