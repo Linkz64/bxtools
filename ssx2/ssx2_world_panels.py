@@ -166,6 +166,13 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		paths_box_split.prop(io, "exportPathsGeneral", text="General")
 		paths_box_split.prop(io, "exportPathsShowoff", text="Showoff")
 
+		instances_box = col.box()
+		instances_box = instances_box.row()
+		paths_box_split = instances_box.split(factor=0.3)
+		paths_box_split.label(text="Instances")
+		paths_box_split.prop(io, "exportInstances", text="")
+
+
 		row = col.row().split(factor=0.36)
 		row.prop(io, 'exportAutoBuild')
 		if io.exportAutoBuild:

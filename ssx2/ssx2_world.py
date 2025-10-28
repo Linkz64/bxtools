@@ -1802,7 +1802,13 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
-		return io.exportPatches or io.exportSplines or io.exportPathsGeneral or io.exportPathsShowoff
+		return \
+			io.exportPatches or \
+			io.exportSplines or \
+			io.exportPathsGeneral or \
+			io.exportPathsShowoff or \
+			io.exportInstances
+
 
 	def execute(self, context):
 		time_export_star = time.time()
@@ -1839,6 +1845,100 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 			patch_objects = 0, # todo
 			patch_segments = 0, # todo
 		)
+
+		# if io.exportModels:
+		if io.exportInstances:
+			print("\nExporting Model Instances")
+			instances_collection = bpy.data.collections.get("Instances")
+
+			if instances_collection is None:
+				self.report({'ERROR'}, "'Instances' collection not found")
+				return {'CANCELLED'}
+
+			json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/Instances.json'
+
+			#instance_objects = instances_collection.all_objects
+			# instance_objects = []
+
+			json_data = {
+				"Instances": []
+			}
+
+			# skip_keys = [
+			# 	"InstanceName",
+			# 	"Location",
+			# 	"Rotation",
+			# 	"Scale"]
+
+			for obj in instances_collection.all_objects:
+
+				# if obj.instance_type == 'COLLECTION':
+				if obj.ssx2_EmptyMode != 'INSTANCE':
+					continue
+
+				# json_entry = {}
+
+				# for key in obj.keys():
+				# 	if key in skip_keys:
+				# 		continue
+				# 	json_entry[key] = obj[key]
+
+				quat = obj.rotation_quaternion
+
+				json_entry = {
+					'InstanceName': obj.name,
+					'Location': (obj.location * 100).to_tuple(),
+					'Rotation': [quat[1], quat[2], quat[3], quat[0]],
+					'Scale': obj.scale.to_tuple(),
+					'LightVector1': obj['LightVector1'].to_list(),
+					'LightVector2': obj['LightVector2'].to_list(),
+					'LightVector3': obj['LightVector3'].to_list(),
+					'AmbentLightVector': obj['AmbentLightVector'].to_list(),
+					'LightColour1': obj['LightColour1'].to_list(),
+					'LightColour2': obj['LightColour2'].to_list(),
+					'LightColour3': obj['LightColour3'].to_list(),
+					'AmbentLightColour': obj['AmbentLightColour'].to_list(),
+					'ModelID': obj['ModelID'],
+					'PrevInstance': obj['PrevInstance'],
+					'NextInstance': obj['NextInstance'],
+					'UnknownInt26': obj['UnknownInt26'],
+					'UnknownInt27': obj['UnknownInt27'],
+					'UnknownInt28': obj['UnknownInt28'],
+					'ModelID2': obj['ModelID2'],
+					'UnknownInt30': obj['UnknownInt30'],
+					'UnknownInt31': obj['UnknownInt31'],
+					'UnknownInt32': obj['UnknownInt32'],
+					'LTGState': obj['LTGState'],
+					'Hash': obj['Hash'],
+					'IncludeSound': obj['IncludeSound'],
+					'Sounds': obj['Sounds'].to_dict() if obj['Sounds'] is not None else None,
+					'U0': obj['U0'],
+					'PlayerBounceAmmount': obj['PlayerBounceAmmount'],
+					'U2': obj['U2'],
+					'U22': obj['U22'],
+					'Visable': obj['Visable'],
+					'PlayerCollision': obj['PlayerCollision'],
+					'PlayerBounce': obj['PlayerBounce'],
+					'Unknown241': obj['Unknown241'],
+					'UVScroll': obj['UVScroll'],
+					'U4': obj['U4'],
+					'CollsionMode': obj['CollsionMode'],
+					'CollsionModelPaths': obj['CollsionModelPaths'] if type(obj['CollsionModelPaths']) is list else [],
+					'EffectSlotIndex': obj['EffectSlotIndex'],
+					'PhysicsIndex': obj['PhysicsIndex'],
+					'U8': obj['U8'],
+				}
+
+				json_data["Instances"].append(json_entry)
+
+
+			with open(json_export_path, 'w') as f:
+				if do_json_indend:
+					json.dump(json_data, f, indent=2)
+				else:
+					json.dump(json_data, f, separators=(',', ':'))
+
+
 
 		if io.exportPathsGeneral or io.exportPathsShowoff: # <------------------------- Export Paths
 			print("Exporting Paths")
@@ -1983,7 +2083,6 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						json.dump(temp_json, f, separators=(',', ':'))
 
 			# ENDOF Export Paths
-
 
 		if io.exportSplines: # <------------------------------------------------------ Export Splines
 			print("Exporting Splines")
@@ -2573,6 +2672,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 			# ENDOF Export Patches
 
+
+
+
+
 		if io.exportAutoBuild:
 			# subprocess_run(
 			# 	[multitool_path, "trickylevel", "trickybuild", export_folder], 
@@ -2656,18 +2759,18 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	patchImportAsControlGrid: bpy.props.BoolProperty(default=False)
 
 	# models & instances
-	importModels: bpy.props.BoolProperty(name="Import Models", default=True)
+	importModels: bpy.props.BoolProperty(name="Import Models", default=False)
 	expandImportModel: bpy.props.BoolProperty(default=False)
 	# modelImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
 	instanceImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='BATCH')
 
 	# splines
-	importSplines: bpy.props.BoolProperty(name="Import Splines", default=True)
+	importSplines: bpy.props.BoolProperty(name="Import Splines", default=False)
 	expandImportSplines: bpy.props.BoolProperty(default=False)
 	splineImportAsNURBS: bpy.props.BoolProperty(default=False)
 
 	# paths
-	importPaths: bpy.props.BoolProperty(name="Import Paths", default=True)
+	importPaths: bpy.props.BoolProperty(name="Import Paths", default=False)
 	importPathsAsCurve: bpy.props.BoolProperty(default=True)
 	expandImportPaths: bpy.props.BoolProperty(default=False)
 
@@ -2678,14 +2781,17 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 
 	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)
 	exportPatchesCages: bpy.props.BoolProperty(name="Cages", default=True)
-	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=True)
+	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=False)
 
-	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=True)
-	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=True,
+	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=False)
+	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=False,
 		description="Overrides existing JSON splines. Will delete JSON contents if 'Splines' collection is empty")
 
-	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=True)
-	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=True)
+	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=False)
+	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=False)
+
+	exportModels: bpy.props.BoolProperty(name="Export Models", default=False)
+	exportInstances: bpy.props.BoolProperty(name="Export Instances", default=False)
 
 class SSX2_WorldModelCollectionPropGroup(bpy.types.PropertyGroup):
 	unknown3: bpy.props.IntProperty(name="Unknown3")
