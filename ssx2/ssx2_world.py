@@ -7,6 +7,7 @@ from subprocess import Popen
 import json
 import time
 import os
+import re
 
 from ..general.blender_set_data import * # set_patch_object
 from ..general.blender_get_data import get_images_from_folder, get_uvs, get_uvs_per_verts
@@ -31,10 +32,6 @@ from .ssx2_constants import (
 )
 from .ssx2_world_lightmaps import SSX2_OP_BakeTest
 
-
-import re
-def natural_key(s):
-	return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 
 
@@ -116,6 +113,8 @@ def update_prefab_for_inst(self, context):
 		self.show_instancer_for_viewport = True
 
 def update_event_start_end(self, context):
+	if context.active_object is None:
+		return
 	for mod in context.active_object.modifiers:
 		if mod.type == 'NODES' and mod.node_group:
 			if mod.node_group.name.startswith("PathLinesAppend"):
@@ -690,40 +689,57 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		self.json_patches = []
 		self.images = []
 
-		self.scene_collection = None
-		self.io = None
+		scene = bpy.context.scene
+		self.scene_collection = scene.collection
+		self.io = scene.ssx2_WorldImportExportProps
+
+		if not self.io.importPatches and not self.io.importPrefabs:
+			return
 
 		append_path = templates_append_path
-		material_name = "PatchMaterialAppend"
-		material = bpy.data.materials.get(material_name)
 
 		if not os.path.isfile(append_path):
 			self.report({'ERROR'}, f"Failed to append {append_path}")
 			return {'CANCELLED'}
 
-		if material is None:
-			print("BXT Append Material:", material_name)
-			with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
-				if material_name in data_from.materials:
-					data_to.materials = [material_name]
-				else:
-					self.report({'ERROR'}, f"BXT Failed to append material from {append_path}")
-					return {'CANCELLED'}
 
-		self.appended_material = bpy.data.materials.get(material_name)
+		patch_material_name = "PatchMaterialAppend"
+		patch_material = bpy.data.materials.get(patch_material_name)
+		model_material_name = "ModelMaterialAppend"
+		model_material = bpy.data.materials.get(model_material_name)
+		model_color_material_name = "ModelColorMaterialAppend"
+		model_color_material = bpy.data.materials.get(model_color_material_name)
 
 		node_tree_name = "GridTesselateAppend"
 		node_tree = bpy.data.node_groups.get(node_tree_name)
 
-		if node_tree is None:
-			with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+
+		with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+
+			mats_to_append = []
+
+			if patch_material is None:
+				mats_to_append.append(patch_material_name)
+			if model_material is None:
+				mats_to_append.append(model_material_name)
+			if model_color_material is None:
+				mats_to_append.append(model_color_material_name)
+
+			data_to.materials = mats_to_append
+
+
+			if node_tree is None:
 				if node_tree_name in data_from.node_groups:
 					data_to.node_groups = [node_tree_name]
 				else:
 					self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
 					return {'CANCELLED'}
-				
+
+		self.appended_patch_material = bpy.data.materials.get(patch_material_name)
 		self.appended_geonodes = bpy.data.node_groups.get(node_tree_name)
+		self.appended_model_material = bpy.data.materials.get(model_material_name)
+		self.appended_model_color_material = bpy.data.materials.get(model_color_material_name)
+
 
 	def create_patches_json(self):
 		active_collection = bpy.context.collection
@@ -750,7 +766,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				pch_mat = bpy.data.materials.get(pch_mat_name)
 				if pch_mat is None:
 					#pch_mat = set_patch_material(pch_mat_name)
-					pch_mat = self.appended_material.copy()
+					pch_mat = self.appended_patch_material.copy()
 					pch_mat.name = pch_mat_name
 
 				pch_mat.node_tree.nodes["Image Texture"].image = bpy.data.images.get(json_patch.texture_path)
@@ -808,7 +824,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				pch_mat = bpy.data.materials.get(pch_mat_name)
 				if pch_mat is None:
 					#pch_mat = set_patch_material(pch_mat_name)
-					pch_mat = self.appended_material.copy()
+					pch_mat = self.appended_patch_material.copy()
 					pch_mat.name = pch_mat_name
 
 				pch_mat.node_tree.nodes["Image Texture"].image = bpy.data.images.get(json_patch.texture_path)
@@ -883,6 +899,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'ERROR'}, f"Folder 'Models' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
 
+		materials_file_path = self.folder_path + '/Materials.json'
+		if not os.path.isfile(materials_file_path):
+			self.report({'ERROR'}, f"File 'Materials.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+
 		prefabs_file_path = self.folder_path + '/Prefabs.json'
 		if not os.path.isfile(prefabs_file_path):
 			self.report({'ERROR'}, f"File 'Prefabs.json' does not exist in 'Import Folder'")
@@ -903,11 +924,41 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		# name_grouping_test = []
 
+
+		### Import Materials
+		print("\nParsing Materials")
+
+		json_materials = []
+
+		with open(materials_file_path, 'r') as f:
+			data = json.load(f)
+
+		for i, json_mat in enumerate(data["Materials"]):
+			mat_name = json_mat["MaterialName"]
+			texture_path = json_mat["TexturePath"]
+
+			mat = bpy.data.materials.get(mat_name)
+			if mat is None:
+				if texture_path is None:
+					mat = self.appended_model_color_material.copy()
+				else:
+					mat = self.appended_model_material.copy()
+					mat.node_tree.nodes["Image Texture"].image = bpy.data.images.get(json_mat["TexturePath"])
+
+				mat.name = mat_name
+
+			# for key in json_mat:
+			# 	mat[key] = json_mat[key]
+
+
+		# return ""
+
+
 		### Import Prefabs
 		print("\nParsing Prefabs")
 
 		meshes_to_merge = []
-		materials_to_import = []
+		material_ids = []
 
 		with open(prefabs_file_path, 'r') as f:
 			data = json.load(f)
@@ -963,8 +1014,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				for mesh_data in sub_obj["MeshData"]:
 					to_merge.append((mesh_data["MeshPath"], mesh_data["MeshID"], mesh_data["MaterialID"]))
 
-					if mesh_data["MaterialID"] not in materials_to_import:
-						materials_to_import.append(mesh_data["MaterialID"])
+					if mesh_data["MaterialID"] not in material_ids:
+						material_ids.append(mesh_data["MaterialID"])
 				meshes_to_merge.append(to_merge)
 
 				sub_objs.append(sub_obj_dict)
@@ -989,7 +1040,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# unknown int 18
 		# unk_18 & 0xFFFF for first 2 bytes
 		# unk_18 >> 16 for the last 2 bytes
-		# for mat in materials_to_import:
+		# for mat in material_ids:
 		# 	print(mat)
 
 		# return ""
@@ -1203,8 +1254,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 
 		
-		def remove_trailing_numbers(s): # removes trailing numbers and and '_'
-			return re.sub(r'[_\d]+$', '', s)
+		
 
 
 
@@ -1428,8 +1478,6 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 	def import_json(self):
 		scene = bpy.context.scene
-		self.scene_collection = scene.collection
-		self.io = scene.ssx2_WorldImportExportProps
 
 		self.folder_path = scene.ssx2_WorldImportExportProps.importFolderPath
 		self.folder_path = os.path.abspath(bpy.path.abspath(self.folder_path))
@@ -1441,6 +1489,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.images = get_images_from_folder(self.folder_path+'/Textures/')
 
 		if self.io.importPatches: # <------------------------------- Import Patches
+
 			getset_collection_to_target('Patches', self.scene_collection)
 
 			temp_time_start = time.time()
@@ -1476,7 +1525,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			# APPEND PATH GEOMETRY NODES
 
-			if io.importPathsAsCurve:
+			if self.io.importPathsAsCurve:
 				append_path = templates_append_path
 				node_tree_name = "PathLinesAppend"
 				node_tree = bpy.data.node_groups.get(node_tree_name)
@@ -1537,7 +1586,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					path_points = path["PathPoints"]
 					path_events = path["PathEvents"]
 
-					if io.importPathsAsCurve:
+					if self.io.importPathsAsCurve:
 						curve = bpy.data.curves.new(name, 'CURVE')
 						curve.dimensions = '3D'
 
@@ -1636,7 +1685,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					path_events = path["PathEvents"]
 
 
-					if io.importPathsAsCurve:
+					if self.io.importPathsAsCurve:
 						curve = bpy.data.curves.new(name, 'CURVE')
 						curve.dimensions = '3D'
 
@@ -1749,7 +1798,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			self.report({'INFO'}, "Imported")
 
 		
-		bpy.data.materials.remove(self.appended_material)
+		# if self.io.importPatches or self.io.importPrefabs:
+			# bpy.data.materials.remove(self.appended_patch_material)
+			# bpy.data.materials.remove(self.appended_model_material)
+			# bpy.data.materials.remove(self.appended_model_color_material)
 
 		return {'FINISHED'}
 

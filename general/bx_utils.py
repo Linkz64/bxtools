@@ -5,6 +5,7 @@ import struct
 import numpy as np
 from os import path
 from math import ceil
+import re
 
 from .bx_struct import get_string
 from ..external.DXTDecompress import DXTBuffer
@@ -150,6 +151,14 @@ def append_material(mat_name):
 		return None
 	return mat
 
+
+### Strings
+
+def remove_trailing_numbers(s): # removes trailing numbers and and '_'
+	return re.sub(r'[_\d]+$', '', s)
+
+def natural_key(s):
+	return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
 
 ### Math
 
