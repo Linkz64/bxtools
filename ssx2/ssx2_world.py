@@ -949,12 +949,12 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					uses_alpha = False
 
 					if has_alpha_channel:
-					    pixels = list(img.pixels)
-					    alphas = pixels[3::4]
-					    uses_alpha = any(a < 1.0 for a in alphas)
+						pixels = list(img.pixels)
+						alphas = pixels[3::4]
+						uses_alpha = any(a < 1.0 for a in alphas)
 
-					    if uses_alpha:
-					    	mat.blend_method = 'HASHED'
+						if uses_alpha:
+							mat.blend_method = 'HASHED'
 
 					mat.node_tree.nodes["Image Texture"].image = img
 
@@ -971,6 +971,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		print("\nParsing Models")
 
 		all_surfaces_to_merge = []
+		# surface_names_for_mode_2 = []
 
 		with open(models_file_path, 'r') as f:
 			data = json.load(f)
@@ -1023,6 +1024,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				}
 
 				all_surfaces_to_merge.append([(m["MeshPath"], m["MeshID"], m["MaterialID"]) for m in sub_obj["MeshData"]])
+				# for m in sub_obj["MeshData"]:
+					# surface_names_for_mode_2.append(m["MeshPath"][:-4])
+
 
 				sub_objs.append(sub_obj_dict)
 
@@ -1033,9 +1037,119 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		print("\nImporting .obj files")
 
-		obj_file_import_mode = 0
+		obj_file_import_mode = 2
 
 		import_obj_files_time_start = time.time()
+
+
+		if obj_file_import_mode == 2:
+			obj_files = next(os.walk(models_folder_path))[2]
+			obj_files = [fl for fl in obj_files if fl.lower().endswith(".obj")]
+
+			if not obj_files:
+				print("No .obj files found in:", models_folder_path)
+				return False
+
+			# if len(obj_files) < len(all_surfaces_to_merge):
+			# 	return False
+
+			prev_scene = bpy.context.window.scene
+			scene_name = "BXTOOLS_TEMP_SCENE"
+
+			if scene_name in bpy.data.scenes:
+				temp_scene = bpy.data.scenes[scene_name]
+			else:
+				temp_scene = bpy.data.scenes.new(scene_name)
+
+			bpy.context.window.scene = temp_scene
+
+			print(f"switched to scene: {temp_scene.name}")
+			
+			files = [{"name": fl} for fl in obj_files]
+
+			bpy.ops.wm.obj_import(
+				files=files,
+				directory=models_folder_path,
+				global_scale=new_global_scale,
+				use_split_objects=False,
+				use_split_groups=False,
+				validate_meshes=True,
+			)
+
+			print("importing .obj files took", time.time() - import_obj_files_time_start)
+
+
+			# new_object_names = [obj.name for obj in temp_scene.objects]
+			# new_object_names = sorted(new_object_names, key=natural_key)
+
+
+			new_obj_objects = sorted([obj for obj in temp_scene.objects], key=lambda item: (natural_key(item.name), item))
+			# print(new_obj_objects)
+
+
+
+			# [obj.select_set(True) for obj in new_obj_objects]
+			bpy.context.view_layer.objects.active = new_obj_objects[0]
+			bpy.ops.object.rotation_clear()
+			bpy.ops.object.transform_apply(location=False)
+			bpy.ops.object.select_all(action='DESELECT')
+
+
+			already_merged = []
+			merging_time_start = time.time()
+
+			for surfaces_to_merge in all_surfaces_to_merge:
+				if not surfaces_to_merge:
+					continue
+				
+				primary_mesh = surfaces_to_merge[0][0]
+				new_obj_name = primary_mesh[:-4]
+
+				# existing_object = bpy.data.objects.get(new_obj_name)
+				# if existing_object is not None:
+				# 	if existing_object.type == 'MESH':
+				# 		continue
+
+				if new_obj_name in already_merged:
+					continue
+
+				if len(surfaces_to_merge) != 1:
+					for mesh_data in surfaces_to_merge:
+						new_obj_objects[mesh_data[1]].data.materials.append(json_materials[mesh_data[2]])
+
+					objs_to_merge = [new_obj_objects[mesh_data[1]] for mesh_data in surfaces_to_merge]
+
+					bpy.context.view_layer.objects.active = objs_to_merge[0]
+					[obj.select_set(True) for obj in objs_to_merge]
+					bpy.ops.object.join()
+					new_obj = bpy.context.view_layer.objects.active
+				else:
+					#bpy.context.view_layer.objects.active = new_obj_objects[surfaces_to_merge[0][1]]
+					new_obj = new_obj_objects[surfaces_to_merge[0][1]]
+					new_obj.data.materials.append(json_materials[surfaces_to_merge[0][2]])
+
+				new_obj.name = new_obj_name
+				new_obj.data.name = new_obj_name
+
+				# print(new_obj.name, new_obj_name)
+				if new_obj.name != new_obj_name:
+					print("OH OH")
+					return ""
+
+				temp_scene.collection.objects.unlink(new_obj)
+
+				already_merged.append(new_obj_name)
+
+				# return {"CANCELLED"}
+			print("merging .obj files took ", time.time() - merging_time_start)
+
+			bpy.context.window.scene = prev_scene
+			bpy.data.scenes.remove(temp_scene)
+
+
+
+
+
 
 		if obj_file_import_mode == 0:
 			bpy.ops.object.select_all(action='DESELECT')
@@ -1170,6 +1284,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		print("\nLinking models to model collections")
 
+		linking_models_to_collections_time_start = time.time()
+
 		root_layer_collection = bpy.context.view_layer.layer_collection
 
 		for model_collection in model_collections:
@@ -1182,6 +1298,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				if not primary_mesh:
 					mesh = bpy.data.meshes.new("Empty Mesh")
 					new_obj = bpy.data.objects.new("Empty Mesh", mesh)
+
+					# new_obj = bpy.data.objects.new("Nothing", None)
 					new_obj_name = new_obj.name
 
 					new_obj.show_axis = True
@@ -1189,6 +1307,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				else:
 					new_obj_name = primary_mesh[:-4]
 					new_obj = bpy.data.objects.get(new_obj_name)
+
+					
 
 				# print("   ", primary_mesh, new_obj_name, new_obj.name, mdl_collection.name)
 
@@ -1231,11 +1351,16 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			current_new_objs.clear()
 
 
-			layer_collection = get_layer_collection(root_layer_collection, mdl_collection.name)
-			layer_collection.exclude = True
+			# layer_collection = get_layer_collection(root_layer_collection, mdl_collection.name)
+			# layer_collection.exclude = True
 			#layer_collection.hide_viewport = True # not needed
 
+		layer_collection = get_layer_collection(root_layer_collection, "Models")
+		for child in layer_collection.children:
+			child.exclude = True
 
+
+		print("linking models took", time.time() - linking_models_to_collections_time_start)
 
 
 
@@ -1246,6 +1371,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		### Import Instances
 		print("\nImporting Instances")
+		import_instances_time_start = time.time()
 
 		with open(instances_file_path, 'r') as f:
 			data = json.load(f)
@@ -1312,8 +1438,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			# elif io.instanceImportGrouping == 'MESH': # or 'MODEL'/'PREFAB'
 				#TODO: Implement!
 
-			# else:
-			# 	pass
+			else:
+				instances_collection.objects.link(empty)
+
+		print("importing instances took", time.time() - import_instances_time_start)
 
 	def create_splines_json(self):
 		print("Importing Splines")
@@ -2768,7 +2896,7 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	importModels: bpy.props.BoolProperty(name="Import Models", default=False)
 	expandImportModel: bpy.props.BoolProperty(default=False)
 	# modelImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
-	instanceImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='BATCH')
+	instanceImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='NONE')
 
 	# splines
 	importSplines: bpy.props.BoolProperty(name="Import Splines", default=False)
