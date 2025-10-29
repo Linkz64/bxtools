@@ -1219,8 +1219,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				if sub_obj["include_matrix"]:
 					new_obj.location = Vector(sub_obj["position"]) / 100 # WorldScale
 					# new_obj.rotation_mode = 'QUATERNION'
-					quat = sub_obj["rotation"]
-					new_obj.rotation_quaternion = [quat[3], quat[0], quat[1], quat[2]]
+					q = sub_obj["rotation"]
+					new_obj.rotation_quaternion = [q[3], q[0], q[1], q[2]]
 					new_obj.rotation_mode = 'XYZ'
 
 				mdl_collection.objects.link(new_obj)
@@ -1257,8 +1257,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			empty.rotation_mode = 'QUATERNION'
 			empty.empty_display_type = 'ARROWS'
 			empty.location = Vector(json_inst["Location"]) / 100 # WorldScale
-			quat = json_inst["Rotation"]
-			empty.rotation_quaternion = [quat[3], quat[0], quat[1], quat[2]]
+			q = json_inst["Rotation"]
+			empty.rotation_quaternion = [q[3], q[0], q[1], q[2]]
 			empty.rotation_mode = 'XYZ'
 			empty.scale = json_inst["Scale"]
 			empty.instance_type = 'COLLECTION'
@@ -1883,12 +1883,16 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				# 		continue
 				# 	json_entry[key] = obj[key]
 
-				quat = obj.rotation_quaternion
+				prev_rotation_mode = obj.rotation_mode
+
+				obj.rotation_mode = 'QUATERNION'
+				q = obj.rotation_quaternion
 
 				json_entry = {
 					'InstanceName': obj.name,
 					'Location': (obj.location * 100).to_tuple(),
-					'Rotation': [quat[1], quat[2], quat[3], quat[0]],
+					# 'Rotation': [q[1], q[2], q[3], q[0]],
+					'Rotation': [q[1], q[2], q[3], q[0]],
 					'Scale': obj.scale.to_tuple(),
 					'LightVector1': obj['LightVector1'].to_list(),
 					'LightVector2': obj['LightVector2'].to_list(),
@@ -1915,7 +1919,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					'U0': obj['U0'],
 					'PlayerBounceAmmount': obj['PlayerBounceAmmount'],
 					'U2': obj['U2'],
-					'U22': obj['U22'],
+					# 'U22': obj['U22'],
 					'Visable': obj['Visable'],
 					'PlayerCollision': obj['PlayerCollision'],
 					'PlayerBounce': obj['PlayerBounce'],
@@ -1930,6 +1934,8 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				}
 
 				json_data["Instances"].append(json_entry)
+
+				obj.rotation_mode = prev_rotation_mode
 
 
 			with open(json_export_path, 'w') as f:
