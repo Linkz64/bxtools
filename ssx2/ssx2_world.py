@@ -1998,11 +1998,11 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 			# 	"Rotation",
 			# 	"Scale"]
 
-			for obj in instances_collection.all_objects:
+			to_export = [obj for obj in instance_collection.all_objects if obj.ssx2_EmptyMode == 'INSTANCE']
+			to_export = sorted(to_export, key=lambda obj: (natural_key(obj.name), obj))
 
+			for obj in to_export:
 				# if obj.instance_type == 'COLLECTION':
-				if obj.ssx2_EmptyMode != 'INSTANCE':
-					continue
 
 				# json_entry = {}
 
