@@ -1394,6 +1394,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			empty.instance_collection = model_collection_for_instance
 			empty.ssx2_EmptyMode = 'INSTANCE'
 
+			empty['index'] = i
+
 			# collision mode = enum? (Self, Custom, BBox)
 
 			for key in json_inst:
@@ -1999,7 +2001,8 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 			# 	"Scale"]
 
 			to_export = [obj for obj in instances_collection.all_objects if obj.ssx2_EmptyMode == 'INSTANCE']
-			to_export = sorted(to_export, key=lambda obj: (natural_key(obj.name), obj))
+			# to_export = sorted(to_export, key=lambda obj: (natural_key(obj[]), obj))
+			to_export = sorted(to_export, key=lambda obj: obj['index'])
 
 			for obj in to_export:
 				# if obj.instance_type == 'COLLECTION':
