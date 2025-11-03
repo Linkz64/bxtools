@@ -4,7 +4,7 @@ from mathutils import Vector
 import struct
 import numpy as np
 from os import path
-from math import ceil
+from math import ceil, sqrt
 import re
 
 from .bx_struct import get_string
@@ -374,7 +374,7 @@ def calc_coefficients(P0, P1, P2, P3, samples=200):
         dx = pts[i][0] - pts[i - 1][0]
         dy = pts[i][1] - pts[i - 1][1]
         dz = pts[i][2] - pts[i - 1][2]
-        total += math.sqrt(dx*dx + dy*dy + dz*dz)
+        total += sqrt(dx*dx + dy*dy + dz*dz)
         dists.append(total)
 
     # convert to meters
