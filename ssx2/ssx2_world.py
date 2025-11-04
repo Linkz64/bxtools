@@ -2407,6 +2407,16 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 		if io.exportPatches: #                                        <--- Export Patches
 			print("Exporting Patches")
+
+			do_lightmaps = True
+			to_create_for_lightmaps = [] # put the split cages here (4x4s)
+			# then create the objects
+
+			SURFACE_PATCH = 0
+			CONTROL_GRID = 1
+			SPLINE_CAGE = 2
+			BLENDER_ASSET = 3
+
 			patch_collection = bpy.data.collections.get("Patches")
 
 			if patch_collection is None:
@@ -2423,22 +2433,21 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					if inst_col is not None:
 						for sub_obj in inst_col.all_objects:
 							if sub_obj.ssx2_CurveMode == 'CAGE': # make it work on all patch types
-								patch_objects.append((3, sub_obj, obj))
+								patch_objects.append((BLENDER_ASSET, sub_obj, obj))
 							# with parent (0/1/2 sub_obj, obj)
 							# no parent (0/1/2, sub_obj, None) and do an is None check instead of == 3
 				elif obj.ssx2_CurveMode == 'CAGE':
-					patch_objects.append((2, obj))
+					patch_objects.append((SPLINE_CAGE, obj))
 				elif obj.type == 'SURFACE':
-					patch_objects.append((0, obj))
+					patch_objects.append((SURFACE_PATCH, obj))
 				elif obj.ssx2_PatchProps.isControlGrid:
-					patch_objects.append((1, obj))
+					patch_objects.append((CONTROL_GRID, obj))
 
 			if len(patch_objects) == 0:
 				self.report({'ERROR'}, "No patches found in 'Patches' collection")
 				return {'CANCELLED'}
 
 			json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath))+'/Patches.json'
-
 			print(json_export_path)
 
 			if not os.path.isfile(json_export_path):
@@ -2452,7 +2461,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 			for obj in patch_objects:
 				obj_type = obj[0]
 				
-				if obj_type == 3: # blender asset
+				if obj_type == BLENDER_ASSET: # blender asset
 					inst_obj = obj[2]
 					obj = obj[1]
 					obj_name = inst_obj.name + '_' + obj.name
@@ -2474,7 +2483,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				props = obj.ssx2_PatchProps
 				print(obj_name)
 
-				if obj_type == 2 or obj_type == 3: # export spline cage
+				if obj_type == SPLINE_CAGE or obj_type == BLENDER_ASSET: # export spline cage
 					cage_nodes = None
 					for mod in obj.modifiers:
 						if mod.type == 'NODES' and mod.node_group:
@@ -2633,14 +2642,14 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						self.report({'WARNING'}, f"{obj_name} must have 2, 4 or 6 splines. Skipping.")
 						continue
 
-					tex = "0022.png"
+					tex = "0000.png"
 
 					if mat is not None:
 						tex_node = mat.node_tree.nodes.get("Image Texture")
 						if tex_node is not None:
 							tex = mat.node_tree.nodes["Image Texture"].image.name
 							if not tex.endswith(".png") or len(tex) < 5:
-								tex = "0022.png"
+								tex = "0000.png"
 
 					#patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
 					if not props.useManualUV:
@@ -2663,8 +2672,6 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					for i, patch in enumerate(new_patches):
 
-						#print(patch_uvs[0])
-
 						name = f"{obj_name}_{i}"
 
 						patch_points = []
@@ -2672,11 +2679,6 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 							for p in uh:
 								x, y, z = p
 								patch_points.append((x, y, z))
-
-						# tex = "0022.png"
-						# patch_uvs = patch_known_uvs[0]
-						# lightmap_uvs = [0.0, 0.0, 0.0625, 0.0625]
-						# lightmap_id = 0
 
 						patch_json_obj = {
 							"PatchName": name,
@@ -2690,7 +2692,20 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						}
 						temp_json['Patches'].append(patch_json_obj)
 
-				elif obj_type == 0: # export surface patch
+						if do_lightmaps:
+							to_create_for_lightmaps.append((obj, export_counts['patch_segments']))
+
+						export_counts['patch_segments'] += 1
+
+
+
+
+
+
+
+
+
+				elif obj_type == SURFACE_PATCH: # export surface patch
 
 					patch_points = []
 					for spline in obj.data.splines:
@@ -2746,7 +2761,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					}
 					temp_json['Patches'].append(patch_json_obj)
 
-				else: # export control grid
+				elif obj_type == CONTROL_GRID: # export control grid
 					grid_points = []
 
 					for vtx in obj.data.vertices:
@@ -2800,6 +2815,25 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					# print(patch_json_obj)
 
 					temp_json['Patches'].append(patch_json_obj)
+
+				else:
+					print("oops")
+					return {'CANCELLED'}
+
+
+
+
+
+
+			
+
+
+
+
+
+
+
+
 
 
 			with open(json_export_path, 'w') as f:

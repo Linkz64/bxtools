@@ -130,6 +130,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             # - merge all duplicates
             # - make a new material type that's only for the final bake mesh 
 
+            # - tessellate uvs
+
 
             bpy.context.scene.render.bake.margin = 0
 
