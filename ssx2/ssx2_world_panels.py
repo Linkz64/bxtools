@@ -400,61 +400,60 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 		layout = self.layout
 		obj = context.object
 
-		if obj.type == 'CURVE':
-			prop_split(layout, obj, "ssx2_CurveMode", "Curve Mode")
+		if obj.type != 'CURVE':
+			return
 
-			if obj.ssx2_CurveMode == 'SPLINE':
-				prop_split(layout, obj.ssx2_SplineProps, 'type', "Spline Type")
+		prop_split(layout, obj, "ssx2_CurveMode", "Curve Mode")
 
-			elif obj.ssx2_CurveMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_EVENT':
-				path_props = obj.ssx2_PathProps
+		if obj.ssx2_CurveMode == 'SPLINE':
+			prop_split(layout, obj.ssx2_SplineProps, 'type', "Spline Type")
 
-				for mod in context.active_object.modifiers:
-					if mod.type == 'NODES' and mod.node_group:
-						if mod.node_group.name.startswith("PathLinesAppend"):
-							break
+		elif obj.ssx2_CurveMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_EVENT':
+			path_props = obj.ssx2_PathProps
 
-				row = layout.row()
-				row.prop(mod, '["Input_2"]', text="Show Points", \
-					icon="HIDE_OFF" if mod["Input_2"] else "HIDE_ON")
-				row.prop(mod, '["Input_3"]', text="Show Event", \
-					icon="HIDE_OFF" if mod["Input_3"] else "HIDE_ON")
+			for mod in context.active_object.modifiers:
+				if mod.type == 'NODES' and mod.node_group:
+					if mod.node_group.name.startswith("PathLinesAppend"):
+						break
 
-				if obj.ssx2_CurveMode == 'PATH_AI':
-					layout.prop(path_props, "reset", text="Reset Target")
-					layout.prop(path_props, "start", text="Start Point")
-					prop_split(layout, path_props, "aipaths_u3", "Unknown 3")
-				else:
-					prop_split(layout, path_props, "eventpaths_u2", "Unknown 2")
+			row = layout.row()
+			row.prop(mod, '["Input_2"]', text="Show Points", \
+				icon="HIDE_OFF" if mod["Input_2"] else "HIDE_ON")
+			row.prop(mod, '["Input_3"]', text="Show Event", \
+				icon="HIDE_OFF" if mod["Input_3"] else "HIDE_ON")
+
+			if obj.ssx2_CurveMode == 'PATH_AI':
+				layout.prop(path_props, "reset", text="Reset Target")
+				layout.prop(path_props, "start", text="Start Point")
+				prop_split(layout, path_props, "aipaths_u3", "Unknown 3")
+			else:
+				prop_split(layout, path_props, "eventpaths_u2", "Unknown 2")
 
 
-				# layout.label(text="Path Mode: [Enum]")
+			# layout.label(text="Path Mode: [Enum]")
 
-				events_box = layout.box()
-				evt_box_header = events_box.row(align=True)
+			events_box = layout.box()
+			evt_box_header = events_box.row(align=True)
 
-				evt_box_header.label(text="Events")
-				evt_box_header.operator(SSX2_OP_PathEventAdd.bl_idname, text="Add", icon="ADD")
-				evt_box_header.operator(SSX2_OP_PathEventRemove.bl_idname, text="Remove", icon="REMOVE")
+			evt_box_header.label(text="Events")
+			evt_box_header.operator(SSX2_OP_PathEventAdd.bl_idname, text="Add", icon="ADD")
+			evt_box_header.operator(SSX2_OP_PathEventRemove.bl_idname, text="Remove", icon="REMOVE")
 
-				for event in path_props.events:
-					row = events_box.row(align=True)
-					evt_header_row = row
+			for event in path_props.events:
+				row = events_box.row(align=True)
 
-					evt_header_row.prop(event, "checked") #text=event.name)
+				# row.label(icon='HIDE_ON')
+				row.prop(event, "checked") #text=event.name)
 
-					split1 = evt_header_row.split(align=True, factor=0.45)
-					split_name_ints = split1.split(align=True, factor=0.42)
+				split1 = row.split(align=True, factor=0.48)
+				
+				evt_ints = split1.column(align=True)
+				evt_ints.prop(event, "u0", text="Type")
+				evt_ints.prop(event, "u1", text="Sub Value")
 
-					#split_name_ints.prop(event, "name", text="") # event.name
-
-					#evt_ints = split_name_ints.row(align=True)
-					split_name_ints.prop(event, "u0", text="")
-					split_name_ints.prop(event, "u1", text="")
-
-					evt_floats = split1.row(align=True)
-					evt_floats.prop(event, "u2", text="")
-					evt_floats.prop(event, "u3", text="")
+				evt_floats = split1.column(align=True)
+				evt_floats.prop(event, "u2", text="Start")
+				evt_floats.prop(event, "u3", text="End")
 
 class SSX2_MaterialPropPanel(SSX2_Panel):
 	bl_label = "Test"
