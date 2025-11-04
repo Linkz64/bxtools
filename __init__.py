@@ -215,6 +215,9 @@ class BXT_Panel(bpy.types.Panel):
     bl_category = 'BXTools'
     bl_options = {'DEFAULT_CLOSED'}
 
+    def draw_header(self, context):
+        self.layout.label(icon='PREFERENCES')
+
     def draw(self, context): 
         col = self.layout.column()
         col.scale_y = 1.1

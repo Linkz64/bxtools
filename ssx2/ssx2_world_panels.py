@@ -50,6 +50,9 @@ class SSX2_WorldPanel(SSX2_Panel):
 	bl_idname = 'SSX2_PT_world'
 	bl_label = 'Worlds'
 
+	def draw_header(self, context):
+		self.layout.label(icon='WORLD')
+
 	def draw(self, context):
 		col = self.layout.column()
 		col.scale_y = 1.0
@@ -72,6 +75,9 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 	bl_idname = 'SSX2_PT_world_import'
 	bl_label = 'World Import'
 	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw_header(self, context):
+		self.layout.label(icon='IMPORT')
 
 	def draw(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
@@ -138,6 +144,9 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 	bl_idname = 'SSX2_PT_world_export'
 	bl_label = 'World Export'
 	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw_header(self, context):
+		self.layout.label(icon='EXPORT')
 
 	def draw(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
