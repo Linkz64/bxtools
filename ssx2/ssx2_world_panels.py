@@ -365,12 +365,12 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 				#split_name_ints.prop(event, "name", text="") # event.name
 
 				#evt_ints = split_name_ints.row(align=True)
-				split_name_ints.prop(event, "u0", text="")
-				split_name_ints.prop(event, "u1", text="")
+				split_name_ints.prop(event, "type_custom", text="")
+				split_name_ints.prop(event, "value", text="")
 
 				evt_floats = split1.row(align=True)
-				evt_floats.prop(event, "u2", text="")
-				evt_floats.prop(event, "u3", text="")
+				evt_floats.prop(event, "start", text="")
+				evt_floats.prop(event, "end", text="")
 
 
 		elif empty_mode == "INSTANCE":
@@ -430,7 +430,7 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 				layout.prop(path_props, "start")
 				prop_split(layout, path_props, "aipaths_u3", "Unknown 3")
 			else:
-				prop_split(layout, path_props, "eventpaths_u2", "Unknown 2")
+				prop_split(layout, path_props, "eventpaths_u2", "Distance to finish")
 
 
 			# layout.label(text="Path Mode: [Enum]")
@@ -453,14 +453,19 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 				row.prop(event, "checked")
 
 				split1 = row.split(align=True, factor=0.48)
-				
 				evt_ints = split1.column(align=True)
-				evt_ints.prop(event, "u0", text="Type")
-				evt_ints.prop(event, "u1", text="Sub Value")
+
+				if event.type_enum == 'CUSTOM':
+					evt_type_row = evt_ints.row(align=True)
+					evt_type_row.prop(event, "type_enum", text="")
+					evt_type_row.prop(event, "type_custom", text="")
+				else:
+					evt_ints.prop(event, "type_enum", text="")
+				evt_ints.prop(event, "value", text="Value")
 
 				evt_floats = split1.column(align=True)
-				evt_floats.prop(event, "u2", text="Start")
-				evt_floats.prop(event, "u3", text="End")
+				evt_floats.prop(event, "start", text="Start")
+				evt_floats.prop(event, "end", text="End")
 
 class SSX2_MaterialPropPanel(SSX2_Panel):
 	bl_label = "Test"
@@ -598,8 +603,8 @@ class SSX2_OP_WorldShowPathEvent(bpy.types.Operator):
 
 			mod["Input_3"] = True
 			# this triggers update_event_start_end()
-			obj.ssx2_PathProps.events[self.index].u2 = obj.ssx2_PathProps.events[self.index].u2
-			obj.ssx2_PathProps.events[self.index].u3 = obj.ssx2_PathProps.events[self.index].u3
+			obj.ssx2_PathProps.events[self.index].start = obj.ssx2_PathProps.events[self.index].start
+			obj.ssx2_PathProps.events[self.index].end = obj.ssx2_PathProps.events[self.index].end
 
 		mod.show_viewport = False
 		mod.show_viewport = True

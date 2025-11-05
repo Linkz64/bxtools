@@ -25,6 +25,7 @@ from .ssx2_constants import (
 	enum_ssx2_patch_group,
 	enum_ssx2_surface_type,
 	enum_ssx2_surface_type_spline,
+	enum_ssx2_path_event_type,
 	enum_ssx2_surface_type_extended,
 	enum_ssx2_empty_mode,
 	enum_ssx2_curve_mode,
@@ -118,12 +119,18 @@ def update_event_start_end(self, context):
 	for mod in context.active_object.modifiers:
 		if mod.type == 'NODES' and mod.node_group:
 			if mod.node_group.name.startswith("PathLinesAppend"):
-				if self.u3 < self.u2:
-					self.u3 = self.u2
+				if self.end < self.start:
+					self.end = self.start
 
-				mod["Input_4"] = self.u2
-				mod["Input_5"] = self.u3
+				mod["Input_4"] = self.start
+				mod["Input_5"] = self.end
 				break
+
+def event_type_to_enum(event_type) -> str:
+	if any(item[0] == str(event_type) for item in enum_ssx2_path_event_type):
+		return str(event_type)
+	else:
+		return 'CUSTOM'
 
 ### Operators
 
@@ -446,11 +453,12 @@ class SSX2_OP_PathEventRemove(bpy.types.Operator):
 		for event in events:
 			if event.checked == False:
 				new_list.append((
-					event.u0, 
-					event.u1, 
-					event.u2, 
-					event.u3,
-					event.checked))
+					event.type_custom,
+					event.value,
+					event.start,
+					event.end,
+					event.checked,
+					event.type_enum))
 			else:
 				at_least_one_checked = True
 
@@ -461,11 +469,12 @@ class SSX2_OP_PathEventRemove(bpy.types.Operator):
 
 		for val in new_list:
 			new_event = events.add()
-			new_event.u0 = val[0]
-			new_event.u1 = val[1]
-			new_event.u2 = val[2]
-			new_event.u3 = val[3]
+			new_event.type_custom = val[0]
+			new_event.value = val[1]
+			new_event.start = val[2]
+			new_event.end = val[3]
 			new_event.checked = val[4]
+			new_event.type_enum = val[5]
 
 		return {'FINISHED'}
 
@@ -1839,10 +1848,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						for k, event in enumerate(path_events):
 							new_event = events.add()
 							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.u0 = event["EventType"]
-							new_event.u1 = event["EventValue"]
-							new_event.u2 = event["EventStart"] / 100
-							new_event.u3 = event["EventEnd"] / 100
+							new_event.type_enum = event_type_to_enum(event["EventType"])
+							new_event.type_custom = event["EventType"]
+							new_event.value = event["EventValue"]
+							new_event.start = event["EventStart"] / 100
+							new_event.end = event["EventEnd"] / 100
 
 						# curve_obj.location = path_pos
 
@@ -1866,10 +1876,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						for k, event in enumerate(path_events):
 							new_event = events.add()
 							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.u0 = event["EventType"]
-							new_event.u1 = event["EventValue"]
-							new_event.u2 = event["EventStart"] / 100
-							new_event.u3 = event["EventEnd"] / 100
+							new_event.type_enum = event_type_to_enum(event["EventType"])
+							new_event.type_custom = event["EventType"]
+							new_event.value = event["EventValue"]
+							new_event.start = event["EventStart"] / 100
+							new_event.end = event["EventEnd"] / 100
 									
 						col_sub.objects.link(empty)
 
@@ -1938,10 +1949,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						for k, event in enumerate(path_events):
 							new_event = events.add()
 							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.u0 = event["EventType"]
-							new_event.u1 = event["EventValue"]
-							new_event.u2 = event["EventStart"] / 100
-							new_event.u3 = event["EventEnd"] / 100
+							new_event.type_enum = event_type_to_enum(event["EventType"])
+							new_event.type_custom = event["EventType"]
+							new_event.value = event["EventValue"]
+							new_event.start = event["EventStart"] / 100
+							new_event.end = event["EventEnd"] / 100
 
 						node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
 						node_modifier.node_group = node_tree
@@ -1963,10 +1975,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						for k, event in enumerate(path_events):
 							new_event = events.add()
 							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.u0 = event["EventType"]
-							new_event.u1 = event["EventValue"]
-							new_event.u2 = event["EventStart"] / 100
-							new_event.u3 = event["EventEnd"] / 100
+							new_event.type_enum = event_type_to_enum(event["EventType"])
+							new_event.type_custom = event["EventType"]
+							new_event.value = event["EventValue"]
+							new_event.start = event["EventStart"] / 100
+							new_event.end = event["EventEnd"] / 100
 
 						col_sub.objects.link(empty)
 
@@ -2268,10 +2281,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					for event in path_props.events:
 						temp_event = {
-							"EventType":event.u0,
-							"EventValue":event.u1,
-							"EventStart":event.u2 * 100, # WorldScale
-							"EventEnd":event.u3 * 100, # WorldScale
+							"EventType":event.type_custom if event.type_enum == 'CUSTOM' else int(event.type_enum),
+							"EventValue":event.value,
+							"EventStart":event.start * 100, # WorldScale
+							"EventEnd":event.end * 100, # WorldScale
 						}
 						new_data["PathEvents"].append(temp_event)
 
@@ -2310,10 +2323,10 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					for event in path_props.events:
 						temp_event = {
-							"EventType":event.u0,
-							"EventValue":event.u1,
-							"EventStart":event.u2 * 100, # WorldScale
-							"EventEnd":event.u3 * 100, # WorldScale
+							"EventType":event.type_custom if event.type_enum == 'CUSTOM' else int(event.type_enum),
+							"EventValue":event.value,
+							"EventStart":event.start * 100, # WorldScale
+							"EventEnd":event.end * 100, # WorldScale
 						}
 						new_data["PathEvents"].append(temp_event)
 
@@ -3098,19 +3111,22 @@ class SSX2_WorldModelObjectPropGroup(bpy.types.PropertyGroup):
 	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
 	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
 
+
+
 class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
 	# name: bpy.props.StringProperty(name="", subtype='NONE',
 	# 	description="Name of the event")
-	u0: bpy.props.IntProperty(name="u0",
+	type_enum: bpy.props.EnumProperty(name='Type', items=enum_ssx2_path_event_type)
+	type_custom: bpy.props.IntProperty(name="Type custom",
 		description="",
 		min=-1,
 		max=1000)
-	u1: bpy.props.IntProperty(name="u1",
+	value: bpy.props.IntProperty(name="Value",
 		description="",
 		min=-1,
 		max=1000)
-	u2: bpy.props.FloatProperty(name="u2", min=0.0, update=update_event_start_end)
-	u3: bpy.props.FloatProperty(name="u3", min=0.0, update=update_event_start_end)
+	start: bpy.props.FloatProperty(name="Start", min=0.0, update=update_event_start_end)
+	end: bpy.props.FloatProperty(name="End", min=0.0, update=update_event_start_end)
 
 	checked: bpy.props.BoolProperty(name="", default=False)
 
