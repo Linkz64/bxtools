@@ -420,7 +420,7 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 
 			if obj.ssx2_CurveMode == 'PATH_AI':
 				layout.prop(path_props, "reset", text="Reset Target")
-				layout.prop(path_props, "start", text="Start Point")
+				layout.prop(path_props, "start")
 				prop_split(layout, path_props, "aipaths_u3", "Unknown 3")
 			else:
 				prop_split(layout, path_props, "eventpaths_u2", "Unknown 2")
@@ -435,11 +435,15 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 			evt_box_header.operator(SSX2_OP_PathEventAdd.bl_idname, text="Add", icon="ADD")
 			evt_box_header.operator(SSX2_OP_PathEventRemove.bl_idname, text="Remove", icon="REMOVE")
 
-			for event in path_props.events:
+			for i, event in enumerate(path_props.events):
 				row = events_box.row(align=True)
 
-				# row.label(icon='HIDE_ON')
-				row.prop(event, "checked") #text=event.name)
+				row.operator(SSX2_OP_WorldShowPathEvent.bl_idname,\
+					icon='HIDE_OFF' if path_props.visible_event_index == i\
+					else 'HIDE_ON',emboss=False,text="").index = i
+
+
+				row.prop(event, "checked")
 
 				split1 = row.split(align=True, factor=0.48)
 				
@@ -561,6 +565,39 @@ class SSX2_OP_WorldExpandUIBoxes(bpy.types.Operator):
 		setattr(props, props_split[1], not getattr(props, props_split[1]))
 		return {'FINISHED'}
 
+class SSX2_OP_WorldShowPathEvent(bpy.types.Operator):
+	bl_idname = "wm.ssx2_show_path_event"
+	bl_label = ""
+	bl_description = "Test"
+
+	index: bpy.props.IntProperty()
+
+	def execute(self, context):
+		scene = context.scene
+		obj = context.active_object
+
+		mod = None
+		for mod in obj.modifiers:
+			if mod.type == 'NODES' and mod.node_group:
+				if mod.node_group.name.startswith("PathLinesAppend"):
+					break
+
+		if obj.ssx2_PathProps.visible_event_index == self.index:
+			obj.ssx2_PathProps.visible_event_index = -1
+
+			mod["Input_3"] = False
+		else:
+			obj.ssx2_PathProps.visible_event_index = self.index
+
+			mod["Input_3"] = True
+			# this triggers update_event_start_end()
+			obj.ssx2_PathProps.events[self.index].u2 = obj.ssx2_PathProps.events[self.index].u2
+			obj.ssx2_PathProps.events[self.index].u3 = obj.ssx2_PathProps.events[self.index].u3
+
+		mod.show_viewport = False
+		mod.show_viewport = True
+
+		return {'FINISHED'}
 
 ### Functions
 
@@ -584,6 +621,7 @@ classes = (
 	SSX2_WorldAddMenu,
 
 	SSX2_OP_WorldExpandUIBoxes,
+	SSX2_OP_WorldShowPathEvent,
 )
 
 

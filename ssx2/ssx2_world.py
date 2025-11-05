@@ -123,7 +123,7 @@ def update_event_start_end(self, context):
 
 				mod["Input_4"] = self.u2
 				mod["Input_5"] = self.u3
-			break
+				break
 
 ### Operators
 
@@ -431,6 +431,15 @@ class SSX2_OP_PathEventRemove(bpy.types.Operator):
 		obj = bpy.context.active_object 
 		events = obj.ssx2_PathProps.events
 		at_least_one_checked = False
+		obj.ssx2_PathProps.visible_event_index = -1
+
+		for mod in obj.modifiers:
+			if mod.type == 'NODES' and mod.node_group:
+				if mod.node_group.name.startswith("PathLinesAppend"):
+					mod["Input_3"] = False
+					mod.show_viewport = False
+					mod.show_viewport = True
+					break
 
 		new_list = []
 
@@ -2994,8 +3003,8 @@ class SSX2_WorldPathPropGroup(bpy.types.PropertyGroup):
 	# mode: bpy.props.EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
 	reset: bpy.props.BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
 		description="Can be warped to when reset")
-	start: bpy.props.BoolProperty(name="Start Point", default=False, # FOR AIPATHS ONLY?
-		description="Start/Spawn Point")
+	start: bpy.props.BoolProperty(name="Start Path", default=False, # FOR AIPATHS ONLY?
+		description="Acts as Start/Spawn Path")
 
 	aipaths_u3: bpy.props.IntProperty(name="AiPaths u1",
 		description="",)
@@ -3005,6 +3014,7 @@ class SSX2_WorldPathPropGroup(bpy.types.PropertyGroup):
 	eventpaths_u2: bpy.props.FloatProperty(name="EventPaths u2",
 		description="")
 
+	visible_event_index: bpy.props.IntProperty(default=-1)
 
 	events: bpy.props.CollectionProperty(type=SSX2_WorldPathEventPropGroup)
 
