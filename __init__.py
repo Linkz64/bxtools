@@ -55,6 +55,7 @@ else:
         locals()[full_name] = importlib.import_module(full_name) # or globals()
 
     from .ssx2.ssx2_world_lightmaps import SSX2_OP_BakeTest
+    from .ssx2.ssx2_world import SSX2_OP_WorldReloadNodeTrees
 
 bl_info = {
     'name': 'BXTools',
@@ -224,6 +225,7 @@ class BXT_Panel(bpy.types.Panel):
         prop_split(col, context.scene, 'bx_GameChoice', "Game")
         prop_split(col, context.scene, 'bx_PlatformChoice', "Platform")
         col.operator(BXT_OP_Update.bl_idname, icon='IMPORT')
+        col.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH', text="Reload Appends")
         extras_box = col.box()
         extras_box.label(text="Extras")
         extras_box.operator(SSX2_OP_BakeTest.bl_idname, text="Lightmap Bake Test")

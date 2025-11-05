@@ -64,11 +64,7 @@ class SSX2_WorldPanel(SSX2_Panel):
 			if io.worldChoice == 'CUSTOM':
 				prop_split(col, io, 'worldChoiceCustom', 'Custom Choice')
 				
-		general_row = col.row(align=True)
-		general_row.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
-		general_row.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH', text="Reload Appends")
-		#col.operator("script.reload", text="⟳⟳⟳⟳⟳")
-
+		col.operator(SSX2_OP_WorldInitiateProject.bl_idname, icon='ADD')
 		col.menu(SSX2_WorldAddMenu.bl_idname, text="Add Object")
 
 class SSX2_WorldImportPanel(SSX2_Panel):
