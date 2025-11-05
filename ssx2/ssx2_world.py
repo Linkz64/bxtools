@@ -525,9 +525,9 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 				if len(obj.material_slots) != 0:
 					mat = obj.material_slots[0].material
 					if mat is not None:
-						tex_node = mat.node_tree.nodes.get("Image Texture")
-						if tex_node:
-							tex = tex_node.image
+						img_node = mat.node_tree.nodes.get("Image Texture")
+						if img_node:
+							tex = img_node.image
 
 						if mat.name in mat_names:
 							mat_reapply_general.append((obj, mat_names.index(mat.name)))
@@ -552,9 +552,9 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 						)
 						mat = mod["Input_7"]
 						if mat is not None:
-							tex_node = mat.node_tree.nodes.get("Image Texture")
-							if tex_node:
-								tex = tex_node.image
+							img_node = mat.node_tree.nodes.get("Image Texture")
+							if img_node:
+								tex = img_node.image
 							
 							if mat.name in mat_names:
 								mat_reapply_spline_cage.append((obj, mat_names.index(mat.name), j))
@@ -688,7 +688,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			io.importPatches or \
 			io.importSplines or \
 			io.importPaths or \
-			io.importModels\
+			io.importModels or \
+			io.importLights \
 			) and \
 			(s.bx_PlatformChoice == 'XBX' or s.bx_PlatformChoice == 'NGC' or\
 			s.bx_PlatformChoice == 'PS2' or s.bx_PlatformChoice == 'ICE')
@@ -1604,6 +1605,98 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# SELECT ALL AT THE END AND SET ORIGIN
 		#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
+	def create_lights_json(self):
+		# self.active_collection = bpy.context.collection
+
+		light_energy_scale = 10
+
+		DIRECTIONAL = 0
+		SPOT = 1
+		POINT = 2
+		AMBIENT = 3
+
+		blender_types = ['SUN', 'SPOT', 'POINT']
+
+		lights_file_path = self.folder_path + '/Lights.json'
+		if not os.path.isfile(lights_file_path):
+			self.report({'ERROR'}, f"File 'Lights.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
+		
+		lights_collection = getset_collection_to_target('Lights', self.scene_collection)
+
+		print("\nParsing Lights.json")
+
+		with open(lights_file_path, 'r') as f:
+			data = json.load(f)
+
+		for i, json_light in enumerate(data["Lights"]):
+			light_name = json_light["LightName"]
+			light_type = json_light["Type"]
+			light_color = Vector(json_light["Colour"])
+			light_position = Vector(json_light["Postion"])
+			light_direction = Vector(json_light["Direction"])
+
+			# "SpriteRes": 0,
+			# "UnknownFloat1": 1.0,
+			# "UnknownInt1": 0,
+			# "UnknownFloat2": 0.0,
+			# "UnknownInt2": 1,
+			# "UnknownFloat3": 2.0,
+			# "UnknownInt3": 0,
+			# "Hash": 228080849
+
+			# print(light_name)
+
+			if light_type != AMBIENT:
+
+				if light_type != 21412412: # != DIRECTIONAL:
+					light_data = bpy.data.lights.new(name=light_name, type=blender_types[light_type])
+					
+
+					color_absolute = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z)))
+
+					brightness = light_color.length
+					color = color_absolute / brightness
+					if color.length == 0.0:
+						color = Vector((1.0, 1.0, 1.0))
+
+					brightness = brightness * (1 if sum(light_color) >= 0 else -1)
+
+					light_data.color = color#light_color.normalized()
+
+					# light_data.color.s = 1
+
+					if light_type == DIRECTIONAL:
+						light_data.energy = brightness #  * light_energy_scale
+					elif light_type == SPOT:
+						light_data.energy = brightness * 100
+					elif light_type == POINT:
+						light_data.energy = brightness
+
+					# light_data.shadow_soft_size = 1
+
+					light_object = bpy.data.objects.new(name=light_name, object_data=light_data)
+					light_object.location = light_position / 100 # world_scale
+
+					lights_collection.objects.link(light_object)
+
+
+					dir_vec = light_direction.normalized()
+					quat = dir_vec.to_track_quat('-Z', 'Y')
+					#quat = (-dir_vec).to_track_quat('Z', 'Y')
+					light_object.rotation_euler = quat.to_euler()
+
+					# light_object.rotation_quaternion = quat
+
+
+					light_object["Direction"] = json_light["Direction"]
+
+			else:
+				print("Ambient")
+
+			
+
+
 	def import_json(self):
 		scene = bpy.context.scene
 
@@ -1896,6 +1989,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		if self.io.importSplines: # <------------------------------- Import Splines
 			run_without_update(self.create_splines_json)
+
+		if self.io.importLights:
+			run_without_update(self.create_lights_json)
 
 
 
@@ -2652,13 +2748,20 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						continue
 
 					tex = "0000.png"
-
 					if mat is not None:
-						tex_node = mat.node_tree.nodes.get("Image Texture")
-						if tex_node is not None:
-							tex = mat.node_tree.nodes["Image Texture"].image.name
-							if not tex.endswith(".png") or len(tex) < 5:
-								tex = "0000.png"
+						img_node = mat.node_tree.nodes.get("Image Texture")
+						if img_node is not None:
+							img = img_node.image
+							if img is not None:
+								if img.file_format == 'PNG' and img.source == 'FILE':
+									png_folder, tex = os.path.split(img.filepath_from_user())
+
+									# print(img.filepath)
+									# print(img.filepath_from_user())
+									# print(img.filepath_raw)
+								else:
+									self.report({'WARNING'}, f"{img.name} is not a valid PNG")
+
 
 					#patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
 					if not props.useManualUV:
@@ -2740,11 +2843,14 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					if len(obj.material_slots) != 0:
 						mat = bpy.data.materials.get(obj.material_slots[0].name)
 						if mat is not None:
-							tex_node = mat.node_tree.nodes.get("Image Texture")
-							if tex_node is not None:
-								tex_image = tex_node.image
-								if tex_image is not None:
-									tex = tex_image.name
+							img_node = mat.node_tree.nodes.get("Image Texture")
+							if img_node is not None:
+								img = img_node.image
+								if img is not None:
+									if img.file_format == 'PNG' and img.source == 'FILE':
+										png_folder, tex = os.path.split(img.filepath_from_user())
+									else:
+										self.report({'WARNING'}, f"{img.name} is not a valid PNG")
 
 					if 'lightmap_uvs' in obj.keys():
 						lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
@@ -2792,11 +2898,14 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					if len(obj.material_slots) != 0:
 						mat = bpy.data.materials.get(obj.material_slots[0].name)
 						if mat is not None:
-							tex_node = mat.node_tree.nodes.get("Image Texture")
-							if tex_node is not None:
-								tex_image = tex_node.image
-								if tex_image is not None:
-									tex = tex_image.name
+							img_node = mat.node_tree.nodes.get("Image Texture")
+							if img_node is not None:
+								img = img_node.image
+								if img is not None:
+									if img.file_format == 'PNG' and img.source == 'FILE':
+										png_folder, tex = os.path.split(img.filepath_from_user())
+									else:
+										self.report({'WARNING'}, f"{img.name} is not a valid PNG")
 
 					if 'lightmap_uvs' in obj.keys(): # and ('lightmap_id' in obj.keys())
 						lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
@@ -2954,6 +3063,12 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 	importPaths: bpy.props.BoolProperty(name="Import Paths", default=False)
 	importPathsAsCurve: bpy.props.BoolProperty(default=True)
 	expandImportPaths: bpy.props.BoolProperty(default=False)
+
+	# lights
+	importLights: bpy.props.BoolProperty(name="Import Lights", default=False)
+
+
+
 
 	# export
 	exportFolderPath: bpy.props.StringProperty(subtype='DIR_PATH', default="",

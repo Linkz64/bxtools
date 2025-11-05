@@ -133,6 +133,13 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 			label_row.label(text="Instances")
 			prop_enum_horizontal(the_box, io, 'instanceImportGrouping', "Grouping", spacing=0.3)
 
+		# LIGHTS
+		the_box = col.box()
+		box_row = the_box.row(align=True)
+		box_row.label(icon='BLANK1')
+		box_row.prop(io, "importLights", text="Lights")
+
+
 		# IMPORT BUTTON
 		col.operator(SSX2_OP_WorldImport.bl_idname)
 

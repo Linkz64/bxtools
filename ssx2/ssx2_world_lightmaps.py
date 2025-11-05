@@ -1,6 +1,68 @@
 import bpy
 from mathutils import Vector
 
+
+def find_layer_collection(layer_collection, name):
+    """Find collection in the outliner/layer"""
+    found = None
+    if layer_collection.name == name:
+        return layer_collection
+    for layer in layer_collection.children:
+        found = find_layer_collection(layer, name)
+        if found:
+            return found
+
+def getset_image(name, res_x, res_y):
+    image = bpy.data.images.get(name) # check if bake exists first
+    if image is None:
+        image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y)
+    return image
+def getset_image_udim(name, res_x, res_y):
+    image = bpy.data.images.get(name) # check if bake exists first
+    if image is None:
+        image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y, tiled=True)
+    return image
+
+def setup_lightmap_uvs(uv_scale, length):
+    """
+    uv_scale = uv tile scale (0.0625 for 8x8 tile if texture is 128x128)
+    length = number of patches
+
+    note: blender origin is bottom left, ssx origin is top left
+          therefore y is set to start at 0.9375 (1.0 - uv_scale)
+    """
+    x = 0.0
+    y = 1.0 - uv_scale
+    uvs = [(x, y)]
+    for i in range(length):
+        #print(f"{i:3} {x:6} {y:6}")
+        if x + uv_scale < 1.0:
+            x += uv_scale
+        else:
+            x = 0.0
+            y = y - uv_scale
+        if y == -uv_scale:
+            y = 1.0 - uv_scale
+        uvs.append((x, y))
+        #print(f"{i:3} {x:6} {y:6}")
+    return uvs
+
+def getUVIslandsForActiveObject(): # from "raubana Dylan J. Raub" https://blenderartists.org/t/modifying-uvs-in-python-while-in-object-mode-affects-how-uv-islands-work/1378510/4
+    islands = []
+    obj = bpy.context.view_layer.objects.active
+    
+    poly_index_lists = bpy_extras.mesh_utils.mesh_linked_uv_islands( obj.data )
+    
+    for poly_index_list in poly_index_lists:
+        island = []
+        for poly_index in poly_index_list:
+            island.append( obj.data.polygons[poly_index] )
+        islands.append( island )
+    
+    return islands
+
+
+
 class SSX2_OP_BakeTest(bpy.types.Operator):
     bl_idname = 'object.ssx2_bake_test'
     bl_label = "Bake Test"
@@ -14,65 +76,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         time_start = time.time()
         print("Timer started")
 
-
-        def find_layer_collection(layer_collection, name):
-            """Find collection in the outliner/layer"""
-            found = None
-            if layer_collection.name == name:
-                return layer_collection
-            for layer in layer_collection.children:
-                found = find_layer_collection(layer, name)
-                if found:
-                    return found
-
-        def getset_image(name, res_x, res_y):
-            image = bpy.data.images.get(name) # check if bake exists first
-            if image is None:
-                image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y)
-            return image
-        def getset_image_udim(name, res_x, res_y):
-            image = bpy.data.images.get(name) # check if bake exists first
-            if image is None:
-                image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y, tiled=True)
-            return image
-
-        def setup_lightmap_uvs(uv_scale, length):
-            """
-            uv_scale = uv tile scale (0.0625 for 8x8 tile if texture is 128x128)
-            length = number of patches
-
-            note: blender origin is bottom left, ssx origin is top left
-                  therefore y is set to start at 0.9375 (1.0 - uv_scale)
-            """
-            x = 0.0
-            y = 1.0 - uv_scale
-            uvs = [(x, y)]
-            for i in range(length):
-                #print(f"{i:3} {x:6} {y:6}")
-                if x + uv_scale < 1.0:
-                    x += uv_scale
-                else:
-                    x = 0.0
-                    y = y - uv_scale
-                if y == -uv_scale:
-                    y = 1.0 - uv_scale
-                uvs.append((x, y))
-                #print(f"{i:3} {x:6} {y:6}")
-            return uvs
-
-        def getUVIslandsForActiveObject(): # from "raubana Dylan J. Raub" https://blenderartists.org/t/modifying-uvs-in-python-while-in-object-mode-affects-how-uv-islands-work/1378510/4
-            islands = []
-            obj = bpy.context.view_layer.objects.active
-            
-            poly_index_lists = bpy_extras.mesh_utils.mesh_linked_uv_islands( obj.data )
-            
-            for poly_index_list in poly_index_lists:
-                island = []
-                for poly_index in poly_index_list:
-                    island.append( obj.data.polygons[poly_index] )
-                islands.append( island )
-            
-            return islands
+        prev_render_engine = bpy.context.scene.render.engine
 
         bpy.context.scene.render.engine = 'CYCLES'
         bpy.context.scene.cycles.device = 'GPU'
@@ -99,7 +103,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             self.report({'WARNING'}, "No 'Patches' Collection found!")
             return {'CANCELLED'}
         
-        patches = [i for i in collection.all_objects if i.type == 'SURFACE']
+        patches = [obj for obj in collection.all_objects if obj.type == 'SURFACE']
+        # not hide_viewport
+        # not exclude
 
         
 
