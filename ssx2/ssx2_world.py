@@ -488,6 +488,8 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 		scene = bpy.context.scene
 		scene_collection = scene.collection
 
+		# bpy.context.space_data.overlay.show_light_colors = True
+
 		for screen in bpy.data.screens:
 			for area in screen.areas:
 				if area.type == "OUTLINER":
@@ -502,6 +504,8 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 							space.clip_start = 0.5
 							space.clip_end = 2000
 							space.overlay.display_handle = 'ALL'
+							space.overlay.show_light_colors = True
+
 
 		getset_collection_to_target("Patches", scene_collection)
 		getset_collection_to_target("Splines", scene_collection)
