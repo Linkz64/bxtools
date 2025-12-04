@@ -1073,7 +1073,10 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 			time_started = time.time()
 
-			self.quads_to_patches(obj)
+			test = self.quads_to_patches(obj)
+
+			if test == False:
+				return {'CANCELLED'}
 
 		return {'FINISHED'}
 
@@ -1349,6 +1352,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				test_obj.ssx2_PatchProps.isControlGrid = True
 			except:
 				print("error because isControlGrid is missing")
+				return False
 
 
 
