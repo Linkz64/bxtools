@@ -1061,15 +1061,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			self.report({'ERROR'}, "An active object is required")
 			return {'CANCELLED'}
 
-
-
-		
-
-
 		for obj in self.selected_objs:
 			
-			
-			print("Building Vertex Neighborhood")
+			# print("Building Vertex Neighborhood")
 
 			time_started = time.time()
 
@@ -1101,7 +1095,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		swapped = (1, 0)
 
 		for i, f in enumerate(bm.faces):
-			print("\n__________________ Face:", i, "______________________")
+			# print("\n__________________ Face:", i, "______________________")
 			bm.faces.ensure_lookup_table()
 
 			if len(f.verts) != 4:
@@ -1188,9 +1182,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				result[ev2][j] = nbr_for_e_v2.index if nbr_for_e_v2 else None
 
 
-
-
-			print(result)
 			result = list(result.values())
 
 			# C, N, W, S, E, NW, SW, SE, NE
@@ -1198,10 +1189,10 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			majors = [[None, None, None, None, None, None, None, None, None] for i in range(4)]
 
 
-			print("\nBuilding Majors/Handles")
+			# print("\nBuilding Majors/Handles")
 
 			for j, neighbor_info in enumerate(result):
-				print(j, f.verts[j].index, neighbor_info) # aka nbr_verts
+				# print(j, f.verts[j].index, neighbor_info) # aka nbr_verts
 
 				core = f.verts[j].co
 
@@ -1363,7 +1354,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 				for j, point in enumerate(points):
 					points[j] = Vector((point.x, point.y, point.z, 1.0))
-
 
 				patch = set_patch_object(points, "PatchFromQuad" + str(i))
 
