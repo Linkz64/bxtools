@@ -1039,6 +1039,330 @@ class SSX2_OP_CageToPatch(bpy.types.Operator): # Curve/Spline Cage to Patch.
 		self.report({'INFO'}, "Finished")
 		return {'FINISHED'}
 
+class SSX2_OP_QuadToPatch(bpy.types.Operator):
+	bl_idname = 'object.patch_from_quad'
+	bl_label = "Patch from Quad"
+	bl_description = "Generates a patch from each quad"
+	bl_options = {'REGISTER', 'UNDO'}
+
+	@classmethod
+	def poll(self, context):
+		active_object = context.active_object
+		if active_object is not None:
+			if active_object.type == 'MESH':
+				return True
+
+	def execute(self, context):
+		collection = bpy.context.collection
+		self.selected_objs = bpy.context.selected_objects
+		active_obj = bpy.context.active_object
+
+		if active_obj is None:
+			self.report({'ERROR'}, "An active object is required")
+			return {'CANCELLED'}
+
+
+
+		
+
+
+		for obj in self.selected_objs:
+			
+			
+			print("Building Vertex Neighborhood")
+
+			time_started = time.time()
+
+			self.quads_to_patches(obj)
+
+		return {'FINISHED'}
+
+	def quads_to_patches(self, obj):
+
+		# if len(bpy.context.selected_objects) != 0:
+		# 	bpy.ops.object.select_all(action='DESELECT')
+		obj.select_set(True)
+		bpy.context.view_layer.objects.active = obj
+		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
+
+		mesh = obj.data
+		verts = mesh.vertices
+		bm = bmesh.from_edit_mesh(mesh)
+
+		test_global_val = 0.3333333333333333
+
+		NORTH, WEST, SOUTH, EAST = 0, 1, 2, 3
+		cardinal_opposites = (SOUTH, EAST, NORTH, WEST)
+
+		swapped = (1, 0)
+
+		for i, f in enumerate(bm.faces):
+			print("\n__________________ Face:", i, "______________________")
+			bm.faces.ensure_lookup_table()
+
+			if len(f.verts) != 4:
+				# raise ValueError(f"Face {i} is not a quad")
+				continue
+
+			# face loops are CCW, so this is consistent (v0, v1, v2, v3)
+			loops = [l for l in f.loops]
+			v = [l.vert for l in loops]  # v[0]..v[3]
+
+			edges = (
+				loops[0].edge, # (v0, v1)
+				loops[1].edge, # (v1, v2)
+				loops[2].edge, # (v2, v3)
+				loops[3].edge  # (v3, v0)
+			)
+
+			edges_list = [loops[0].edge, loops[1].edge, loops[2].edge, loops[3].edge]
+			edges_verts = [(e.verts[0].index, e.verts[1].index) for e in edges_list]
+
+			result = {}
+			for corner in v:
+				result[corner.index] = [None, None, None, None] # cardinal vertex neighbors 
+
+
+			for j, edge in enumerate(edges):
+				# print("\nCurrent loop:", _i)
+				# print("BM Edge:", edge.index, "Verts: {", edge.verts[0].index, ",", edge.verts[1].index, "}")
+
+				linked_faces = [lf for lf in edge.link_faces if lf != f]
+
+				# verts inside the edges
+				e_v1, e_v2 = edge.verts
+				ev1, ev2 = e_v1.index, e_v2.index
+
+
+				opposite_direction = cardinal_opposites[j]
+
+
+				# get the internal neighbors
+
+				a = None
+				b = None
+
+				for z, _entry in enumerate(edges_verts):
+					if ev2 in _entry:
+						continue
+					if ev1 in _entry:
+						a = _entry[swapped[_entry.index(ev1)]]
+
+				for z, _entry in enumerate(edges_verts):
+					if ev1 in _entry:
+						continue
+					if ev2 in _entry:
+						b = _entry[swapped[_entry.index(ev2)]]
+
+
+				result[ev1][opposite_direction] = a
+				result[ev2][opposite_direction] = b
+
+				if not linked_faces:
+					# print("<-----------------------------------skipped")
+					continue # boundary edge. no neighbor
+
+				neighbor = linked_faces[0]  # one face (unless there's triangles?)
+
+				def find_adjacent_in_neighbor(shared_a, shared_b):
+					for nl in neighbor.loops:
+						if nl.vert is shared_a and nl.link_loop_next.vert is shared_b:
+							# the vertex before shared_a (in this loop order) is the non-shared neighbor for shared_a
+							return nl.link_loop_prev.vert
+
+					# swapped order (if loops list is oriented opposite)
+					for nl in neighbor.loops:
+						if nl.vert is shared_a and nl.link_loop_prev.vert is shared_b:
+							return nl.link_loop_next.vert
+					return None
+
+				nbr_for_e_v1 = find_adjacent_in_neighbor(e_v1, e_v2)
+				nbr_for_e_v2 = find_adjacent_in_neighbor(e_v2, e_v1)
+
+				# assign to both corners that touch this edge (both shared verts should get this direction)
+				result[ev1][j] = nbr_for_e_v1.index if nbr_for_e_v1 else None
+				result[ev2][j] = nbr_for_e_v2.index if nbr_for_e_v2 else None
+
+
+
+
+			print(result)
+			result = list(result.values())
+
+			# C, N, W, S, E, NW, SW, SE, NE
+			# 0, 1, 2, 3, 4,  5,  6,  7,  8
+			majors = [[None, None, None, None, None, None, None, None, None] for i in range(4)]
+
+
+			print("\nBuilding Majors/Handles")
+
+			for j, neighbor_info in enumerate(result):
+				print(j, f.verts[j].index, neighbor_info) # aka nbr_verts
+
+				core = f.verts[j].co
+
+				cardinal_handles = [None, None, None, None] # N, W, S, E
+				quadrant_handles = [None, None, None, None] # NW, SW, SE, NE
+
+
+				for direction, neighbor in enumerate(neighbor_info):
+					if neighbor is None:
+						opposite_vtx = neighbor_info[cardinal_opposites[direction]]
+						new_handle = (core - verts[opposite_vtx].co) * test_global_val
+					else:
+						new_handle = (verts[neighbor].co - core) * test_global_val
+
+					cardinal_handles[direction] = new_handle
+
+
+				quadrant_handles[0] = cardinal_handles[0] + cardinal_handles[1]
+				quadrant_handles[1] = cardinal_handles[1] + cardinal_handles[2]
+				quadrant_handles[2] = cardinal_handles[2] + cardinal_handles[3]
+				quadrant_handles[3] = cardinal_handles[0] + cardinal_handles[3]
+
+				cardinal_handles[0] = core + ((quadrant_handles[0] + quadrant_handles[1]) * 0.5)
+				cardinal_handles[1] = core + ((quadrant_handles[1] + quadrant_handles[2]) * 0.5)
+				cardinal_handles[2] = core + ((quadrant_handles[2] + quadrant_handles[3]) * 0.5)
+				cardinal_handles[3] = core + ((quadrant_handles[3] + quadrant_handles[0]) * 0.5)
+
+				quadrant_handles[0] += core
+				quadrant_handles[1] += core
+				quadrant_handles[2] += core
+				quadrant_handles[3] += core
+
+				majors[j][0] = (quadrant_handles[0] + quadrant_handles[1] + quadrant_handles[2] + quadrant_handles[3]) * 0.25
+				
+				majors[j][1] = cardinal_handles[0]
+				majors[j][2] = cardinal_handles[1]
+				majors[j][3] = cardinal_handles[2]
+				majors[j][4] = cardinal_handles[3]
+
+				majors[j][5] = quadrant_handles[0]
+				majors[j][6] = quadrant_handles[1]
+				majors[j][7] = quadrant_handles[2]
+				majors[j][8] = quadrant_handles[3]
+
+				# set_cursor(obj.location + cardinal_handles[0])
+
+
+
+
+			# for _ji, major in enumerate(majors):
+
+			# 	test_mesh = bpy.data.meshes.new("TestMeshMajor" + str(_ji))
+			# 	bmn = bmesh.new()
+			# 	bmn.from_mesh(test_mesh)
+
+			# 	for vert in major:
+			# 		if vert is None:
+			# 			continue
+			# 		bmn.verts.new(vert)
+			# 		bmn.verts.ensure_lookup_table()
+
+			# 		bmn.to_mesh(test_mesh)
+			# 		test_mesh.update()
+			# 	bmn.free()
+
+
+			# 	test_obj = bpy.data.objects.new("TestMeshMajor" + str(_ji), test_mesh)
+			# 	bpy.context.collection.objects.link(test_obj)
+
+			# 	test_obj.location = obj.location
+
+
+
+
+
+
+			points = [Vector((0,0,0))] * 16
+
+			# C, N, W, S, E, NW, SW, SE, NE <----- is NW wrong??
+			# 0, 1, 2, 3, 4,  5,  6,  7,  8
+
+			# points[ 0] = majors[0][0]
+			# points[ 1] = majors[0][1]
+			# points[ 2] = majors[1][3]
+			# points[ 3] = majors[1][0]
+
+			# points[ 4] = majors[0][2]
+			# points[ 5] = majors[0][6]
+			# points[ 6] = majors[1][7]
+			# points[ 7] = majors[1][2]
+
+			# points[ 8] = majors[3][4]
+			# points[ 9] = majors[3][5]
+			# points[10] = majors[2][8]
+			# points[11] = majors[2][4]
+
+			# points[12] = majors[3][0]
+			# points[13] = majors[3][1]
+			# points[14] = majors[2][3]
+			# points[15] = majors[2][0]
+
+			points[ 0] = majors[2][0]
+			points[ 1] = majors[2][3]
+			points[ 2] = majors[3][1]
+			points[ 3] = majors[3][0]
+
+			points[ 4] = majors[2][4]
+			points[ 5] = majors[2][8]
+			points[ 6] = majors[3][5]
+			points[ 7] = majors[3][4]
+
+			points[ 8] = majors[1][2]
+			points[ 9] = majors[1][7]
+			points[10] = majors[0][6]
+			points[11] = majors[0][2]
+
+			points[12] = majors[1][0]
+			points[13] = majors[1][3]
+			points[14] = majors[0][1]
+			points[15] = majors[0][0]
+
+
+			test_mesh = bpy.data.meshes.new("TestMeshFace" + str(i))
+			bmn = bmesh.new()
+			bmn.from_mesh(test_mesh)
+
+			for vert in points:
+				bmn.verts.new(vert)
+				bmn.verts.ensure_lookup_table()
+
+				bmn.to_mesh(test_mesh)
+				test_mesh.update()
+			bmn.free()
+
+
+			test_obj = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
+			bpy.context.collection.objects.link(test_obj)
+
+			test_obj.location = obj.location
+
+
+			node_tree = bpy.data.node_groups.get("GridTesselateAppend")
+			if node_tree is not None:
+				node_modifier = test_obj.modifiers.new(name="GeoNodes", type='NODES')
+				node_modifier.node_group = node_tree
+
+			try:
+				test_obj.ssx2_PatchProps.isControlGrid = True
+			except:
+				print("error because isControlGrid is missing")
+
+
+
+
+			# if i == 0:
+			# 	break
+
+
+		bm.free()
+
+
+
+
+
 class SSX2_OP_FlipSplineOrder(bpy.types.Operator):
 	bl_idname = 'object.flip_spline_order'
 	bl_label = "Flip Spline Order"
@@ -2688,6 +3012,7 @@ classes = (
 	SSX2_OP_PatchUVEditor,
 	SSX2_OP_ToggleControlGrid,
 	SSX2_OP_CageToPatch,
+	SSX2_OP_QuadToPatch,
 	SSX2_OP_FlipSplineOrder,
 	SSX2_OP_PatchSplit4x4,
 	SSX2_OP_SelectSplineCageU,

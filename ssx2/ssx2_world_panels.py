@@ -32,6 +32,7 @@ from .ssx2_world_patches import (
 	SSX2_OP_Patch_Slide_V,
 	SSX2_OP_ToggleControlGrid,
 	SSX2_OP_CageToPatch,
+	SSX2_OP_QuadToPatch,
 	SSX2_OP_FlipSplineOrder,
 	SSX2_OP_PatchSplit4x4,
 	SSX2_OP_SelectSplineCageU,
@@ -241,6 +242,7 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		#col.label(text="Spline Cage")
 		col.separator()
 		col.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
+		col.operator(SSX2_OP_QuadToPatch.bl_idname, text="Patch from Quads")
 
 		col_b = col.column(align=True)
 		row = col_b.row(align=True)
