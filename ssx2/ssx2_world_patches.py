@@ -1166,7 +1166,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 					# print("<-----------------------------------skipped")
 					continue # boundary edge. no neighbor
 
-				neighbor = linked_faces[0]  # one face (unless there's triangles?)
+				neighbor = linked_faces[0] # one face (unless there's triangles?)
 
 				def find_adjacent_in_neighbor(shared_a, shared_b):
 					for nl in neighbor.loops:
@@ -1250,7 +1250,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 
-
 			# for _ji, major in enumerate(majors):
 
 			# 	test_mesh = bpy.data.meshes.new("TestMeshMajor" + str(_ji))
@@ -1276,85 +1275,101 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 
-
-
 			points = [Vector((0,0,0))] * 16
 
-			# C, N, W, S, E, NW, SW, SE, NE <----- is NW wrong??
+			# C, N, W, S, E, NW, SW, SE, NE
 			# 0, 1, 2, 3, 4,  5,  6,  7,  8
 
-			# points[ 0] = majors[0][0]
-			# points[ 1] = majors[0][1]
-			# points[ 2] = majors[1][3]
-			# points[ 3] = majors[1][0]
 
-			# points[ 4] = majors[0][2]
-			# points[ 5] = majors[0][6]
-			# points[ 6] = majors[1][7]
-			# points[ 7] = majors[1][2]
+			new_obj_mode = 1
 
-			# points[ 8] = majors[3][4]
-			# points[ 9] = majors[3][5]
-			# points[10] = majors[2][8]
-			# points[11] = majors[2][4]
+			if new_obj_mode == 0:
 
-			# points[12] = majors[3][0]
-			# points[13] = majors[3][1]
-			# points[14] = majors[2][3]
-			# points[15] = majors[2][0]
+				points[ 0] = majors[2][0]
+				points[ 1] = majors[2][3]
+				points[ 2] = majors[3][1]
+				points[ 3] = majors[3][0]
 
-			points[ 0] = majors[2][0]
-			points[ 1] = majors[2][3]
-			points[ 2] = majors[3][1]
-			points[ 3] = majors[3][0]
+				points[ 4] = majors[2][4]
+				points[ 5] = majors[2][8]
+				points[ 6] = majors[3][5]
+				points[ 7] = majors[3][4]
 
-			points[ 4] = majors[2][4]
-			points[ 5] = majors[2][8]
-			points[ 6] = majors[3][5]
-			points[ 7] = majors[3][4]
+				points[ 8] = majors[1][2]
+				points[ 9] = majors[1][7]
+				points[10] = majors[0][6]
+				points[11] = majors[0][2]
 
-			points[ 8] = majors[1][2]
-			points[ 9] = majors[1][7]
-			points[10] = majors[0][6]
-			points[11] = majors[0][2]
+				points[12] = majors[1][0]
+				points[13] = majors[1][3]
+				points[14] = majors[0][1]
+				points[15] = majors[0][0]
 
-			points[12] = majors[1][0]
-			points[13] = majors[1][3]
-			points[14] = majors[0][1]
-			points[15] = majors[0][0]
+				test_mesh = bpy.data.meshes.new("TestMeshFace" + str(i))
+				bmn = bmesh.new()
+				bmn.from_mesh(test_mesh)
+
+				for vert in points:
+					bmn.verts.new(vert)
+					bmn.verts.ensure_lookup_table()
+
+					bmn.to_mesh(test_mesh)
+					test_mesh.update()
+				bmn.free()
 
 
-			test_mesh = bpy.data.meshes.new("TestMeshFace" + str(i))
-			bmn = bmesh.new()
-			bmn.from_mesh(test_mesh)
+				test_obj = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
+				bpy.context.collection.objects.link(test_obj)
 
-			for vert in points:
-				bmn.verts.new(vert)
-				bmn.verts.ensure_lookup_table()
+				# test_obj.location = obj.location
+				test_obj.matrix_world = obj.matrix_world
+				# # # test_obj.scale = obj.scale
+				# # # test_obj.rotation_euler = obj.rotation_euler
 
-				bmn.to_mesh(test_mesh)
-				test_mesh.update()
-			bmn.free()
+				node_tree = bpy.data.node_groups.get("GridTesselateAppend")
+				if node_tree is not None:
+					node_modifier = test_obj.modifiers.new(name="GeoNodes", type='NODES')
+					node_modifier.node_group = node_tree
 
-
-			test_obj = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
-			bpy.context.collection.objects.link(test_obj)
-
-			test_obj.location = obj.location
-
-
-			node_tree = bpy.data.node_groups.get("GridTesselateAppend")
-			if node_tree is not None:
-				node_modifier = test_obj.modifiers.new(name="GeoNodes", type='NODES')
-				node_modifier.node_group = node_tree
-
-			try:
-				test_obj.ssx2_PatchProps.isControlGrid = True
-			except:
-				print("error because isControlGrid is missing")
-				return False
+				try:
+					test_obj.ssx2_PatchProps.isControlGrid = True
+				except:
+					print("error because isControlGrid is missing")
+					return False
 
 
+			elif new_obj_mode == 1:
+				points[ 0] = majors[0][0]
+				points[ 1] = majors[0][1]
+				points[ 2] = majors[1][3]
+				points[ 3] = majors[1][0]
+
+				points[ 4] = majors[0][2]
+				points[ 5] = majors[0][6]
+				points[ 6] = majors[1][7]
+				points[ 7] = majors[1][2]
+
+				points[ 8] = majors[3][4]
+				points[ 9] = majors[3][5]
+				points[10] = majors[2][8]
+				points[11] = majors[2][4]
+
+				points[12] = majors[3][0]
+				points[13] = majors[3][1]
+				points[14] = majors[2][3]
+				points[15] = majors[2][0]
+
+				getset_collection_to_target("Patches", bpy.context.scene.collection)
+
+				for j, point in enumerate(points):
+					points[j] = Vector((point.x, point.y, point.z, 1.0))
+
+
+				patch = set_patch_object(points, "PatchFromQuad" + str(i))
+
+				patch.ssx2_PatchProps.type = '1'
+
+				patch.matrix_world = obj.matrix_world
 
 
 			# if i == 0:
