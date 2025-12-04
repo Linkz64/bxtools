@@ -2,7 +2,7 @@ import bpy
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Matrix
-from math import ceil
+from math import ceil, pi
 from subprocess import Popen
 import json
 import time
@@ -33,7 +33,19 @@ from .ssx2_constants import (
 )
 from .ssx2_world_lightmaps import SSX2_OP_BakeTest
 
+def separate_light(src_color: Vector) -> tuple:
+	brightness = src_color.length
+	if brightness == 0.0:
+		return Vector((1.0, 1.0, 1.0)), 0.0
 
+	color = Vector((abs(src_color.x), abs(src_color.y), abs(src_color.z))) / brightness
+	sign = 1 if src_color.x + src_color.y + src_color.z >= 0 else -1
+
+	if sign < 0:
+		color = Vector((1.0, 1.0, 1.0)) - color
+
+	brightness *= sign
+	return color, brightness
 
 
 def update_select_by_surface_type(self, context):
@@ -488,6 +500,8 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 		scene = bpy.context.scene
 		scene_collection = scene.collection
 
+		scene.view_settings.view_transform = 'Standard'
+
 		# bpy.context.space_data.overlay.show_light_colors = True
 
 		for screen in bpy.data.screens:
@@ -712,9 +726,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		self.json_patches = []
 		self.images = []
 
-		scene = bpy.context.scene
-		self.scene_collection = scene.collection
-		self.io = scene.ssx2_WorldImportExportProps
+		self.scene = bpy.context.scene
+		self.scene_collection = self.scene.collection
+		self.io = self.scene.ssx2_WorldImportExportProps
 
 		if not self.io.importPatches and not self.io.importModels:
 			return
@@ -1630,6 +1644,8 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		blender_types = ['SUN', 'SPOT', 'POINT']
 
+		vec_1 = Vector((1.0, 1.0, 1.0))
+
 		lights_file_path = self.folder_path + '/Lights.json'
 		if not os.path.isfile(lights_file_path):
 			self.report({'ERROR'}, f"File 'Lights.json' does not exist in 'Import Folder'")
@@ -1641,6 +1657,18 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		with open(lights_file_path, 'r') as f:
 			data = json.load(f)
+
+		# ((maybe))
+		# have 2 ambient options for the user
+		# 1) ambient baking (world color) - lightmap and static object light baking
+		# 2) ambient dynamic (custom prop) - riders, physics objects(?)
+
+
+		# todo:
+		# look into high contrast and raw
+
+
+
 
 		for i, json_light in enumerate(data["Lights"]):
 			light_name = json_light["LightName"]
@@ -1660,52 +1688,96 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			# print(light_name)
 
+			
+
 			if light_type != AMBIENT:
 
-				if light_type != 21412412: # != DIRECTIONAL:
-					light_data = bpy.data.lights.new(name=light_name, type=blender_types[light_type])
-					
+				light_data = bpy.data.lights.new(name=light_name, type=blender_types[light_type])
 
-					color_absolute = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z)))
+				# color_absolute = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z)))
 
-					brightness = light_color.length
-					color = color_absolute / brightness
-					if color.length == 0.0:
-						color = Vector((1.0, 1.0, 1.0))
+				# brightness = light_color.length
+				# color = color_absolute / brightness
+				# if color.length == 0.0:
+				# 	color = Vector((1.0, 1.0, 1.0))
 
-					brightness = brightness * (1 if sum(light_color) >= 0 else -1)
-
-					light_data.color = color#light_color.normalized()
-
-					# light_data.color.s = 1
-
-					if light_type == DIRECTIONAL:
-						light_data.energy = brightness #  * light_energy_scale
-					elif light_type == SPOT:
-						light_data.energy = brightness * 100
-					elif light_type == POINT:
-						light_data.energy = brightness
-
-					# light_data.shadow_soft_size = 1
-
-					light_object = bpy.data.objects.new(name=light_name, object_data=light_data)
-					light_object.location = light_position / 100 # world_scale
-
-					lights_collection.objects.link(light_object)
+				# brightness = brightness * (1 if sum(light_color) >= 0 else -1)
 
 
-					dir_vec = light_direction.normalized()
-					quat = dir_vec.to_track_quat('-Z', 'Y')
-					#quat = (-dir_vec).to_track_quat('Z', 'Y')
-					light_object.rotation_euler = quat.to_euler()
 
-					# light_object.rotation_quaternion = quat
+				# color, brightness = separate_light(light_color)
+
+				brightness = light_color.length
+				if brightness == 0.0:
+					color = vec_1
+					brightness = 0.0
+
+				color = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z))) / brightness
+				sign = 1 if light_color.x + light_color.y + light_color.z >= 0 else -1
+
+				if sign < 0:
+					color = vec_1 - color
+
+				brightness *= sign
 
 
-					light_object["Direction"] = json_light["Direction"]
 
-			else:
-				print("Ambient")
+				light_data.color = color
+
+				if light_type == DIRECTIONAL:
+					light_data.energy = brightness #  * light_energy_scale
+				elif light_type == SPOT:
+
+					if sign < 0:
+						light_data.energy = (brightness * self.io.lightSpotMultiplier) * 10
+					else:
+						light_data.energy = brightness * self.io.lightSpotMultiplier
+
+					light_data.spot_size = self.io.lightSpotSize
+					light_data.spot_blend = self.io.lightSpotBlend
+				elif light_type == POINT:
+					light_data.energy = brightness * self.io.lightPointMultiplier
+
+				# light_data.shadow_soft_size = 1
+
+				light_object = bpy.data.objects.new(name=light_name, object_data=light_data)
+				light_object.location = light_position / 100 # world_scale
+
+				lights_collection.objects.link(light_object)
+
+
+				dir_vec = light_direction.normalized()
+				quat = dir_vec.to_track_quat('-Z', 'Y')
+				#quat = (-dir_vec).to_track_quat('Z', 'Y')
+				light_object.rotation_euler = quat.to_euler()
+
+			else: # ambient
+				world_nodes = self.scene.world.node_tree.nodes
+
+				if world_nodes is None:
+					pass
+				else:
+					bg0 = world_nodes.get("Background")
+
+					if bg0 is not None:
+
+						# color_absolute = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z)))
+
+						# brightness = light_color.length
+						# color = color_absolute / brightness
+						# if color.length <= 0.0:
+						# 	color = Vector((1.0, 1.0, 1.0))
+
+						# brightness = brightness * (1 if sum(light_color) >= 0 else -1)
+
+						color, brightness = separate_light(light_color)
+
+
+						bg0.inputs[0].default_value = color.to_4d()
+						bg0.inputs[1].default_value = brightness / 10
+
+			if i == 127:
+				break
 
 			
 
@@ -1727,6 +1799,9 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			getset_collection_to_target('Patches', self.scene_collection)
 
 			temp_time_start = time.time()
+			if not os.path.isfile(self.folder_path+'/Patches.json'):
+				self.report({'ERROR'}, f"File 'Patches.json' does not exist in 'Import Folder'")
+				return {'CANCELLED'}
 			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
 			
 
@@ -3083,7 +3158,13 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 
 	# lights
 	importLights: bpy.props.BoolProperty(name="Import Lights", default=False)
+	lightSpotSize: bpy.props.FloatProperty(name="Spot Light Size", default=2.0943951, min=0.0, max=pi)
+	lightSpotBlend: bpy.props.FloatProperty(name="Spot Light Blend", default=1.0, min=0.0, max=1.0)
 
+	lightDirectionalMultiplier: bpy.props.FloatProperty(name="Spot Directional Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
+	lightSpotMultiplier: bpy.props.FloatProperty(name="Spot Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
+	lightPointMultiplier: bpy.props.FloatProperty(name="Point Light Multiplier", default=1000.0, soft_min=-100.0, soft_max=10000.0)
+	lightAmbientMultiplier: bpy.props.FloatProperty(name="Ambient Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
 
 
 

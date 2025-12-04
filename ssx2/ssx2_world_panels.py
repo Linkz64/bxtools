@@ -137,7 +137,7 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 		the_box = col.box()
 		box_row = the_box.row(align=True)
 		box_row.label(icon='BLANK1')
-		box_row.prop(io, "importLights", text="Lights")
+		box_row.prop(io, "importLights", text="Lights (Experimental)")
 
 
 		# IMPORT BUTTON
