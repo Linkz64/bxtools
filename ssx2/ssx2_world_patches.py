@@ -1072,6 +1072,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			if test == False:
 				return {'CANCELLED'}
 
+		bpy.context.view_layer.objects.active = active_obj
+		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
 		return {'FINISHED'}
 
 	def quads_to_patches(self, obj):
@@ -1093,6 +1096,11 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		cardinal_opposites = (SOUTH, EAST, NORTH, WEST)
 
 		swapped = (1, 0)
+
+
+		# majors_to_fix = {i: [] for i in range(len(verts))}
+		majors_to_fix = {}
+		patches_to_fix = {}
 
 		for i, f in enumerate(bm.faces):
 			# print("\n__________________ Face:", i, "______________________")
@@ -1131,12 +1139,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				e_v1, e_v2 = edge.verts
 				ev1, ev2 = e_v1.index, e_v2.index
 
-
 				opposite_direction = cardinal_opposites[j]
 
-
 				# get the internal neighbors
-
 				a = None
 				b = None
 
@@ -1237,40 +1242,18 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				majors[j][7] = quadrant_handles[2]
 				majors[j][8] = quadrant_handles[3]
 
-				# set_cursor(obj.location + cardinal_handles[0])
 
-
-
-			# for _ji, major in enumerate(majors):
-
-			# 	test_mesh = bpy.data.meshes.new("TestMeshMajor" + str(_ji))
-			# 	bmn = bmesh.new()
-			# 	bmn.from_mesh(test_mesh)
-
-			# 	for vert in major:
-			# 		if vert is None:
-			# 			continue
-			# 		bmn.verts.new(vert)
-			# 		bmn.verts.ensure_lookup_table()
-
-			# 		bmn.to_mesh(test_mesh)
-			# 		test_mesh.update()
-			# 	bmn.free()
-
-
-			# 	test_obj = bpy.data.objects.new("TestMeshMajor" + str(_ji), test_mesh)
-			# 	bpy.context.collection.objects.link(test_obj)
-
-			# 	test_obj.location = obj.location
-
-
+				if f.verts[j].index not in majors_to_fix:
+					majors_to_fix[f.verts[j].index] = [majors[j][0], [(i, j)]]
+				else:
+					majors_to_fix[f.verts[j].index][0] += majors[j][0]
+					majors_to_fix[f.verts[j].index][1].append((i, j))
 
 
 			points = [Vector((0,0,0))] * 16
 
 			# C, N, W, S, E, NW, SW, SE, NE
 			# 0, 1, 2, 3, 4,  5,  6,  7,  8
-
 
 			new_obj_mode = 1
 
@@ -1309,21 +1292,21 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				bmn.free()
 
 
-				test_obj = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
-				bpy.context.collection.objects.link(test_obj)
+				new_patch = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
+				bpy.context.collection.objects.link(new_patch)
 
-				# test_obj.location = obj.location
-				test_obj.matrix_world = obj.matrix_world
-				# # # test_obj.scale = obj.scale
-				# # # test_obj.rotation_euler = obj.rotation_euler
+				# new_patch.location = obj.location
+				new_patch.matrix_world = obj.matrix_world
+				# # # new_patch.scale = obj.scale
+				# # # new_patch.rotation_euler = obj.rotation_euler
 
 				node_tree = bpy.data.node_groups.get("GridTesselateAppend")
 				if node_tree is not None:
-					node_modifier = test_obj.modifiers.new(name="GeoNodes", type='NODES')
+					node_modifier = new_patch.modifiers.new(name="GeoNodes", type='NODES')
 					node_modifier.node_group = node_tree
 
 				try:
-					test_obj.ssx2_PatchProps.isControlGrid = True
+					new_patch.ssx2_PatchProps.isControlGrid = True
 				except:
 					print("error because isControlGrid is missing")
 					return False
@@ -1355,18 +1338,41 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				for j, point in enumerate(points):
 					points[j] = Vector((point.x, point.y, point.z, 1.0))
 
-				patch = set_patch_object(points, "PatchFromQuad" + str(i))
+				new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
 
-				patch.ssx2_PatchProps.type = '1'
+				new_patch.ssx2_PatchProps.type = '1'
 
-				patch.matrix_world = obj.matrix_world
+				new_patch.matrix_world = obj.matrix_world
+
+			
+			patches_to_fix[i] = new_patch.data.splines[0]
 
 
 			# if i == 0:
 			# 	break
 
 
+		corner_index_translate = (0, 3, 15, 12)
+
+		for major_index, to_fix in majors_to_fix.items():
+
+			num_cores = len(to_fix[1])
+
+			if num_cores < 3:
+				continue
+
+			# print(major_index, to_fix)
+
+			midpoint = to_fix[0] / num_cores
+			midpoint = Vector((midpoint[0], midpoint[1], midpoint[2], 1.0))
+
+			for patch_index, corner_index in to_fix[1]:
+				idx = corner_index_translate[corner_index]
+				patches_to_fix[patch_index].points[idx].co = midpoint
+
+
 		bm.free()
+
 
 
 
