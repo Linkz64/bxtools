@@ -1045,6 +1045,8 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 	bl_description = "Generates a patch from each quad"
 	bl_options = {'REGISTER', 'UNDO'}
 
+	split_all_quads: bpy.props.BoolProperty(default=False, options={'HIDDEN'})
+
 	@classmethod
 	def poll(self, context):
 		active_object = context.active_object
@@ -1057,17 +1059,20 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		self.selected_objs = bpy.context.selected_objects
 		active_obj = bpy.context.active_object
 
+		self.patches_collection = getset_collection_to_target("Patches", bpy.context.scene.collection)
+
 		if active_obj is None:
 			self.report({'ERROR'}, "An active object is required")
 			return {'CANCELLED'}
 
 		for obj in self.selected_objs:
-			
-			# print("Building Vertex Neighborhood")
-
 			time_started = time.time()
 
-			test = self.quads_to_patches(obj)
+			if self.split_all_quads:
+				bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+				test = self.quads_to_patches_split(obj)
+			else:
+				test = self.quads_to_patches(obj)
 
 			if test == False:
 				return {'CANCELLED'}
@@ -1076,6 +1081,76 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
 		return {'FINISHED'}
+
+	def quads_to_patches_split(self, obj):
+		mesh = obj.data
+		vertices = mesh.vertices
+		bm = bmesh.from_edit_mesh(mesh)
+
+		handle_scalar = 0.3333333333333333
+
+		for i, f in enumerate(mesh.polygons):
+			if len(f.vertices) != 4:
+				continue
+
+			v0, v1, v2, v3 = vertices[f.vertices[0]].co, \
+				vertices[f.vertices[1]].co, \
+				vertices[f.vertices[2]].co, \
+				vertices[f.vertices[3]].co
+
+			points = [Vector((0,0,0))] * 16
+
+			# points[ 0] = v0
+			# points[ 1] = ((v0 - v1) * -handle_scalar) + v0
+			# points[ 2] = ((v1 - v0) * -handle_scalar) + v1
+			# points[ 3] = v1
+
+			# points[ 4] = ((v0 - v3) * -handle_scalar) + v0
+			# points[ 5] = (((v1 - v0) + (v3 - v0)) * handle_scalar) + v0
+			# points[ 6] = (((v0 - v1) + (v2 - v1)) * handle_scalar) + v1
+			# points[ 7] = ((v1 - v2) * -handle_scalar) + v1
+
+			# points[ 8] = ((v3 - v0) * -handle_scalar) + v3
+			# points[ 9] = (((v0 - v3) + (v2 - v3)) * handle_scalar) + v3
+			# points[10] = (((v1 - v2) + (v3 - v2)) * handle_scalar) + v2
+			# points[11] = ((v2 - v1) * -handle_scalar) + v2
+
+			# points[12] = v3
+			# points[13] = ((v3 - v2) * -handle_scalar) + v3
+			# points[14] = ((v2 - v3) * -handle_scalar) + v2
+			# points[15] = v2
+
+			points[ 0] = v1
+			points[ 1] = ((v1 - v0) * -handle_scalar) + v1
+			points[ 2] = ((v0 - v1) * -handle_scalar) + v0
+			points[ 3] = v0
+
+			points[ 4] = ((v1 - v2) * -handle_scalar) + v1
+			points[ 5] = (((v0 - v1) + (v2 - v1)) * handle_scalar) + v1
+			points[ 6] = (((v1 - v0) + (v3 - v0)) * handle_scalar) + v0
+			points[ 7] = ((v0 - v3) * -handle_scalar) + v0
+
+			points[ 8] = ((v2 - v1) * -handle_scalar) + v2
+			points[ 9] = (((v1 - v2) + (v3 - v2)) * handle_scalar) + v2
+			points[10] = (((v0 - v3) + (v2 - v3)) * handle_scalar) + v3
+			points[11] = ((v3 - v0) * -handle_scalar) + v3
+
+			points[12] = v2
+			points[13] = ((v2 - v3) * -handle_scalar) + v2
+			points[14] = ((v3 - v2) * -handle_scalar) + v3
+			points[15] = v3
+
+			# bpy.context.scene.cursor.location = points[14]
+
+			for j, point in enumerate(points):
+				points[j] = Vector((point.x, point.y, point.z, 1.0))
+
+			new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
+
+			new_patch.ssx2_PatchProps.type = '1'
+
+			new_patch.matrix_world = obj.matrix_world
+
 
 	def quads_to_patches(self, obj):
 
@@ -1090,7 +1165,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		verts = mesh.vertices
 		bm = bmesh.from_edit_mesh(mesh)
 
-		test_global_val = 0.3333333333333333
+		handle_scalar = 0.3333333333333333
 
 		NORTH, WEST, SOUTH, EAST = 0, 1, 2, 3
 		cardinal_opposites = (SOUTH, EAST, NORTH, WEST)
@@ -1208,9 +1283,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				for direction, neighbor in enumerate(neighbor_info):
 					if neighbor is None:
 						opposite_vtx = neighbor_info[cardinal_opposites[direction]]
-						new_handle = (core - verts[opposite_vtx].co) * test_global_val
+						new_handle = (core - verts[opposite_vtx].co) * handle_scalar
 					else:
-						new_handle = (verts[neighbor].co - core) * test_global_val
+						new_handle = (verts[neighbor].co - core) * handle_scalar
 
 					cardinal_handles[direction] = new_handle
 
@@ -1333,7 +1408,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				points[14] = majors[2][3]
 				points[15] = majors[2][0]
 
-				getset_collection_to_target("Patches", bpy.context.scene.collection)
 
 				for j, point in enumerate(points):
 					points[j] = Vector((point.x, point.y, point.z, 1.0))

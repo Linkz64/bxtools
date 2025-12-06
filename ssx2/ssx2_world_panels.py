@@ -242,7 +242,10 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		#col.label(text="Spline Cage")
 		col.separator()
 		col.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
-		col.operator(SSX2_OP_QuadToPatch.bl_idname, text="Patch from Quads")
+
+		col_split = col.split(factor=0.8, align=True)
+		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Patch from Quads").split_all_quads = False
+		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="", icon='MOD_EDGESPLIT').split_all_quads = True
 
 		col_b = col.column(align=True)
 		row = col_b.row(align=True)
