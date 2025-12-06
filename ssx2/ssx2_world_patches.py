@@ -1388,25 +1388,25 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 			elif new_obj_mode == 1:
-				points[ 0] = majors[0][0]
-				points[ 1] = majors[0][1]
-				points[ 2] = majors[1][3]
-				points[ 3] = majors[1][0]
+				points[ 0] = majors[1][0]
+				points[ 1] = majors[1][3]
+				points[ 2] = majors[0][1]
+				points[ 3] = majors[0][0]
 
-				points[ 4] = majors[0][2]
-				points[ 5] = majors[0][6]
-				points[ 6] = majors[1][7]
-				points[ 7] = majors[1][2]
+				points[ 4] = majors[1][2]
+				points[ 5] = majors[1][7]
+				points[ 6] = majors[0][6]
+				points[ 7] = majors[0][2]
 
-				points[ 8] = majors[3][4]
-				points[ 9] = majors[3][5]
-				points[10] = majors[2][8]
-				points[11] = majors[2][4]
+				points[ 8] = majors[2][4]
+				points[ 9] = majors[2][8]
+				points[10] = majors[3][5]
+				points[11] = majors[3][4]
 
-				points[12] = majors[3][0]
-				points[13] = majors[3][1]
-				points[14] = majors[2][3]
-				points[15] = majors[2][0]
+				points[12] = majors[2][0]
+				points[13] = majors[2][3]
+				points[14] = majors[3][1]
+				points[15] = majors[3][0]
 
 
 				for j, point in enumerate(points):
@@ -1426,7 +1426,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			# 	break
 
 
-		corner_index_translate = (0, 3, 15, 12)
+		corner_index_translate = (3, 0, 12, 15)
 
 		for major_index, to_fix in majors_to_fix.items():
 
