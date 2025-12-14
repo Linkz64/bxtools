@@ -2309,16 +2309,16 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				# 	self.report({'ERROR'}, f"'               .json' not found.\n{json_export_path}")
 				# 	return {'CANCELLED'}
 
-				roots_ai = []
+				objs_ai = []
 				roots_events = []
 
 				for obj in all_objects:
 					if obj.ssx2_EmptyMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_AI':
-						roots_ai.append(obj)
+						objs_ai.append(obj)
 					elif obj.ssx2_EmptyMode == 'PATH_EVENT' or obj.ssx2_CurveMode == 'PATH_EVENT':
 						roots_events.append(obj)
 
-				if len(roots_ai) == 0 and len(roots_events) == 0:
+				if len(objs_ai) == 0 and len(roots_events) == 0:
 					self.report({'ERROR'}, f"No paths found in '{col_main_name}' collection")
 					return {'CANCELLED'}
 
@@ -2327,15 +2327,13 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					"AIPaths": [],
 					"RaceLines": []
 				}
-				for j, root in enumerate(roots_ai):      #  <--- AI PATHS
-					path_props = root.ssx2_PathProps
-					m = root.matrix_world
-					spline_points = root.data.splines[0].points
-					origin = Vector((m[0][3], m[1][3], m[2][3]))
-					root_loc = Vector(spline_points[0].co[:3])
+				
+				for j, obj in enumerate(objs_ai):      #  <--- AI PATHS
+					path_props = obj.ssx2_PathProps
+					m = obj.matrix_world
 
 					new_data = {
-						"Name": root.name if export_names else None,
+						"Name": obj.name if export_names else None,
 						"Type":  2,
 						"U1": 100,
 						"U2": 4,
@@ -2348,15 +2346,23 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						"PathEvents": []
 					}
 
-					if root.type == "EMPTY":
-						new_data["PathPos"] = tuple(root.location * 100), # WorldScale
-						new_data["PathPoints"] = [tuple(child.location * 100) for child in root.children_recursive], # WorldScale
+					if obj.type == "EMPTY":
+						self.report({'ERROR'}, "Empties Not supported")
+						return {'CANCELLED'}
+
+						new_data["PathPos"] = tuple(post_transform_points), # WorldScale
+						new_data["PathPoints"] = [tuple(child.location * 100) for child in obj.children_recursive], # WorldScale
 					else:
-						new_data["PathPos"] = tuple((origin + root_loc) * 100) # WorldScale
-						spline_points = root.data.splines[0].points
-						adjusted_points = adjust_path_points(spline_points)
-						for pt in adjusted_points:
-							new_data["PathPoints"].append(tuple(pt * 100))
+						spline_points = obj.data.splines[0].points
+
+						post_transform_points = []
+						for p in spline_points:
+							world_pos = m @ p.co.to_3d()
+							post_transform_points.append(world_pos * 100)
+
+						new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
+						adjusted_points = adjust_path_points_linear(post_transform_points)
+						new_data["PathPoints"].extend(adjusted_points)
 
 					for event in path_props.events:
 						temp_event = {
@@ -2372,15 +2378,12 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					temp_json["AIPaths"].append(new_data)
 
-				for j, root in enumerate(roots_events):      #  <--- EVENT PATHS
-					path_props = root.ssx2_PathProps
-					m = root.matrix_world
-					spline_points = root.data.splines[0].points
-					origin = Vector((m[0][3], m[1][3], m[2][3]))
-					root_loc = Vector(spline_points[0].co[:3])
+				for j, obj in enumerate(roots_events):      #  <--- EVENT PATHS
+					path_props = obj.ssx2_PathProps
+					m = obj.matrix_world
 
 					new_data = {
-						"Name": root.name if export_names else None,
+						"Name": obj.name if export_names else None,
 						"Type":  1,
 						"U0": 0,
 						"U1": 4,
@@ -2390,15 +2393,20 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 						"PathEvents": [],
 					}
 
-					if root.type == "EMPTY":
-						new_data["PathPos"] = tuple(root.location * 100)
-						new_data["PathPoints"] = [tuple(child.location * 100) for child in root.children_recursive], # WorldScale
+					if obj.type == "EMPTY":
+						new_data["PathPos"] = tuple(obj.location * 100)
+						new_data["PathPoints"] = [tuple(child.location * 100) for child in obj.children_recursive], # WorldScale
 					else:
-						new_data["PathPos"] = tuple((origin + root_loc) * 100)
-						adjusted_points = adjust_path_points(spline_points)
+						spline_points = obj.data.splines[0].points
 
-						for pt in adjusted_points:
-							new_data["PathPoints"].append(tuple(pt * 100))
+						post_transform_points = []
+						for p in spline_points:
+							world_pos = m @ p.co.to_3d()
+							post_transform_points.append(world_pos * 100)
+
+						new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
+						adjusted_points = adjust_path_points_linear(post_transform_points)
+						new_data["PathPoints"].extend(adjusted_points)
 
 					for event in path_props.events:
 						temp_event = {

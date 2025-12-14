@@ -551,6 +551,15 @@ def adjust_path_points(spline_points):
 
 	return adjusted_points
 
+def adjust_path_points_linear(points):
+	adjusted_points = [(points[1] - points[0]).to_tuple()]
+
+	for j in range(2, len(points)):
+		new_point = points[j] - points[j - 1]
+		adjusted_points.append(new_point.to_tuple())
+
+	return adjusted_points
+
 
 ### Mesh
 
