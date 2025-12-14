@@ -2466,8 +2466,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 					print("\n    ", obj.name)
 
-					all_points = []
-					segments = [] # from all_points to split segments of 4
+					all_spline_islands = []
 
 					get_name = False
 					for i, s in enumerate(obj.data.splines):
@@ -2510,7 +2509,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 
 
 						if len(current_points) != 0:
-							all_points += current_points
+							all_spline_islands.append(current_points)
 							get_name = True
 						else:
 							print(f"No points in {obj.name} spline {i}")
@@ -2518,33 +2517,36 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 					if get_name:
 						names.append(obj.name)
 
-					for i in range(0, len(all_points), 3):
-						segment_points = all_points[i:i + 4]
+					for _si, spline_island in enumerate(all_spline_islands):
+						segments = [] # split to segments of 4 points
 
-						if i == len(all_points)-1:
-							break
+						for i in range(0, len(spline_island), 3):
+							segment_points = spline_island[i:i + 4]
 
-						coeffs = calc_coefficients(*segment_points, samples=200)
+							if i == len(spline_island) - 1:
+								break
 
-						spline_segments_json_obj = {
-							"Points": [pt.to_tuple() for pt in segment_points],
-							"U0": coeffs[0],
-							"U1": coeffs[1],
-							"U2": coeffs[2],
-							"U3": coeffs[3],
+							coeffs = calc_coefficients(*segment_points, samples=200)
+
+							spline_segments_json_obj = {
+								"Points": [pt.to_tuple() for pt in segment_points],
+								"U0": coeffs[0],
+								"U1": coeffs[1],
+								"U2": coeffs[2],
+								"U3": coeffs[3],
+							}
+
+							segments.append(spline_segments_json_obj)
+
+						spline_json_obj = {
+							"SplineName": obj.name + '.' + str(_si),
+							"U0": 1,
+							"U1": 1,
+							"SplineStyle": int(obj.ssx2_SplineProps.type),
+							"Segments": segments
 						}
 
-						segments.append(spline_segments_json_obj)
-
-					spline_json_obj = {
-						"SplineName": obj.name,
-						"U0": 1,
-						"U1": 1,
-						"SplineStyle": int(obj.ssx2_SplineProps.type),
-						"Segments": segments
-					}
-
-					final_splines.append(spline_json_obj)
+						final_splines.append(spline_json_obj)
 
 
 				if io.exportSplinesOverride:
