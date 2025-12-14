@@ -119,7 +119,7 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportPaths'
 		box_col_row.prop(io, "importPaths", text="Paths")
 		if io.expandImportPaths:
-			box_col.prop(io, "importPathsAsCurve", text="As Poly Curve")
+			box_col.prop(io, "importPathsAsEmpties", text="(TESTING) As Empties")
 
 		# MODELS
 		the_box = col.box()

@@ -1834,7 +1834,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 			# APPEND PATH GEOMETRY NODES
 
-			if self.io.importPathsAsCurve:
+			if not self.io.importPathsAsEmpties:
 				append_path = templates_append_path
 				node_tree_name = "PathLinesAppend"
 				node_tree = bpy.data.node_groups.get(node_tree_name)
@@ -1895,7 +1895,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					path_points = path["PathPoints"]
 					path_events = path["PathEvents"]
 
-					if self.io.importPathsAsCurve:
+					if not self.io.importPathsAsEmpties:
 						curve = bpy.data.curves.new(name, 'CURVE')
 						curve.dimensions = '3D'
 
@@ -1996,7 +1996,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 					path_events = path["PathEvents"]
 
 
-					if self.io.importPathsAsCurve:
+					if not self.io.importPathsAsEmpties:
 						curve = bpy.data.curves.new(name, 'CURVE')
 						curve.dimensions = '3D'
 
@@ -3155,7 +3155,7 @@ class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImpo
 
 	# paths
 	importPaths: bpy.props.BoolProperty(name="Import Paths", default=False)
-	importPathsAsCurve: bpy.props.BoolProperty(default=True)
+	importPathsAsEmpties: bpy.props.BoolProperty(default=False)
 	expandImportPaths: bpy.props.BoolProperty(default=False)
 
 	# lights
