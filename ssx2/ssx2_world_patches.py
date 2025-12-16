@@ -1201,7 +1201,8 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
 
 
-			bpy.context.collection.objects.link(new_patch)
+			# bpy.context.collection.objects.link(new_patch)
+			bpy.data.collections['Patches'].objects.link(new_patch)
 
 
 			# TODO: check node tree existance before main loop
@@ -1438,7 +1439,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
 
 
-				bpy.context.collection.objects.link(new_patch)
+				# bpy.context.collection.objects.link(new_patch)
+				bpy.data.collections['Patches'].objects.link(new_patch)
+
 
 				# new_patch.location = obj.location
 				new_patch.matrix_world = obj.matrix_world
