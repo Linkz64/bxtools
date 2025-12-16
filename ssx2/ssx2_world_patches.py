@@ -1134,6 +1134,10 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				return {'CANCELLED'}
 
 	def quads_to_patches_split(self, obj):
+
+		if obj.type != 'MESH':
+			return
+		
 		mesh = obj.data
 		vertices = mesh.vertices
 		bm = bmesh.from_edit_mesh(mesh)
@@ -1217,6 +1221,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 	def quads_to_patches(self, obj):
+
+		if obj.type != 'MESH':
+			return
 
 		# if len(bpy.context.selected_objects) != 0:
 		# 	bpy.ops.object.select_all(action='DESELECT')
