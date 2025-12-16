@@ -1061,6 +1061,29 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 		self.patches_collection = getset_collection_to_target("Patches", bpy.context.scene.collection)
 
+
+		self.profile_get_data = 0.0
+		self.profile_setup_majors = 0.0
+		self.profile_generate_patches = 0.0
+		profile_total_start = time.time()
+
+		self.append_control_grid_nodes()
+
+		self.control_grid_faces = [
+			(0, 4, 5, 1),
+			(1, 5, 6, 2),
+			(2, 6, 7, 3),
+
+			(4, 8, 9, 5),
+			(5, 9, 10, 6),
+			(6, 10, 11, 7),
+
+			(8, 12, 13, 9),
+			(9, 13, 14, 10),
+			(10, 14, 15, 11),
+		]
+
+
 		if active_obj is None:
 			self.report({'ERROR'}, "An active object is required")
 			return {'CANCELLED'}
@@ -1068,8 +1091,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		for obj in self.selected_objs:
 			time_started = time.time()
 
+			bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
 			if self.split_all_quads:
-				bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 				test = self.quads_to_patches_split(obj)
 			else:
 				test = self.quads_to_patches(obj)
@@ -1080,7 +1104,34 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		bpy.context.view_layer.objects.active = active_obj
 		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
+
+		print()
+		print("get_data:", round(self.profile_get_data, 5))
+		print("setup_majors:", round(self.profile_setup_majors, 5))
+		print("generate_patches:", round(self.profile_generate_patches, 5))
+		print("total:", round(time.time() - profile_total_start, 5))
+
+
 		return {'FINISHED'}
+
+	def append_control_grid_nodes(self):
+		append_path = templates_append_path
+		node_tree_name = "GridTesselateAppend"
+		node_tree = bpy.data.node_groups.get(node_tree_name)
+
+		if node_tree is not None:
+			return
+
+		if not os.path.isfile(append_path):
+			self.report({'ERROR'}, f"Failed to append {append_path}")
+			return {'CANCELLED'}
+
+		with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+			if node_tree_name in data_from.node_groups:
+				data_to.node_groups = [node_tree_name]
+			else:
+				self.report({'ERROR'}, f"Failed to append geonodes from {append_path}")
+				return {'CANCELLED'}
 
 	def quads_to_patches_split(self, obj):
 		mesh = obj.data
@@ -1156,10 +1207,11 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 		# if len(bpy.context.selected_objects) != 0:
 		# 	bpy.ops.object.select_all(action='DESELECT')
-		obj.select_set(True)
-		bpy.context.view_layer.objects.active = obj
-		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+		# obj.select_set(True)
+		# bpy.context.view_layer.objects.active = obj
+		# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
+		profile_timer = time.time()
 
 		mesh = obj.data
 		verts = mesh.vertices
@@ -1171,7 +1223,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		cardinal_opposites = (SOUTH, EAST, NORTH, WEST)
 
 		swapped = (1, 0)
-
 
 		# majors_to_fix = {i: [] for i in range(len(verts))}
 		majors_to_fix = {}
@@ -1264,6 +1315,11 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 			result = list(result.values())
 
+			
+			self.profile_get_data += time.time() - profile_timer
+			profile_timer = time.time()
+
+
 			# C, N, W, S, E, NW, SW, SE, NE
 			# 0, 1, 2, 3, 4,  5,  6,  7,  8
 			majors = [[None, None, None, None, None, None, None, None, None] for i in range(4)]
@@ -1325,49 +1381,48 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 					majors_to_fix[f.verts[j].index][1].append((i, j))
 
 
+			self.profile_setup_majors += time.time() - profile_timer
+			profile_timer = time.time()
+
+
 			points = [Vector((0,0,0))] * 16
 
 			# C, N, W, S, E, NW, SW, SE, NE
 			# 0, 1, 2, 3, 4,  5,  6,  7,  8
 
-			new_obj_mode = 1
+			new_obj_mode = 0
 
 			if new_obj_mode == 0:
+				points[ 0] = majors[1][0] # majors[2][0]
+				points[ 1] = majors[1][3] # majors[2][3]
+				points[ 2] = majors[0][1] # majors[3][1]
+				points[ 3] = majors[0][0] # majors[3][0]
 
-				points[ 0] = majors[2][0]
-				points[ 1] = majors[2][3]
-				points[ 2] = majors[3][1]
-				points[ 3] = majors[3][0]
+				points[ 4] = majors[1][2] # majors[2][4]
+				points[ 5] = majors[1][7] # majors[2][8]
+				points[ 6] = majors[0][6] # majors[3][5]
+				points[ 7] = majors[0][2] # majors[3][4]
 
-				points[ 4] = majors[2][4]
-				points[ 5] = majors[2][8]
-				points[ 6] = majors[3][5]
-				points[ 7] = majors[3][4]
+				points[ 8] = majors[2][4] # majors[1][2]
+				points[ 9] = majors[2][8] # majors[1][7]
+				points[10] = majors[3][5] # majors[0][6]
+				points[11] = majors[3][4] # majors[0][2]
 
-				points[ 8] = majors[1][2]
-				points[ 9] = majors[1][7]
-				points[10] = majors[0][6]
-				points[11] = majors[0][2]
+				points[12] = majors[2][0] # majors[1][0]
+				points[13] = majors[2][3] # majors[1][3]
+				points[14] = majors[3][1] # majors[0][1]
+				points[15] = majors[3][0] # majors[0][0]
 
-				points[12] = majors[1][0]
-				points[13] = majors[1][3]
-				points[14] = majors[0][1]
-				points[15] = majors[0][0]
-
+				# bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 				test_mesh = bpy.data.meshes.new("TestMeshFace" + str(i))
-				bmn = bmesh.new()
-				bmn.from_mesh(test_mesh)
-
-				for vert in points:
-					bmn.verts.new(vert)
-					bmn.verts.ensure_lookup_table()
-
-					bmn.to_mesh(test_mesh)
-					test_mesh.update()
-				bmn.free()
-
+				
+				test_mesh.from_pydata(points, [], self.control_grid_faces)
+				test_mesh.update()
+				# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 				new_patch = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
+
+
 				bpy.context.collection.objects.link(new_patch)
 
 				# new_patch.location = obj.location
@@ -1380,12 +1435,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 					node_modifier = new_patch.modifiers.new(name="GeoNodes", type='NODES')
 					node_modifier.node_group = node_tree
 
-				try:
-					new_patch.ssx2_PatchProps.isControlGrid = True
-				except:
-					print("error because isControlGrid is missing")
-					return False
+				new_patch.ssx2_PatchProps.isControlGrid = True
 
+				patches_to_fix[i] = new_patch.data
 
 			elif new_obj_mode == 1:
 				points[ 0] = majors[1][0]
@@ -1408,42 +1460,64 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				points[14] = majors[3][1]
 				points[15] = majors[3][0]
 
-
 				for j, point in enumerate(points):
 					points[j] = Vector((point.x, point.y, point.z, 1.0))
 
 				new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
+				
+				patches_to_fix[i] = new_patch.data.splines[0]
 
-				new_patch.ssx2_PatchProps.type = '1'
 
-				new_patch.matrix_world = obj.matrix_world
+			new_patch.ssx2_PatchProps.type = '1'
+			new_patch.matrix_world = obj.matrix_world
 
+
+			self.profile_generate_patches += time.time() - profile_timer
+			profile_timer = time.time()
 			
-			patches_to_fix[i] = new_patch.data.splines[0]
-
-
 			# if i == 0:
 			# 	break
 
 
-		corner_index_translate = (3, 0, 12, 15)
+		if new_obj_mode == 1:
 
-		for major_index, to_fix in majors_to_fix.items():
+			corner_index_translate = (3, 0, 12, 15)
 
-			num_cores = len(to_fix[1])
+			for major_index, to_fix in majors_to_fix.items():
 
-			if num_cores < 3:
-				continue
+				num_cores = len(to_fix[1])
 
-			# print(major_index, to_fix)
+				if num_cores < 3:
+					continue
 
-			midpoint = to_fix[0] / num_cores
-			midpoint = Vector((midpoint[0], midpoint[1], midpoint[2], 1.0))
+				# print(major_index, to_fix)
 
-			for patch_index, corner_index in to_fix[1]:
-				idx = corner_index_translate[corner_index]
-				patches_to_fix[patch_index].points[idx].co = midpoint
+				midpoint = to_fix[0] / num_cores
+				midpoint = Vector((midpoint[0], midpoint[1], midpoint[2], 1.0))
 
+				for patch_index, corner_index in to_fix[1]:
+					idx = corner_index_translate[corner_index]
+					patches_to_fix[patch_index].points[idx].co = midpoint
+
+		else:
+			corner_index_translate = (3, 0, 12, 15)
+
+			for major_index, to_fix in majors_to_fix.items():
+
+				num_cores = len(to_fix[1])
+
+				if num_cores < 3:
+					continue
+
+				# print(major_index, to_fix)
+
+				midpoint = to_fix[0] / num_cores
+				midpoint = Vector((midpoint[0], midpoint[1], midpoint[2], 1.0))
+
+				for patch_index, corner_index in to_fix[1]:
+					idx = corner_index_translate[corner_index]
+					patches_to_fix[patch_index].vertices[idx].co = midpoint.to_3d()
+			
 
 		bm.free()
 
