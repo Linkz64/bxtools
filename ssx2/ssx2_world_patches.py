@@ -1191,12 +1191,24 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			points[14] = ((v3 - v2) * -handle_scalar) + v3
 			points[15] = v3
 
-			# bpy.context.scene.cursor.location = points[14]
 
-			for j, point in enumerate(points):
-				points[j] = Vector((point.x, point.y, point.z, 1.0))
+			test_mesh = bpy.data.meshes.new("PatchFromQuad" + str(i))
+			
+			test_mesh.from_pydata(points, [], self.control_grid_faces)
+			test_mesh.update()
+			# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
-			new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
+			new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
+
+
+			bpy.context.collection.objects.link(new_patch)
+
+
+			# TODO: check node tree existance before main loop
+			node_tree = bpy.data.node_groups.get("GridTesselateAppend")
+			if node_tree is not None:
+				node_modifier = new_patch.modifiers.new(name="GeoNodes", type='NODES')
+				node_modifier.node_group = node_tree
 
 			new_patch.ssx2_PatchProps.type = '1'
 
@@ -1417,13 +1429,13 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				points[15] = majors[3][0] # majors[0][0]
 
 				# bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
-				test_mesh = bpy.data.meshes.new("TestMeshFace" + str(i))
+				test_mesh = bpy.data.meshes.new("PatchFromQuad" + str(i))
 				
 				test_mesh.from_pydata(points, [], self.control_grid_faces)
 				test_mesh.update()
 				# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
-				new_patch = bpy.data.objects.new("TestMeshFace" + str(i), test_mesh)
+				new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
 
 
 				bpy.context.collection.objects.link(new_patch)
@@ -1433,6 +1445,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				# # # new_patch.scale = obj.scale
 				# # # new_patch.rotation_euler = obj.rotation_euler
 
+				# TODO: check node tree existance before main loop
 				node_tree = bpy.data.node_groups.get("GridTesselateAppend")
 				if node_tree is not None:
 					node_modifier = new_patch.modifiers.new(name="GeoNodes", type='NODES')
