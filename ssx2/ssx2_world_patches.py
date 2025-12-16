@@ -1291,6 +1291,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 					# print("<-----------------------------------skipped")
 					continue # boundary edge. no neighbor
 
+				if mesh.edges[edge.index].crease > 0.99:
+					continue
+
 				neighbor = linked_faces[0] # one face (unless there's triangles?)
 
 				def find_adjacent_in_neighbor(shared_a, shared_b):
