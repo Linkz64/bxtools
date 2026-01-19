@@ -523,7 +523,20 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 
 		getset_collection_to_target("Patches", scene_collection)
 		getset_collection_to_target("Splines", scene_collection)
-		getset_collection_to_target("Paths", scene_collection)
+		col_paths = getset_collection_to_target("Paths", scene_collection)
+		col_paths_general = getset_collection_to_target("Paths General", col_paths)
+		col_paths_showoff = getset_collection_to_target("Paths Showoff", col_paths)
+
+		getset_collection_to_target("Paths General Ai", col_paths_general)
+		getset_collection_to_target("Paths General Events", col_paths_general)
+
+		getset_collection_to_target("Paths Showoff Ai", col_paths_showoff)
+		getset_collection_to_target("Paths Showoff Events", col_paths_showoff)
+
+		getset_collection_to_target("Lights", scene_collection)
+
+		getset_collection_to_target("Models", scene_collection)
+		getset_collection_to_target("Instances", scene_collection)
 
 		return {'FINISHED'}
 
