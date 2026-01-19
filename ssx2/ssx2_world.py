@@ -528,10 +528,10 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 		col_paths_showoff = getset_collection_to_target("Paths Showoff", col_paths)
 
 		getset_collection_to_target("Paths General Ai", col_paths_general)
-		getset_collection_to_target("Paths General Events", col_paths_general)
+		getset_collection_to_target("Paths General Elements", col_paths_general)
 
 		getset_collection_to_target("Paths Showoff Ai", col_paths_showoff)
-		getset_collection_to_target("Paths Showoff Events", col_paths_showoff)
+		getset_collection_to_target("Paths Showoff Elements", col_paths_showoff)
 
 		getset_collection_to_target("Lights", scene_collection)
 
@@ -1896,7 +1896,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				start_paths = data["StartPosList"]
 				for j, path in enumerate(data["AIPaths"]): #                         <- AI PATH
 					#                            checked trick, snow, gari, alaska 
-					name = path["Name"] if path["Name"] is not None else f"{obj_main_name}_Ai.{j}"
+					name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Ai.{j}"
 					# path_type = path["Type"] # multitool property. not needed
 					# path_unk1 = path["U1"]   # always 100?
 					# path_unk2 = path["U2"]   # always 4?
@@ -1991,14 +1991,15 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 							parent_obj = empty
 
-				col_sub_name = f"{col_main_name} Events"
+				col_sub_name = f"{col_main_name} Elements"
 				col_sub = bpy.data.collections.get(col_sub_name)
 				if col_sub is None:
 					col_sub = bpy.data.collections.new(col_sub_name)
 					col_main.children.link(col_sub)
 
-				for j, path in enumerate(data["RaceLines"]): #                         <- EVENT PATH / RACE LINES
-					name = path["Name"] if path["Name"] is not None else f"{obj_main_name}_Events.{j}"
+				for j, path in enumerate(data["RaceLines"]): #                         <- ELEMENTS PATH / RACE LINES
+					name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Elements.{j}"
+					
 					# path_type = path["Type"]
 					# path_unk0 = path["U0"] # always 0?
 					# path_unk1 = path["U1"] # always 4?
@@ -2032,7 +2033,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						curve_obj = bpy.data.objects.new(name, curve)
 						col_sub.objects.link(curve_obj)
 
-						curve_obj.ssx2_CurveMode = 'PATH_EVENT'
+						curve_obj.ssx2_CurveMode = 'PATH_ELEMENTS'
 						# curve_obj.ssx2_PathProps.reset = path_respawn
 						# curve_obj.ssx2_PathProps.start = True if j in start_paths else False
 						curve_obj.ssx2_PathProps.eventpaths_u2 = path_unk2
@@ -2057,7 +2058,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						empty.empty_display_type = 'CUBE'
 						empty.location = path_pos
 
-						empty.ssx2_EmptyMode = 'PATH_EVENT'
+						empty.ssx2_EmptyMode = 'PATH_ELEMENTS'
 						# empty.ssx2_PathProps.mode = 'EVENT'
 						# empty.ssx2_PathProps.reset = path_respawn
 						# empty.ssx2_PathProps.start = True if j in start_paths else False
@@ -2078,7 +2079,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 						parent_obj = empty
 
 						for k, point in enumerate(path_points):
-							name = f"{obj_main_name}_Events.{j}.{k}"
+							name = f"{obj_main_name}_Elements.{j}.{k}"
 							empty = bpy.data.objects.new(name, None)
 							empty.empty_display_size = 100 / 100 # WorldScale
 							# empty.empty_display_type = 'CUBE'
@@ -2328,7 +2329,7 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 				for obj in all_objects:
 					if obj.ssx2_EmptyMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_AI':
 						objs_ai.append(obj)
-					elif obj.ssx2_EmptyMode == 'PATH_EVENT' or obj.ssx2_CurveMode == 'PATH_EVENT':
+					elif obj.ssx2_EmptyMode == 'PATH_ELEMENTS' or obj.ssx2_CurveMode == 'PATH_ELEMENTS':
 						roots_events.append(obj)
 
 				if len(objs_ai) == 0 and len(roots_events) == 0:

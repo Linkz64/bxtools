@@ -43,7 +43,7 @@ enum_ssx2_world = ( # alphabetical order
 enum_ssx2_empty_mode = (
 	('NONE',       "None",            ""),
 	('PATH_AI',    "Path AI",         "Start, AI follow, Reset, etc"),
-	('PATH_EVENT', "Path Event",      "Checkpoints, Finish Line, etc"),
+	('PATH_ELEMENTS', "Path Elements",      "Checkpoints, Finish Line, etc"),
 	('INSTANCE',   "Prefab Instance", "Experimental"),
 )
 
@@ -52,7 +52,7 @@ enum_ssx2_curve_mode = (
 	('SPLINE',     "Spline",      "Spline for grindable rails and model animations"),
 	('CAGE',       "Spline Cage", "Spline cage patch"),
 	('PATH_AI',    "Path AI",     "Start, AI follow, Reset, etc"),
-	('PATH_EVENT', "Path Event",  "Checkpoints, Finish Line, etc"),
+	('PATH_ELEMENTS', "Path Elements",  "Checkpoints, Finish Line, etc"),
 )
 
 enum_ssx2_spline_cage_type = (

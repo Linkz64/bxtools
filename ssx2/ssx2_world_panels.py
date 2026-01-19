@@ -338,7 +338,7 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 
 		empty_mode = obj.ssx2_EmptyMode
 
-		if empty_mode == "PATH_AI" or empty_mode == "PATH_EVENT":
+		if empty_mode == "PATH_AI" or empty_mode == "PATH_ELEMENTS":
 			path_props = obj.ssx2_PathProps
 			events = path_props.events
 
@@ -416,7 +416,7 @@ class SSX2_CurvePropPanel(SSX2_Panel):
 		if obj.ssx2_CurveMode == 'SPLINE':
 			prop_split(layout, obj.ssx2_SplineProps, 'type', "Spline Type")
 
-		elif obj.ssx2_CurveMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_EVENT':
+		elif obj.ssx2_CurveMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_ELEMENTS':
 			path_props = obj.ssx2_PathProps
 
 			for mod in context.active_object.modifiers:
