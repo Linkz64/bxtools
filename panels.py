@@ -7,4 +7,5 @@ class SSX2_Panel(bpy.types.Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.bx_GameChoice == 'SSX2'
+        return True
+        # return context.scene.bx_GameChoice == 'SSX2'

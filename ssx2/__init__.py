@@ -18,16 +18,23 @@ from .ssx2_world_patches import (
 	ssx2_world_patches_unregister,
 )
 
+from .ssx2_world_logic import (
+	ssx2_world_logic_register,
+	ssx2_world_logic_unregister,
+)
+
 def ssx2_register():
 
 	ssx2_world_register()
 	ssx2_world_patches_register()
 	ssx2_world_panels_register()
+	ssx2_world_logic_register()
 	ssx2_model_register()
 
 def ssx2_unregister():
 
 	ssx2_model_unregister()
+	ssx2_world_logic_unregister()
 	ssx2_world_panels_unregister()
 	ssx2_world_patches_unregister()
 	ssx2_world_unregister()

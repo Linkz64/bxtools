@@ -44,6 +44,12 @@ from .ssx2_world_patches import (
 	SSX2_OP_MergePatches,
 )
 
+from .ssx2_world_logic import (
+	SSX2_OP_LogicTest,
+	SSX2_OP_EffectMoveUpDown,
+	effect_type_draws,
+)
+
 
 ### Main Panels
 
@@ -198,12 +204,9 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 
 ### SubPanels
 
-class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
+class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 	bl_idname = 'BXT_PT_world_patches_panel'
 	bl_label = 'Patches'
-	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'UI'
-	bl_category = 'BXTools'
 	bl_parent_id = 'SSX2_PT_world'
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -275,12 +278,9 @@ class SSX2_WorldPatchesSubPanel(bpy.types.Panel):
 		col.separator()
 		prop_split(col, context.scene.ssx2_WorldUIProps, 'patchSelectByType', "Select by Type")
 
-class SSX2_WorldSplinesSubPanel(bpy.types.Panel):
+class SSX2_WorldSplinesSubPanel(SSX2_Panel):
 	bl_idname = 'BXT_PT_world_splines_panel'
 	bl_label = 'Splines'
-	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'UI'
-	bl_category = 'BXTools'
 	bl_parent_id = 'SSX2_PT_world'
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -292,12 +292,9 @@ class SSX2_WorldSplinesSubPanel(bpy.types.Panel):
 		#row.operator(SSX2_OP_AddSplineNURBS.bl_idname, icon='ADD')
 		row.operator(SSX2_OP_AddSplineBezier.bl_idname, icon='ADD', text="Add Bezier Curve")
 
-class SSX2_WorldPathsSubPanel(bpy.types.Panel):
+class SSX2_WorldPathsSubPanel(SSX2_Panel):
 	bl_idname = 'BXT_PT_world_paths_panel'
 	bl_label = 'Paths'
-	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'UI'
-	bl_category = 'BXTools'
 	bl_parent_id = 'SSX2_PT_world'
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -312,6 +309,74 @@ class SSX2_WorldPathsSubPanel(bpy.types.Panel):
 		if obj:
 			if obj.type == 'EMPTY': #if obj.ssx2_EmptyMode == 'PATH_AI':
 				row.operator(SSX2_OP_AddPathChild.bl_idname, icon='ADD', text="Path Child")
+
+
+class SSX2_WorldLogicSubPanel(SSX2_Panel):
+	bl_idname = 'BXT_PT_world_logic_panel'
+	bl_label = 'Logic'
+	bl_parent_id = 'SSX2_PT_world'
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw_header(self, context):
+		self.layout.label(text="", icon='CONSOLE')
+
+	def draw(self, context):
+		pass
+		# row = self.layout.row()
+		# row.operator(SSX2_OP_AddSplineBezier.bl_idname, icon='ADD', text="Blah Blah Blah")
+
+class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
+	bl_idname = 'BXT_PT_world_effect_sequences_panel'
+	bl_label = 'Sequences'
+	bl_parent_id = 'BXT_PT_world_logic_panel'
+	bl_options = {'DEFAULT_CLOSED'}
+
+	# def draw_header(self, context):
+	# 	self.layout.label(text="", icon='CURVE_BEZCURVE')
+
+	def draw(self, context):
+		# row = self.layout.row()
+		# col = row.column()
+		col = self.layout.column()
+		
+		io = context.scene.ssx2_WorldImportExportProps
+		scene = context.scene
+
+
+		col.operator(SSX2_OP_LogicTest.bl_idname)
+
+
+		for i, seq in enumerate(scene.ssx2_LogicSequences):
+
+			seq_box = col.box()
+			box_row = seq_box.row(align=True)
+			box_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
+				icon='DISCLOSURE_TRI_DOWN' if io.expandImportModel\
+				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportModel'
+			
+			# box_row.label(text=seq.name)
+			box_row.prop(seq, "name", text="")
+
+			for j, fx_ref in enumerate(seq.effects):
+				# print("kind", fx_ref.kind, "index" fx_ref.index)
+
+				fx_box = seq_box.box()
+				box_row = fx_box.row(align=True)
+
+				box_row.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
+				box_row.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+
+				box_row.separator()
+
+
+				draw_func = effect_type_draws.get(fx_ref.kind)
+
+				if draw_func is not None:
+					draw_func(
+						box_row, 
+						scene,
+						fx_ref.index
+					)
 
 
 ### Properties
@@ -384,11 +449,32 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 			row.operator(SSX2_OP_SelectModel.bl_idname, text="Select Model").add_mode = False
 			row.operator(SSX2_OP_SelectModel.bl_idname, text="Select Model (Add)").add_mode = True
 			prop_split(col, context.object, 'ssx2_ModelForInstance', "Model", spacing=0.2)
-			row = col.row()
-			row.prop(context.object, 'show_instancer_for_viewport', text='Show Instancer', \
+			row = col.row(align=True)
+			row.prop(context.object, 'show_instancer_for_viewport', text='Show Empty', \
 					icon="HIDE_OFF" if context.object.show_instancer_for_viewport else "HIDE_ON")
 			row.prop(context.object, 'show_in_front', \
 					icon="HIDE_OFF" if context.object.show_in_front else "HIDE_ON")
+
+
+
+
+			io = context.scene.ssx2_WorldImportExportProps
+			scene = context.scene
+
+			col.separator()
+
+			the_box = col.box()
+			the_box_header = the_box.row()
+			the_box_header.label(text="Logic Slots Set")
+			the_box_header.operator(SSX2_OP_SelectModel.bl_idname, text="Copy To")
+			the_box = the_box.grid_flow()
+			the_box.prop(scene, "camera", text="Constant")
+			the_box.prop(scene, "camera", text="Collision")
+			the_box.prop(scene, "camera", text="Slot 3")
+			the_box.prop(scene, "camera", text="Slot 4")
+			the_box.prop(scene, "camera", text="Logic Trigger")
+			the_box.prop(scene, "camera", text="Slot 6")
+			the_box.prop(scene, "camera", text="Slot 7")
 
 class SSX2_CurvePropPanel(SSX2_Panel):
 	bl_label = "BX Spline Curve"
@@ -627,6 +713,10 @@ classes = (
 	SSX2_WorldPatchesSubPanel,
 	SSX2_WorldSplinesSubPanel,
 	SSX2_WorldPathsSubPanel,
+	SSX2_WorldLogicSubPanel,
+	SSX2_WorldLogicSequencesSubPanel,
+
+
 	SSX2_WorldImportPanel,
 	SSX2_WorldExportPanel,
 	

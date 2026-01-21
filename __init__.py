@@ -29,6 +29,7 @@ module_names = ( # for reloading
     'ssx2.ssx2_world_patches',
     'ssx2.ssx2_world_panels',
     'ssx2.ssx2_world_lightmaps',
+    'ssx2.ssx2_world_logic',
     'ssx2.ssx2_constants',
 )
 
@@ -312,7 +313,7 @@ def unregister_keymaps():
 
 def register():
     ssx2_register()
-    ssx3_register()
+    # ssx3_register()
 
     for c in classes:
         register_class(c)
@@ -330,7 +331,7 @@ def register():
 
 def unregister():
     ssx2_unregister()
-    ssx3_unregister()
+    # ssx3_unregister()
 
     del bpy.types.Scene.bx_GameChoice
     del bpy.types.Scene.bx_PlatformChoice

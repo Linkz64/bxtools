@@ -44,7 +44,7 @@ enum_ssx2_empty_mode = (
 	('NONE',       "None",            ""),
 	('PATH_AI',    "Path AI",         "Start, AI follow, Reset, etc"),
 	('PATH_ELEMENTS', "Path Elements",      "Checkpoints, Finish Line, etc"),
-	('INSTANCE',   "Prefab Instance", "Experimental"),
+	('INSTANCE',   "Model Instance", "Experimental"),
 )
 
 enum_ssx2_curve_mode = (
@@ -193,10 +193,17 @@ indices_for_control_grid = [ # 4x4 grid (3x3 faces)
 ]
 
 
-### Prefabs & Instances
+### Models & Instances
 
 enum_ssx2_instance_group = (
 	('NONE',  "None",  "No grouping"),
 	('BATCH', "Batch", "Group into collections by a set amount"),
 	('NAME',  "Name",  "Group into collections by name")
+)
+
+
+### Logic
+
+enum_ssx2_effect_types = (
+	("dead_node", "Dead Node", ""),
 )
