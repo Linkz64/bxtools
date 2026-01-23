@@ -963,6 +963,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		if not os.path.isfile(instances_file_path):
 			self.report({'ERROR'}, f"File 'Instances.json' does not exist in 'Import Folder'")
 			return {'CANCELLED'}
+
+		logic_file_path = self.folder_path + '/SSFLogic.json'
+		if not os.path.isfile(logic_file_path):
+			self.report({'ERROR'}, f"File 'SSFLogic.json' does not exist in 'Import Folder'")
+			return {'CANCELLED'}
 		
 		models_collection = getset_collection_to_target('Models', scene_collection)
 		instances_collection = getset_collection_to_target('Instances', scene_collection)
@@ -1014,6 +1019,107 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				mat[key] = json_mat[key]
 
 			json_materials.append(mat)
+
+
+
+		scene = bpy.context.scene
+
+
+		print("\nImporting Logic")
+		import_logic_time_start = time.time()
+
+		with open(logic_file_path, 'r') as f:
+			data = json.load(f)
+
+
+		def fx_import_texture_flip(scene, seq, json_fx):
+			json_fx = json_fx["TextureFlip"]
+			fx_index = len(scene.ssx2_Effects.texture_flip)
+
+			fx = scene.ssx2_Effects.texture_flip.add()
+			fx.u0 = json_fx["U0"]
+			fx.direction = json_fx["Direction"]
+			fx.speed = json_fx["Speed"]
+			fx.length = json_fx["Length"]
+			fx.u4 = json_fx["U4"]
+
+			fx_ref = seq.effects.add()
+			fx_ref.index = fx_index
+			fx_ref.kind = 'texture_flip'
+
+		effects_dictionary = {
+			0: {
+				11: fx_import_texture_flip
+			}
+
+		}
+
+
+
+		num_seq_start = len(scene.ssx2_LogicSequences)
+		num_seq = num_seq_start
+		num_fx_undef = len(scene.ssx2_Effects.undefined)
+
+		for i, json_seq in enumerate(data["EffectHeaders"]):
+			seq_name = json_seq["EffectName"]
+			print("\n seq:", i, seq_name)
+
+			seq = scene.ssx2_LogicSequences.add()
+
+			seq.name = "Sequence " + str(num_seq) \
+				if seq_name == "Effect " + str(i) \
+				else seq_name
+
+
+			print(seq)
+
+
+			for j, json_fx in enumerate(json_seq["Effects"]):
+				# print("json_fx", json_fx)
+
+				type_found = False
+
+				if json_fx["MainType"] == 0:
+					# sub_type = json_fx["type0"]["SubType"]
+
+					a = effects_dictionary.get(0)
+					if a is not None:
+						import_func = a.get(json_fx["type0"]["SubType"])
+
+						if import_func is not None:
+							import_func(scene, seq, json_fx["type0"])
+							type_found = True
+				
+				if type_found == False:
+
+					fx = scene.ssx2_Effects.undefined.add()
+					fx.json_string = str(json_fx).replace("'", '"')
+					# fx.json_string = "Hello there!"
+
+					fx_ref = seq.effects.add()
+					fx_ref.index = num_fx_undef
+					fx_ref.kind = 'undefined'
+
+					num_fx_undef += 1
+
+
+			num_seq += 1
+
+			# if i == 1:
+			# 	break
+
+
+
+		print("importing Logic took", time.time() - import_logic_time_start)
+
+
+		return {'CANCELLED'}
+
+
+
+
+
+
 
 
 
@@ -1494,6 +1600,11 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				instances_collection.objects.link(empty)
 
 		print("importing instances took", time.time() - import_instances_time_start)
+
+
+
+		
+
 
 	def create_splines_json(self):
 		print("Importing Splines")

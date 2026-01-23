@@ -2,6 +2,33 @@ import bpy
 from bpy.utils import register_class, unregister_class
 
 from bpy.types import PropertyGroup, Operator
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    # FloatVectorProperty,
+    IntProperty,
+    IntVectorProperty,
+    PointerProperty,
+    StringProperty,
+
+)
+
+def update_sequence_name(self, context):
+	print(self, context.scene)
+
+
+def draw_undefined(layout, scene, index):
+	effect = scene.ssx2_Effects.undefined[index]
+
+	col = layout.column()
+	col.prop(effect, "checked", text="JSON")
+	# col.label(text="Undefined")
+
+	col.prop(effect, "json_string", text="", expand=True)
+
+
 
 
 def draw_dead_node(layout, scene, index):
@@ -16,84 +43,116 @@ def draw_wait(layout, scene, index):
 	# layout.label(text="Wait")
 	layout.prop(effect, "time", text="Time")
 
+def draw_texture_flip(layout, scene, index):
+	effect = scene.ssx2_Effects.texture_flip[index]
+
+	col = layout.column()
+
+	col.prop(effect, "checked", text="Texture Flip")
+	# layout.label(text="Texture Flip")
+
+	col.prop(effect, "u0", text="Unknown 0")
+	col.prop(effect, "direction", text="Direction")
+	col.prop(effect, "speed", text="Speed")
+	col.prop(effect, "length", text="Length")
+	col.prop(effect, "u4", text="Unknown 4")
+
 
 enum_ssx2_effect_types = ( # move to constants?
-	("dead_node", "Dead Node", ""),
-	("wait", "Wait", ""), # aka sleep
+	('undefined', "UNDEFINED", ""),
+	('dead_node', "Dead Node", ""),
+	('wait', "Wait", ""), # aka sleep
+	('texture_flip', "Texture Flip", "")
 )
 
 effect_type_draws = {
+	"undefined": draw_undefined,
 	"dead_node": draw_dead_node,
 	"wait": draw_wait,
+	"texture_flip": draw_texture_flip,
 }
 
 
+class SSX2_WorldEffectUndefined(PropertyGroup):
+	checked: BoolProperty()
+	json_string: StringProperty()
 
-class SSX2_WorldEffectDeadNodePropGroup(PropertyGroup):
-	checked: bpy.props.BoolProperty()
-	mode: bpy.props.IntProperty() # TODO: Convert to Enum
+class SSX2_WorldEffectDeadNode(PropertyGroup):
+	checked: BoolProperty()
+	mode: IntProperty() # TODO: Convert to Enum
 
-class SSX2_WorldEffectWaitPropGroup(PropertyGroup):
-	checked: bpy.props.BoolProperty()
-	time: bpy.props.FloatProperty()
+class SSX2_WorldEffectTextureFlip(PropertyGroup):
+	checked: BoolProperty()
+	u0: IntProperty()
+	direction: IntProperty()
+	speed: FloatProperty()
+	length: FloatProperty()
+	u4: IntProperty()
+
+class SSX2_WorldEffectWait(PropertyGroup):
+	checked: BoolProperty()
+	time: FloatProperty()
 
 
-class SSX2_WorldEffectsPropGroup(PropertyGroup):
+class SSX2_WorldEffects(PropertyGroup):
+
+	undefined: CollectionProperty(type=SSX2_WorldEffectUndefined)
+
 	# type 0
-	# t0_s0: bpy.props.CollectionProperty(type=)
-	# t0_s2: bpy.props.CollectionProperty(type=)
-	dead_node: bpy.props.CollectionProperty(type=SSX2_WorldEffectDeadNodePropGroup)
-	# counter: bpy.props.CollectionProperty(type=)
-	# t0_s7: bpy.props.CollectionProperty(type=)
-	# uv_scroll: bpy.props.CollectionProperty(type=)
-	# texture_flip: bpy.props.CollectionProperty(type=)
-	# fence_flex: bpy.props.CollectionProperty(type=)
-	# t0_s13: bpy.props.CollectionProperty(type=)
-	# t0_s14: bpy.props.CollectionProperty(type=)
-	# t0_s15: bpy.props.CollectionProperty(type=)
-	# crowd: bpy.props.CollectionProperty(type=)
-	# t0_s18: bpy.props.CollectionProperty(type=)
-	# t0_s20: bpy.props.CollectionProperty(type=)
-	# t0_s23: bpy.props.CollectionProperty(type=)
-	# t0_s24: bpy.props.CollectionProperty(type=)
-	# anim_object: bpy.props.CollectionProperty(type=)
-	# t0_s257: bpy.props.CollectionProperty(type=)
-	# t0_s258: bpy.props.CollectionProperty(type=)
+	# t0_s0: CollectionProperty(type=)
+	# t0_s2: CollectionProperty(type=)
+	dead_node: CollectionProperty(type=SSX2_WorldEffectDeadNode)
+	# counter: CollectionProperty(type=)
+	# t0_s7: CollectionProperty(type=)
+	# uv_scroll: CollectionProperty(type=)
+	texture_flip: CollectionProperty(type=SSX2_WorldEffectTextureFlip)
+	# fence_flex: CollectionProperty(type=)
+	# t0_s13: CollectionProperty(type=)
+	# t0_s14: CollectionProperty(type=)
+	# t0_s15: CollectionProperty(type=)
+	# crowd: CollectionProperty(type=)
+	# t0_s18: CollectionProperty(type=)
+	# t0_s20: CollectionProperty(type=)
+	# t0_s23: CollectionProperty(type=)
+	# t0_s24: CollectionProperty(type=)
+	# anim_object: CollectionProperty(type=)
+	# t0_s257: CollectionProperty(type=)
+	# t0_s258: CollectionProperty(type=)
 
 
 	# # type 2
-	# emitter: bpy.props.CollectionProperty(type=)
-	# t1_s1: bpy.props.CollectionProperty(type=)
-	# t1_s2: bpy.props.CollectionProperty(type=)
+	# emitter: CollectionProperty(type=)
+	# t1_s1: CollectionProperty(type=)
+	# t1_s2: CollectionProperty(type=)
 
 
 	# # type 3
-	# t3_s0: bpy.props.CollectionProperty(type=)
+	# t3_s0: CollectionProperty(type=)
 	# # type 4
-	wait: bpy.props.CollectionProperty(type=SSX2_WorldEffectWaitPropGroup)
+	wait: CollectionProperty(type=SSX2_WorldEffectWait)
 	# # type 5
-	# t5_s0: bpy.props.CollectionProperty(type=)
+	# t5_s0: CollectionProperty(type=)
 
 	# # type 7
-	# instance_effect: bpy.props.CollectionProperty(type=)
+	# instance_effect: CollectionProperty(type=)
 	# # type 8
-	# play_sound: bpy.props.CollectionProperty(type=)
+	# play_sound: CollectionProperty(type=)
 	# # type 9
 
 	# # type 13
-	# reset: bpy.props.CollectionProperty(type=)
+	# reset: CollectionProperty(type=)
 	# # type 14
-	# multiplier: bpy.props.CollectionProperty(type=)
+	# multiplier: CollectionProperty(type=)
 	# # type 17
-	# boost: bpy.props.CollectionProperty(type=)
+	# boost: CollectionProperty(type=)
 	# # type 18
-	# trick_boost: bpy.props.CollectionProperty(type=)
+	# trick_boost: CollectionProperty(type=)
 	# # type 21
-	# function_run: bpy.props.CollectionProperty(type=)
+	# function_run: CollectionProperty(type=)
 	# # type 24
-	# teleport: bpy.props.CollectionProperty(type=)
+	# teleport: CollectionProperty(type=)
 	# # type 25
-	# spline_effect: bpy.props.CollectionProperty(type=)
+	# spline_effect: CollectionProperty(type=)
 
 
 
@@ -138,19 +197,19 @@ class SSX2_WorldEffectsPropGroup(PropertyGroup):
 	
 	"""
 
-class SSX2_WorldEffectRefPropGroup(PropertyGroup):
-	index: bpy.props.IntProperty()
-	kind: bpy.props.EnumProperty(items = enum_ssx2_effect_types)
+class SSX2_WorldEffectRef(PropertyGroup):
+	index: IntProperty()
+	kind: EnumProperty(items=enum_ssx2_effect_types)
 
 
-class SSX2_WorldLogicSequencePropGroup(PropertyGroup):
-	# name: <- already built-in
-	expanded: bpy.props.BoolProperty() 
-	# checked: bpy.props.BoolProperty()
-	effects: bpy.props.CollectionProperty(type=SSX2_WorldEffectRefPropGroup)
+class SSX2_WorldLogicSequence(PropertyGroup):
+	name: StringProperty(update=update_sequence_name)
+	expanded: BoolProperty() 
+	# checked: BoolProperty()
+	effects: CollectionProperty(type=SSX2_WorldEffectRef)
 	
 	# I could do it with indices:
-	# checked: bpy.props.CollectionProperty(type=?)
+	# checked: CollectionProperty(type=?)
 
 
 
@@ -160,7 +219,7 @@ class SSX2_OP_EffectMoveUpDown(Operator):
 	bl_description = "Move effect up or down"
 	bl_options = {'UNDO'}
 
-	vals: bpy.props.IntVectorProperty()
+	vals: IntVectorProperty()
 
 	def execute(self, context):
 		scene = context.scene
@@ -250,7 +309,7 @@ class SSX2_OP_LogicTest(Operator):
 
 
 		# prints custom props within the class:
-		# for prop in SSX2_WorldEffectsPropGroup.bl_rna.properties:
+		# for prop in SSX2_WorldEffects.bl_rna.properties:
 		# 	if prop.is_runtime:
 		# 		print(prop.identifier)
 
@@ -262,13 +321,15 @@ class SSX2_OP_LogicTest(Operator):
 
 
 classes = (
-	SSX2_WorldEffectDeadNodePropGroup,
-	SSX2_WorldEffectWaitPropGroup,
+	SSX2_WorldEffectUndefined,
+	SSX2_WorldEffectDeadNode,
+	SSX2_WorldEffectWait,
+	SSX2_WorldEffectTextureFlip,
 
-	SSX2_WorldEffectRefPropGroup,
-	SSX2_WorldEffectsPropGroup,
+	SSX2_WorldEffectRef,
+	SSX2_WorldEffects,
 
-	SSX2_WorldLogicSequencePropGroup,
+	SSX2_WorldLogicSequence,
 
 	SSX2_OP_EffectMoveUpDown,
 	SSX2_OP_LogicTest,
@@ -278,8 +339,8 @@ def ssx2_world_logic_register():
 	for c in classes:
 		register_class(c)
 
-	bpy.types.Scene.ssx2_Effects = bpy.props.PointerProperty(type=SSX2_WorldEffectsPropGroup)
-	bpy.types.Scene.ssx2_LogicSequences = bpy.props.CollectionProperty(type=SSX2_WorldLogicSequencePropGroup)
+	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_WorldEffects)
+	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_WorldLogicSequence)
 
 def ssx2_world_logic_unregister():
 

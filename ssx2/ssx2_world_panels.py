@@ -361,22 +361,30 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 				# print("kind", fx_ref.kind, "index" fx_ref.index)
 
 				fx_box = seq_box.box()
-				box_row = fx_box.row(align=True)
 
-				box_row.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
-				box_row.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+				row_a = fx_box.row(align=True)
 
-				box_row.separator()
+				# box_col = fx_box.column()
+				# fx_box = fx_box.grid_flow()
+				
 
 
 				draw_func = effect_type_draws.get(fx_ref.kind)
 
 				if draw_func is not None:
 					draw_func(
-						box_row, 
+						row_a, 
 						scene,
-						fx_ref.index
+						fx_ref.index,
 					)
+
+
+
+				row_a.separator()
+
+				row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
+				row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+
 
 
 ### Properties
