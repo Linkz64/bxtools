@@ -325,6 +325,7 @@ class SSX2_WorldLogicSubPanel(SSX2_Panel):
 		# row = self.layout.row()
 		# row.operator(SSX2_OP_AddSplineBezier.bl_idname, icon='ADD', text="Blah Blah Blah")
 
+
 class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 	bl_idname = 'BXT_PT_world_effect_sequences_panel'
 	bl_label = 'Sequences'
@@ -339,9 +340,7 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 		# col = row.column()
 		col = self.layout.column()
 		
-		io = context.scene.ssx2_WorldImportExportProps
 		scene = context.scene
-
 
 		col.operator(SSX2_OP_LogicTest.bl_idname)
 
@@ -351,33 +350,33 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 
 			seq_box = col.box()
 			box_row = seq_box.row(align=True)
-			box_row.operator(SSX2_OP_WorldExpandUIBoxes.bl_idname,\
-				icon='DISCLOSURE_TRI_DOWN' if io.expandImportModel\
-				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportModel'
+			box_row.operator(SSX2_OP_WorldLogicExpandSequence.bl_idname,\
+				icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
+				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").index = i
 			
-			# box_row.label(text=seq.name)
 			box_row.prop(seq, "name", text="")
+			# box_row.label(text=seq.name)
 
-			for j, fx_ref in enumerate(seq.effect_refs):
-				# print("kind", fx_ref.kind, "index" fx_ref.index)
+			if seq.expanded:
 
-				fx_box = seq_box.box()
+				for j, fx_ref in enumerate(seq.effect_refs):
+					# print("kind", fx_ref.kind, "index" fx_ref.index)
 
-				row_a = fx_box.row(align=True)
+					fx_box = seq_box.box()
 
-				# box_col = fx_box.column()
-				# fx_box = fx_box.grid_flow()
-				
+					row_a = fx_box.row(align=True)
 
-				logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
-				
+					# box_col = fx_box.column()
+					# fx_box = fx_box.grid_flow()
+					
+
+					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
 
 
+					row_a.separator()
 
-				row_a.separator()
-
-				row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
-				row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
 
 
 
@@ -670,6 +669,19 @@ class SSX2_OP_WorldExpandUIBoxes(bpy.types.Operator):
 		setattr(props, props_split[1], not getattr(props, props_split[1]))
 		return {'FINISHED'}
 
+class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
+	bl_idname = "wm.ssx2_expand_logic_sequence"
+	bl_label = ""
+	bl_description = "Expand box"
+
+	index: bpy.props.IntProperty()
+
+	def execute(self, context):
+		seq = context.scene.ssx2_LogicSequences[self.index]
+		seq.expanded = not seq.expanded 
+
+		return {'FINISHED'}
+
 class SSX2_OP_WorldShowPathEvent(bpy.types.Operator):
 	bl_idname = "wm.ssx2_show_path_event"
 	bl_label = ""
@@ -730,6 +742,7 @@ classes = (
 	SSX2_WorldAddMenu,
 
 	SSX2_OP_WorldExpandUIBoxes,
+	SSX2_OP_WorldLogicExpandSequence,
 	SSX2_OP_WorldShowPathEvent,
 )
 
