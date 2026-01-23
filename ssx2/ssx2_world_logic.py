@@ -140,42 +140,61 @@ def update_sequence_name(self, context):
 	pass
 
 
+class LogicDraw:
+	def __init__(self, scene):
+		self.scene = scene
+		self.effects = scene.ssx2_Effects
 
-def draw_undefined(layout, scene, index):
-	effect = scene.ssx2_Effects.undefined[index]
 
-	col = layout.column()
-	col.prop(effect, "checked", text="JSON")
-	# col.label(text="Undefined")
+	effect_drawers = {}
 
-	col.prop(effect, "json_string", text="", expand=True)
 
-def draw_dead_node(layout, scene, index):
-	effect = scene.ssx2_Effects.dead_node[index]
-	layout.prop(effect, "checked", text="Dead Node")
-	# layout.label(text="Dead Node")
-	layout.prop(effect, "mode", text="Mode")
+	def draw_kind(self, layout, kind, index):
+		draw_func = self.effect_drawers.get(kind)
 
-def draw_wait(layout, scene, index):
-	effect = scene.ssx2_Effects.wait[index]
-	layout.prop(effect, "checked", text="Wait")
-	# layout.label(text="Wait")
-	layout.prop(effect, "time", text="Time")
+		if draw_func is not None:
+			draw_func(self, layout, index)
 
-def draw_texture_flip(layout, scene, index):
-	effect = scene.ssx2_Effects.texture_flip[index]
 
-	col = layout.column()
+	def draw_undefined(self, layout, index):
+		effect = self.effects.undefined[index]
 
-	col.prop(effect, "checked", text="Texture Flip")
-	# layout.label(text="Texture Flip")
+		layout.prop(effect, "checked", text="JSON")
+		layout.prop(effect, "json_string", text="", expand=True)
 
-	col.prop(effect, "u0", text="Unknown 0")
-	col.prop(effect, "direction", text="Direction")
-	col.prop(effect, "speed", text="Speed")
-	col.prop(effect, "length", text="Length")
-	col.prop(effect, "u4", text="Unknown 4")
+	def draw_dead_node(self, layout, index):
+		effect = self.effects.dead_node[index]
+		layout.prop(effect, "checked", text="Dead Node")
+		# layout.label(text="Dead Node")
+		layout.prop(effect, "mode", text="Mode")
 
+	def draw_wait(self, layout, index):
+		effect = self.effects.wait[index]
+		layout.prop(effect, "checked", text="Wait")
+		# layout.label(text="Wait")
+		layout.prop(effect, "time", text="Time")
+
+	def draw_texture_flip(self, layout, index):
+		effect = self.effects.texture_flip[index]
+
+		col = layout.column()
+
+		col.prop(effect, "checked", text="Texture Flip")
+		# layout.label(text="Texture Flip")
+
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "direction", text="Direction")
+		col.prop(effect, "speed", text="Speed")
+		col.prop(effect, "length", text="Length")
+		col.prop(effect, "u4", text="Unknown 4")
+
+
+LogicDraw.effect_drawers = {
+	"undefined": LogicDraw.draw_undefined,
+	"dead_node": LogicDraw.draw_dead_node,
+	"wait": LogicDraw.draw_wait,
+	"texture_flip": LogicDraw.draw_texture_flip,
+}
 
 enum_ssx2_effect_types = ( # move to constants?
 	('undefined', "UNDEFINED", ""),
@@ -184,12 +203,7 @@ enum_ssx2_effect_types = ( # move to constants?
 	('texture_flip', "Texture Flip", "")
 )
 
-effect_type_draws = {
-	"undefined": draw_undefined,
-	"dead_node": draw_dead_node,
-	"wait": draw_wait,
-	"texture_flip": draw_texture_flip,
-}
+
 
 
 class SSX2_WorldEffectUndefined(PropertyGroup):
@@ -347,7 +361,7 @@ class SSX2_OP_EffectMoveUpDown(Operator):
 		seq_idx = self.vals[1]
 		fx_idx = self.vals[2]
 
-		effects_prop = scene.ssx2_LogicSequences[seq_idx].effects
+		effect_refs = scene.ssx2_LogicSequences[seq_idx].effect_refs
 
 		if self.vals[0] == 0: # UP
 			if fx_idx == 0:
@@ -356,20 +370,20 @@ class SSX2_OP_EffectMoveUpDown(Operator):
 			other_idx = fx_idx - 1
 
 		else: # DOWN
-			if fx_idx == len(effects_prop) - 1:
+			if fx_idx == len(effect_refs) - 1:
 				return {'CANCELLED'} # TODO? move to start
 
 			other_idx = fx_idx + 1
 
-		current = (effects_prop[fx_idx].index, effects_prop[fx_idx].kind)
-		other = (effects_prop[other_idx].index, effects_prop[other_idx].kind)
+		current = (effect_refs[fx_idx].index, effect_refs[fx_idx].kind)
+		other = (effect_refs[other_idx].index, effect_refs[other_idx].kind)
 
-		effects_prop[fx_idx].index = other[0]
-		effects_prop[fx_idx].kind = other[1]
+		effect_refs[fx_idx].index = other[0]
+		effect_refs[fx_idx].kind = other[1]
 
 
-		effects_prop[other_idx].index = current[0]
-		effects_prop[other_idx].kind = current[1]
+		effect_refs[other_idx].index = current[0]
+		effect_refs[other_idx].kind = current[1]
 
 		return {'FINISHED'}
 
@@ -386,33 +400,36 @@ class SSX2_OP_LogicTest(Operator):
 
 		scene.ssx2_LogicSequences.add()
 
-		scene.ssx2_LogicSequences[num_seq].name = "Sequence " + str(num_seq)
+		seq = scene.ssx2_LogicSequences[num_seq]
+		effect_refs = seq.effect_refs
 
-		num_fx = len(scene.ssx2_LogicSequences[num_seq].effects)
+		seq.name = "Sequence " + str(num_seq)
+
+		num_fx = len(effect_refs)
 		num_dead_node = len(scene.ssx2_Effects.dead_node)
 		num_wait = len(scene.ssx2_Effects.wait)
 
-		scene.ssx2_LogicSequences[num_seq].effects.add()
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx].index = num_dead_node
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx].kind = 'dead_node'
+		effect_refs.add()
+		effect_refs[num_fx].index = num_dead_node
+		effect_refs[num_fx].kind = 'dead_node'
 
 		scene.ssx2_Effects.dead_node.add()
 		scene.ssx2_Effects.dead_node[num_dead_node].mode = 5
 
 
 
-		scene.ssx2_LogicSequences[num_seq].effects.add()
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx + 1].index = num_wait
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx + 1].kind = 'wait'
+		effect_refs.add()
+		effect_refs[num_fx + 1].index = num_wait
+		effect_refs[num_fx + 1].kind = 'wait'
 
 		scene.ssx2_Effects.wait.add()
 		scene.ssx2_Effects.wait[num_wait].time = 3.33
 
 
 
-		scene.ssx2_LogicSequences[num_seq].effects.add()
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx + 2].index = num_dead_node + 1
-		scene.ssx2_LogicSequences[num_seq].effects[num_fx + 2].kind = 'dead_node'
+		effect_refs.add()
+		effect_refs[num_fx + 2].index = num_dead_node + 1
+		effect_refs[num_fx + 2].kind = 'dead_node'
 
 		scene.ssx2_Effects.dead_node.add()
 		scene.ssx2_Effects.dead_node[num_dead_node + 1].mode = 77

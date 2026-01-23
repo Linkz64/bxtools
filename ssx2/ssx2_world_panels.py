@@ -47,7 +47,7 @@ from .ssx2_world_patches import (
 from .ssx2_world_logic import (
 	SSX2_OP_LogicTest,
 	SSX2_OP_EffectMoveUpDown,
-	effect_type_draws,
+	LogicDraw,
 )
 
 
@@ -345,6 +345,7 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 
 		col.operator(SSX2_OP_LogicTest.bl_idname)
 
+		logic_draw = LogicDraw(scene)
 
 		for i, seq in enumerate(scene.ssx2_LogicSequences):
 
@@ -368,15 +369,8 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 				# fx_box = fx_box.grid_flow()
 				
 
-
-				draw_func = effect_type_draws.get(fx_ref.kind)
-
-				if draw_func is not None:
-					draw_func(
-						row_a, 
-						scene,
-						fx_ref.index,
-					)
+				logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+				
 
 
 
