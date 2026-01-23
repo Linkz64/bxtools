@@ -32,6 +32,7 @@ from .ssx2_constants import (
 	enum_ssx2_instance_group,
 )
 from .ssx2_world_lightmaps import SSX2_OP_BakeTest
+from .ssx2_world_logic import LogicImporters
 
 def separate_light(src_color: Vector) -> tuple:
 	brightness = src_color.length
@@ -714,6 +715,8 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+
+
 class SSX2_OP_WorldImport(bpy.types.Operator):
 	bl_idname = "wm.ssx2_import_world"
 	bl_label = "Import"
@@ -940,9 +943,10 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 		# 			patches_collection.objects.unlink(patch)
 
 	def create_models_json(self):
-		scene_collection = bpy.context.scene.collection
+		scene = bpy.context.scene
+		scene_collection = scene.collection
 		active_collection = bpy.context.collection
-		io = bpy.context.scene.ssx2_WorldImportExportProps
+		io = scene.ssx2_WorldImportExportProps
 
 		models_folder_path = self.folder_path + '/Models/'
 		if not os.path.exists(models_folder_path):
@@ -1022,8 +1026,6 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 
 
-		scene = bpy.context.scene
-
 
 		print("\nImporting Logic")
 		import_logic_time_start = time.time()
@@ -1032,81 +1034,14 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			data = json.load(f)
 
 
-		def fx_import_texture_flip(scene, seq, json_fx):
-			json_fx = json_fx["TextureFlip"]
-			fx_index = len(scene.ssx2_Effects.texture_flip)
+		
 
-			fx = scene.ssx2_Effects.texture_flip.add()
-			fx.u0 = json_fx["U0"]
-			fx.direction = json_fx["Direction"]
-			fx.speed = json_fx["Speed"]
-			fx.length = json_fx["Length"]
-			fx.u4 = json_fx["U4"]
-
-			fx_ref = seq.effects.add()
-			fx_ref.index = fx_index
-			fx_ref.kind = 'texture_flip'
-
-		effects_dictionary = {
-			0: {
-				11: fx_import_texture_flip
-			}
-
-		}
-
-
-
-		num_seq_start = len(scene.ssx2_LogicSequences)
-		num_seq = num_seq_start
-		num_fx_undef = len(scene.ssx2_Effects.undefined)
-
-		for i, json_seq in enumerate(data["EffectHeaders"]):
-			seq_name = json_seq["EffectName"]
-			print("\n seq:", i, seq_name)
-
-			seq = scene.ssx2_LogicSequences.add()
-
-			seq.name = "Sequence " + str(num_seq) \
-				if seq_name == "Effect " + str(i) \
-				else seq_name
-
-
-			print(seq)
-
-
-			for j, json_fx in enumerate(json_seq["Effects"]):
-				# print("json_fx", json_fx)
-
-				type_found = False
-
-				if json_fx["MainType"] == 0:
-					# sub_type = json_fx["type0"]["SubType"]
-
-					a = effects_dictionary.get(0)
-					if a is not None:
-						import_func = a.get(json_fx["type0"]["SubType"])
-
-						if import_func is not None:
-							import_func(scene, seq, json_fx["type0"])
-							type_found = True
-				
-				if type_found == False:
-
-					fx = scene.ssx2_Effects.undefined.add()
-					fx.json_string = str(json_fx).replace("'", '"')
-					# fx.json_string = "Hello there!"
-
-					fx_ref = seq.effects.add()
-					fx_ref.index = num_fx_undef
-					fx_ref.kind = 'undefined'
-
-					num_fx_undef += 1
-
-
-			num_seq += 1
-
-			# if i == 1:
-			# 	break
+		test = LogicImporters(
+			scene, 
+			scene.ssx2_LogicSequences, 
+			scene.ssx2_Effects,
+			data,
+		)
 
 
 
@@ -1151,7 +1086,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_group_col = getset_collection(new_group_name)
 				new_group_col.children.link(mdl_collection)
 
-				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
+				if not scene.user_of_id(new_group_col): # if not in scene/layer bring it
 					models_collection.children.link(new_group_col)
 
 			mdl_collection.ssx2_ModelCollectionProps.unknown3 = json_fab["Unknown3"]
@@ -1590,7 +1525,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 				new_group_col = getset_collection(new_group_name)
 				new_group_col.objects.link(empty)
 
-				if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
+				if not scene.user_of_id(new_group_col): # if not in scene/layer bring it
 					instances_collection.children.link(new_group_col)
 
 			# elif io.instanceImportGrouping == 'MESH': # or 'MODEL'/'PREFAB'

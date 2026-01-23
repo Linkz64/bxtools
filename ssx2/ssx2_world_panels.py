@@ -357,7 +357,7 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 			# box_row.label(text=seq.name)
 			box_row.prop(seq, "name", text="")
 
-			for j, fx_ref in enumerate(seq.effects):
+			for j, fx_ref in enumerate(seq.effect_refs):
 				# print("kind", fx_ref.kind, "index" fx_ref.index)
 
 				fx_box = seq_box.box()

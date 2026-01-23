@@ -15,8 +15,130 @@ from bpy.props import (
 
 )
 
+class LogicImporters:
+	def __init__(self, scene, sequences, effects, data):
+		self.scene = scene
+		self.sequences = sequences
+		self.effects = effects
+		self.data = data
+
+		self.importers = {
+			0: {
+				5: self.import_dead_node,
+				11: self.import_texture_flip,
+			},
+
+			4: self.import_wait,
+
+		}
+
+		self.import_all(data)
+
+		# TODO: remove self.scene 
+
+	def import_all(self, json_string):
+		num_seq_start = len(self.sequences)
+		num_seq = num_seq_start
+		num_fx_undef = len(self.effects.undefined)
+
+		for i, json_seq in enumerate(self.data["EffectHeaders"]):
+			seq_name = json_seq["EffectName"]
+			print("\n seq:", i, seq_name)
+
+			seq = self.sequences.add()
+
+			seq.name = "Sequence " + str(num_seq) \
+				if seq_name == "Effect " + str(i) \
+				else seq_name
+
+
+
+			for j, json_fx in enumerate(json_seq["Effects"]):
+				# print("json_fx", json_fx)
+
+				type_found = False
+
+				main_type = json_fx["MainType"]
+
+				_main = self.importers.get(main_type)
+
+				if type(_main) is not dict and _main is not None:
+					_main(seq, json_fx)
+					type_found = True
+				else:
+					if json_fx["MainType"] == 0:
+						# sub_type = json_fx["type0"]["SubType"]
+
+						import_func = _main.get(json_fx["type0"]["SubType"])
+
+						if import_func is not None:
+							import_func(seq, json_fx)
+
+							type_found = True
+
+
+				
+				if type_found == False:
+
+					fx = self.effects.undefined.add()
+					fx.json_string = str(json_fx).replace("'", '"')
+					# fx.json_string = "Hello there!"
+
+					fx_ref = seq.effect_refs.add()
+					fx_ref.index = num_fx_undef
+					fx_ref.kind = 'undefined'
+
+					num_fx_undef += 1
+
+
+			num_seq += 1
+
+			# if i == 1:
+			# 	break
+
+	def import_dead_node(self, seq, json_fx):
+		fx_index = len(self.effects.dead_node)
+
+		fx = self.effects.dead_node.add()
+		fx.mode = json_fx["type0"]["DeadNodeMode"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'dead_node'
+
+	def import_wait(self, seq, json_fx):
+		fx_index = len(self.effects.wait)
+
+		fx = self.effects.wait.add()
+		fx.time = json_fx["WaitTime"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'wait'
+
+	def import_texture_flip(self, seq, json_fx):
+		json_fx = json_fx["type0"]["TextureFlip"]
+		fx_index = len(self.effects.texture_flip)
+
+		fx = self.effects.texture_flip.add()
+		fx.u0 = json_fx["U0"]
+		fx.direction = json_fx["Direction"]
+		fx.speed = json_fx["Speed"]
+		fx.length = json_fx["Length"]
+		fx.u4 = json_fx["U4"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'texture_flip'
+
+
+
+
+
 def update_sequence_name(self, context):
-	print(self, context.scene)
+	# print(self, context.scene)
+	pass
+
 
 
 def draw_undefined(layout, scene, index):
@@ -27,9 +149,6 @@ def draw_undefined(layout, scene, index):
 	# col.label(text="Undefined")
 
 	col.prop(effect, "json_string", text="", expand=True)
-
-
-
 
 def draw_dead_node(layout, scene, index):
 	effect = scene.ssx2_Effects.dead_node[index]
@@ -74,15 +193,15 @@ effect_type_draws = {
 
 
 class SSX2_WorldEffectUndefined(PropertyGroup):
-	checked: BoolProperty()
+	checked: BoolProperty(options={'SKIP_SAVE'})
 	json_string: StringProperty()
 
 class SSX2_WorldEffectDeadNode(PropertyGroup):
-	checked: BoolProperty()
+	checked: BoolProperty(options={'SKIP_SAVE'})
 	mode: IntProperty() # TODO: Convert to Enum
 
 class SSX2_WorldEffectTextureFlip(PropertyGroup):
-	checked: BoolProperty()
+	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
 	direction: IntProperty()
 	speed: FloatProperty()
@@ -90,7 +209,7 @@ class SSX2_WorldEffectTextureFlip(PropertyGroup):
 	u4: IntProperty()
 
 class SSX2_WorldEffectWait(PropertyGroup):
-	checked: BoolProperty()
+	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
 
 
@@ -205,8 +324,7 @@ class SSX2_WorldEffectRef(PropertyGroup):
 class SSX2_WorldLogicSequence(PropertyGroup):
 	name: StringProperty(update=update_sequence_name)
 	expanded: BoolProperty() 
-	# checked: BoolProperty()
-	effects: CollectionProperty(type=SSX2_WorldEffectRef)
+	effect_refs: CollectionProperty(type=SSX2_WorldEffectRef)
 	
 	# I could do it with indices:
 	# checked: CollectionProperty(type=?)
@@ -303,7 +421,7 @@ class SSX2_OP_LogicTest(Operator):
 
 		# for seq in scene.ssx2_LogicSequences:
 		# 	print("\n", seq.name)
-		# 	for fx_ref in seq.effects:
+		# 	for fx_ref in seq.effect_refs:
 		# 		print(fx_ref.index, fx_ref.kind)
 
 
