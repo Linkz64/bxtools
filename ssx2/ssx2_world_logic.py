@@ -16,8 +16,19 @@ from bpy.props import (
 )
 
 def update_sequence_name(self, context):
-	# print(self, context.scene)
-	pass
+	name = self.name
+
+	name_list = [seq.name for seq in context.scene.ssx2_LogicSequences]
+
+	if name_list.count(name) > 1:
+		count = 1
+		new_name = f"{name}.{count:03}"
+
+		while new_name in name_list:
+			count += 1
+			new_name = f"{name}.{count:03}"
+
+		self.name = new_name
 
 
 class LogicImporters:
