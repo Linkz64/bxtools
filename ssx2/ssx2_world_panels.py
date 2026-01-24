@@ -486,7 +486,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 		split = row.split()
 		split.label(text="Logic Slots Set")
 
-		split.operator(SSX2_OP_SelectModel.bl_idname, text="Copy All To")
+		split.operator(SSX2_OP_SelectModel.bl_idname, text="Copy All To") # TODO: make the op
 
 	def draw(self, context):
 		col = self.layout.column()
@@ -509,6 +509,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 		)
 
 		for slot_name, seq_idx in indices:
+			
 			if seq_idx == -1:
 				
 				seq_box = col.box()
@@ -533,6 +534,23 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 			else:
 				seq = sequences[seq_idx]
+
+
+
+				col.prop_search(
+					scene,
+					"ssx2_LogicSequenceChoiceTEST",
+					scene,
+					"ssx2_LogicSequences",
+					icon='VIEWZOOM'
+				)
+
+				if scene.ssx2_LogicSequenceChoiceTEST:
+					col.label(text=f"Choice: {scene.ssx2_LogicSequenceChoiceTEST}")
+
+
+
+
 
 				seq_box = col.box()
 				seq_header = seq_box.row()

@@ -3,15 +3,15 @@ from bpy.utils import register_class, unregister_class
 
 from bpy.types import PropertyGroup, Operator
 from bpy.props import (
-    BoolProperty,
-    CollectionProperty,
-    EnumProperty,
-    FloatProperty,
-    # FloatVectorProperty,
-    IntProperty,
-    IntVectorProperty,
-    PointerProperty,
-    StringProperty,
+	BoolProperty,
+	CollectionProperty,
+	EnumProperty,
+	FloatProperty,
+	# FloatVectorProperty,
+	IntProperty,
+	IntVectorProperty,
+	PointerProperty,
+	StringProperty,
 
 )
 
@@ -470,7 +470,8 @@ class SSX2_OP_LogicTest(Operator):
 		# slots_set.slot7 = 
 
 
-
+		logic_choice_test = scene.ssx2_LogicSequenceChoiceTEST
+		logic_choice_test = seq.name
 
 
 		# for seq in scene.ssx2_LogicSequences:
@@ -517,7 +518,11 @@ def ssx2_world_logic_register():
 	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_WorldLogicSequence)
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_WorldLogicSlotsSet)
 
+	bpy.types.Scene.ssx2_LogicSequenceChoiceTEST = StringProperty(name="Choice 1:")
+
 def ssx2_world_logic_unregister():
+
+	del bpy.types.Scene.ssx2_LogicSequenceChoiceTEST
 
 	del bpy.types.Object.ssx2_LogicSlotsSet
 	del bpy.types.Scene.ssx2_LogicSequences
