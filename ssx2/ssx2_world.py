@@ -1034,7 +1034,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			data = json.load(f)
 
 
-		
+		json_logic_slot_sets = data["EffectSlots"]
 
 		test = LogicImporters(
 			scene, 
@@ -1043,12 +1043,14 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			data,
 		)
 
+		num_seq_start = test.num_seq_start
+
 
 
 		print("importing Logic took", time.time() - import_logic_time_start)
 
 
-		return {'CANCELLED'}
+		# return {'CANCELLED'}
 
 
 
@@ -1488,6 +1490,21 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			empty['original_index'] = i
 
 			# collision mode = enum? (Self, Custom, BBox)
+
+
+			# if json_inst["EffectSlotIndex"] != -1:
+			slots_set = empty.ssx2_LogicSlotsSet
+
+			json_logic_slot_set = json_logic_slot_sets[json_inst["EffectSlotIndex"]]
+
+			slots_set.constant = json_logic_slot_set["PersistantEffectSlot"] + num_seq_start
+			slots_set.collision = json_logic_slot_set["CollisionEffectSlot"] + num_seq_start
+			slots_set.slot3 = json_logic_slot_set["Slot3"] + num_seq_start
+			slots_set.slot4 = json_logic_slot_set["Slot4"] + num_seq_start
+			slots_set.logic_trigger = json_logic_slot_set["EffectTriggerSlot"] + num_seq_start
+			slots_set.slot6 = json_logic_slot_set["Slot6"] + num_seq_start
+			slots_set.slot7 = json_logic_slot_set["Slot7"] + num_seq_start
+
 
 			for key in json_inst:
 				if key in [

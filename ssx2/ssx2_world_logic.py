@@ -15,12 +15,19 @@ from bpy.props import (
 
 )
 
+def update_sequence_name(self, context):
+	# print(self, context.scene)
+	pass
+
+
 class LogicImporters:
 	def __init__(self, scene, sequences, effects, data):
 		self.scene = scene
 		self.sequences = sequences
 		self.effects = effects
 		self.data = data
+
+		self.num_seq_start = len(sequences)
 
 		self.importers = {
 			0: {
@@ -37,8 +44,7 @@ class LogicImporters:
 		# TODO: remove self.scene 
 
 	def import_all(self, json_string):
-		num_seq_start = len(self.sequences)
-		num_seq = num_seq_start
+		num_seq = self.num_seq_start
 		num_fx_undef = len(self.effects.undefined)
 
 		for i, json_seq in enumerate(self.data["EffectHeaders"]):
@@ -135,9 +141,6 @@ class LogicImporters:
 
 
 
-def update_sequence_name(self, context):
-	# print(self, context.scene)
-	pass
 
 
 class LogicDraw:
@@ -205,6 +208,7 @@ enum_ssx2_effect_types = ( # move to constants?
 
 
 
+### Properties
 
 class SSX2_WorldEffectUndefined(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -344,6 +348,18 @@ class SSX2_WorldLogicSequence(PropertyGroup):
 	# checked: CollectionProperty(type=?)
 
 
+class SSX2_WorldLogicSlotsSet(PropertyGroup):
+	constant: IntProperty(default=-1)
+	collision: IntProperty(default=-1)
+	slot3: IntProperty(default=-1)
+	slot4: IntProperty(default=-1)
+	logic_trigger: IntProperty(default=-1)
+	slot6: IntProperty(default=-1)
+	slot7: IntProperty(default=-1)
+
+
+
+### Operators
 
 class SSX2_OP_EffectMoveUpDown(Operator):
 	bl_idname = 'scene.ssx2_effect_move_up_down'
@@ -436,6 +452,27 @@ class SSX2_OP_LogicTest(Operator):
 
 
 
+
+
+		obj = bpy.data.objects.new("LogicTestObject", None)
+		obj.ssx2_EmptyMode = 'INSTANCE'
+		context.collection.objects.link(obj)
+
+
+		slots_set = obj.ssx2_LogicSlotsSet
+
+		slots_set.constant = num_seq
+		slots_set.collision = -1
+		# slots_set.slot3 = 
+		# slots_set.slot4 = 
+		# slots_set.logic_trigger = 
+		# slots_set.slot6 = 
+		# slots_set.slot7 = 
+
+
+
+
+
 		# for seq in scene.ssx2_LogicSequences:
 		# 	print("\n", seq.name)
 		# 	for fx_ref in seq.effect_refs:
@@ -458,13 +495,14 @@ class SSX2_OP_LogicTest(Operator):
 classes = (
 	SSX2_WorldEffectUndefined,
 	SSX2_WorldEffectDeadNode,
-	SSX2_WorldEffectWait,
 	SSX2_WorldEffectTextureFlip,
+	SSX2_WorldEffectWait,
 
 	SSX2_WorldEffectRef,
 	SSX2_WorldEffects,
 
 	SSX2_WorldLogicSequence,
+	SSX2_WorldLogicSlotsSet,
 
 	SSX2_OP_EffectMoveUpDown,
 	SSX2_OP_LogicTest,
@@ -474,11 +512,14 @@ def ssx2_world_logic_register():
 	for c in classes:
 		register_class(c)
 
+
 	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_WorldEffects)
 	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_WorldLogicSequence)
+	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_WorldLogicSlotsSet)
 
 def ssx2_world_logic_unregister():
 
+	del bpy.types.Object.ssx2_LogicSlotsSet
 	del bpy.types.Scene.ssx2_LogicSequences
 
 	for c in classes:

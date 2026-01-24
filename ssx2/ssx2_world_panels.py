@@ -457,25 +457,130 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 					icon="HIDE_OFF" if context.object.show_in_front else "HIDE_ON")
 
 
-
-
-			io = context.scene.ssx2_WorldImportExportProps
-			scene = context.scene
-
 			col.separator()
 
-			the_box = col.box()
-			the_box_header = the_box.row()
-			the_box_header.label(text="Logic Slots Set")
-			the_box_header.operator(SSX2_OP_SelectModel.bl_idname, text="Copy To")
-			the_box = the_box.grid_flow()
-			the_box.prop(scene, "camera", text="Constant")
-			the_box.prop(scene, "camera", text="Collision")
-			the_box.prop(scene, "camera", text="Slot 3")
-			the_box.prop(scene, "camera", text="Slot 4")
-			the_box.prop(scene, "camera", text="Logic Trigger")
-			the_box.prop(scene, "camera", text="Slot 6")
-			the_box.prop(scene, "camera", text="Slot 7")
+			
+
+class SSX2_PT_LogicSlotsSet(SSX2_Panel):
+	bl_label = ""
+	bl_idname = "SSX2_PT_Testttttttttttttttttttttttttttttttt"
+	bl_parent_id = "OBJECT_PT_SSX2_Empty"
+	# bl_options = {"HIDE_HEADER"}
+
+	bl_space_type = "PROPERTIES"
+	bl_region_type = "WINDOW"
+	bl_context = "object"
+
+	@classmethod
+	def poll(cls, context):
+		obj = context.object
+
+		return \
+		context.scene.bx_GameChoice == 'SSX2' and \
+		(obj is not None) and \
+		obj.type == 'EMPTY' and \
+		obj.ssx2_EmptyMode == 'INSTANCE'
+
+	def draw_header(self, context):
+		row = self.layout.row()
+		split = row.split()
+		split.label(text="Logic Slots Set")
+
+		split.operator(SSX2_OP_SelectModel.bl_idname, text="Copy All To")
+
+	def draw(self, context):
+		col = self.layout.column()
+		self.layout.label(text="wow")
+		
+		scene = context.scene
+		obj = context.object
+
+		slots = obj.ssx2_LogicSlotsSet
+		sequences = scene.ssx2_LogicSequences
+		
+		indices = (
+			("Constant", slots.constant),
+			("Collision", slots.collision),
+			("Slot 3", slots.slot3),
+			("Slot 4", slots.slot4),
+			("Logic Trigger", slots.logic_trigger),
+			("Slot 6", slots.slot6),
+			("Slot 7", slots.slot7),
+		)
+
+		for slot_name, seq_idx in indices:
+			if seq_idx == -1:
+				
+				seq_box = col.box()
+				seq_header = seq_box.row()
+				seq_header = seq_header.split(factor=0.3)
+
+				seq_header.label(text=slot_name)
+
+				seq_header.operator(
+					SSX2_OP_WorldLogicSlotSetTESTING.bl_idname,
+					text="Nothing"
+				).index = -1
+
+
+				logic_draw = LogicDraw(scene)
+
+
+				continue
+
+
+
+
+			else:
+				seq = sequences[seq_idx]
+
+				seq_box = col.box()
+				seq_header = seq_box.row()
+				seq_header = seq_header.split(factor=0.3)
+
+				# box_row = seq_box.row(align=True)
+				seq_header.operator(
+					SSX2_OP_WorldLogicExpandSequence.bl_idname,\
+					icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
+					else 'DISCLOSURE_TRI_RIGHT',emboss=False,text=slot_name).index = seq_idx # TODO this is a temp operator............
+				# ^ swap with new operator only for instance panel ^
+				# probably would have to be a scene property with 7 bools
+				# or an int inside the object's logicslots propgroup which can be bit shifted into bools 
+
+				
+
+				seq_header.operator(
+					SSX2_OP_WorldLogicSlotSetTESTING.bl_idname,
+					text=str(sequences[seq_idx].name),
+				).index = seq_idx
+
+
+				logic_draw = LogicDraw(scene)
+
+			
+			
+			# box_row.prop(seq, "name", text="")
+
+			if seq.expanded:
+				for j, fx_ref in enumerate(seq.effect_refs):
+					# print("kind", fx_ref.kind, "index" fx_ref.index)
+
+					fx_box = seq_box.box()
+
+					row_a = fx_box.row(align=True)
+
+					# box_col = fx_box.column()
+					# fx_box = fx_box.grid_flow()
+					
+
+					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+
+
+					row_a.separator()
+
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, seq_idx, j)
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, seq_idx, j)
+
 
 class SSX2_CurvePropPanel(SSX2_Panel):
 	bl_label = "BX Spline Curve"
@@ -682,6 +787,25 @@ class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+class SSX2_OP_WorldLogicSlotSetTESTING(bpy.types.Operator):
+	bl_idname = "wm.ssx2_logic_slot_set_testing"
+	bl_label = ""
+	bl_description = "Logic Slot Set Testing"
+
+	index: bpy.props.IntProperty()
+
+	def execute(self, context):
+
+		if self.index == -1:
+			print(-1)
+		else:
+
+			seq = context.scene.ssx2_LogicSequences[self.index]
+
+			print(seq)
+
+		return {'FINISHED'}
+
 class SSX2_OP_WorldShowPathEvent(bpy.types.Operator):
 	bl_idname = "wm.ssx2_show_path_event"
 	bl_label = ""
@@ -735,6 +859,7 @@ classes = (
 	SSX2_WorldExportPanel,
 	
 	SSX2_EmptyPropPanel,
+	SSX2_PT_LogicSlotsSet,
 	SSX2_CurvePropPanel,
 	SSX2_MaterialPropPanel,
 	SSX2_PatchPropPanel,
@@ -743,6 +868,7 @@ classes = (
 
 	SSX2_OP_WorldExpandUIBoxes,
 	SSX2_OP_WorldLogicExpandSequence,
+	SSX2_OP_WorldLogicSlotSetTESTING,
 	SSX2_OP_WorldShowPathEvent,
 )
 
