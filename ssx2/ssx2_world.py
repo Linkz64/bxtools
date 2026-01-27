@@ -2,6 +2,17 @@ import bpy
 from bpy.utils import register_class, unregister_class
 from bpy_extras.io_utils import ImportHelper
 from mathutils import Vector, Matrix
+from bpy.types import PropertyGroup, Operator
+from bpy.props import (
+	BoolProperty,
+	CollectionProperty,
+	EnumProperty,
+	FloatProperty,
+	IntProperty,
+	PointerProperty,
+	StringProperty,
+)
+
 from math import ceil, pi
 from subprocess import Popen
 import json
@@ -147,7 +158,7 @@ def event_type_to_enum(event_type) -> str:
 
 ### Operators
 
-class SSX2_OP_AddInstance(bpy.types.Operator): # change this to use collection instead of model object
+class SSX2_OP_AddInstance(Operator): # change this to use collection instead of model object
 	bl_idname = 'object.ssx2_add_instance'
 	bl_label = "Model Instance"
 	bl_description = "Generate an instance"
@@ -196,7 +207,7 @@ class SSX2_OP_AddInstance(bpy.types.Operator): # change this to use collection i
 			print(mdl.name, mdl.type, 'Failed')
 			return {'CANCELLED'}
 
-class SSX2_OP_AddSplineBezier(bpy.types.Operator):
+class SSX2_OP_AddSplineBezier(Operator):
 	bl_idname = 'object.ssx2_add_spline_bezier'
 	bl_label = "Bezier Curve"
 	bl_description = 'Generate a bezier curve'
@@ -239,7 +250,7 @@ class SSX2_OP_AddSplineBezier(bpy.types.Operator):
 
 		return {"FINISHED"}
 
-class SSX2_OP_AddSplineNURBS(bpy.types.Operator):
+class SSX2_OP_AddSplineNURBS(Operator):
 	bl_idname = 'object.ssx2_add_spline_nurbs'
 	bl_label = "NURBS Curve"
 	bl_description = 'Generate a NURBS curve'
@@ -280,13 +291,13 @@ class SSX2_OP_AddSplineNURBS(bpy.types.Operator):
 
 		return {"FINISHED"}
 
-class SSX2_OP_AddPath(bpy.types.Operator):
+class SSX2_OP_AddPath(Operator):
 	bl_idname = 'object.ssx2_add_path'
 	bl_label = "Add Path"
 	bl_description = 'Generate a path'
 	bl_options = {'REGISTER', 'UNDO'}
 
-	empties: bpy.props.BoolProperty(name="Use Empties", default=False)
+	empties: BoolProperty(name="Use Empties", default=False)
 
 	def execute(self, context):
 
@@ -383,7 +394,7 @@ class SSX2_OP_AddPath(bpy.types.Operator):
 
 		return {"FINISHED"}
 
-class SSX2_OP_AddPathChild(bpy.types.Operator):
+class SSX2_OP_AddPathChild(Operator):
 	bl_idname = 'object.ssx2_add_path_child'
 	bl_label = "Add Path Child"
 	bl_description = 'Generate a child node for the active node'
@@ -431,7 +442,7 @@ class SSX2_OP_AddPathChild(bpy.types.Operator):
 
 		return {"FINISHED"}
 
-class SSX2_OP_PathEventAdd(bpy.types.Operator):
+class SSX2_OP_PathEventAdd(Operator):
 	bl_idname = "object.ssx2_add_path_event"
 	bl_label = "Add Event"
 
@@ -442,7 +453,7 @@ class SSX2_OP_PathEventAdd(bpy.types.Operator):
 		#new_event.name = f"Event {len(events)}"#{len(events):03}"
 		return {'FINISHED'}
 
-class SSX2_OP_PathEventRemove(bpy.types.Operator):
+class SSX2_OP_PathEventRemove(Operator):
 	bl_idname = "object.ssx2_remove_path_event"
 	bl_label = "Remove Event"
 	bl_options = {'REGISTER', 'UNDO'}
@@ -491,7 +502,7 @@ class SSX2_OP_PathEventRemove(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
+class SSX2_OP_WorldInitiateProject(Operator):
 	bl_idname = "scene.ssx2_world_initiate_project"
 	bl_label = "Initiate Project"
 	bl_description = "Create project collections and set recommended view settings"
@@ -541,7 +552,7 @@ class SSX2_OP_WorldInitiateProject(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
+class SSX2_OP_WorldReloadNodeTrees(Operator):
 	bl_idname = "scene.ssx2_world_reload_node_trees"
 	bl_label = "Reload Node Trees"
 	bl_description = "Reloads geometry nodes and material nodes from templates.blend"
@@ -717,7 +728,7 @@ class SSX2_OP_WorldReloadNodeTrees(bpy.types.Operator):
 
 
 
-class SSX2_OP_WorldImport(bpy.types.Operator):
+class SSX2_OP_WorldImport(Operator):
 	bl_idname = "wm.ssx2_import_world"
 	bl_label = "Import"
 	bl_description = "Import world"
@@ -2209,7 +2220,7 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_OP_WorldExport(bpy.types.Operator):
+class SSX2_OP_WorldExport(Operator):
 	bl_idname = "wm.ssx2_export_world"
 	bl_label = "Export"
 	bl_description = "Export world"
@@ -3169,13 +3180,13 @@ class SSX2_OP_WorldExport(bpy.types.Operator):
 		self.report({'INFO'}, "Exported")
 		return {'FINISHED'}
 
-class SSX2_OP_SelectModel(bpy.types.Operator):
+class SSX2_OP_SelectModel(Operator):
 	bl_idname = "scene.ssx2_select_model"
 	bl_label = "Select Model"
 	bl_description = "Active selects the Model collection and object"
 	bl_options = {'REGISTER', 'UNDO'}
 
-	add_mode: bpy.props.BoolProperty(default=False)
+	add_mode: BoolProperty(default=False)
 
 	def execute(self, context):
 		active_object = bpy.context.view_layer.objects.active
@@ -3209,11 +3220,11 @@ class SSX2_OP_SelectModel(bpy.types.Operator):
 		self.report({"WARNING"}, "Collection not found")
 		return {'CANCELLED'}
 
-class SSX2_OP_ChooseMultitoolExe(bpy.types.Operator, ImportHelper):
+class SSX2_OP_ChooseMultitoolExe(Operator, ImportHelper):
 	bl_idname = "scene.ssx2_choose_multitool_exe"
 	bl_label = "Set Multitool Path"
 
-	filter_glob: bpy.props.StringProperty(default="*.exe", options={'HIDDEN'})
+	filter_glob: StringProperty(default="*.exe", options={'HIDDEN'})
 
 	def execute(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
@@ -3222,132 +3233,132 @@ class SSX2_OP_ChooseMultitoolExe(bpy.types.Operator, ImportHelper):
 
 ### PropertyGroups
 
-class SSX2_WorldImportExportPropGroup(bpy.types.PropertyGroup): # ssx2_WorldImportExportProps
-	importFolderPath: bpy.props.StringProperty(name="", subtype='DIR_PATH', 
+class SSX2_WorldImportExportPropGroup(PropertyGroup):
+	importFolderPath: StringProperty(name="", subtype='DIR_PATH', 
 		default="",
 		description="Folder that contains the world files")
-	worldChoice: bpy.props.EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
-	worldChoiceCustom: bpy.props.StringProperty(name="", default="gari", subtype='NONE',
+	worldChoice: EnumProperty(name='World Choice', items=enum_ssx2_world, default='gari')
+	worldChoiceCustom: StringProperty(name="", default="gari", subtype='NONE',
 		description="Name of input file e.g gari, megaple, pipe")
-	# importTextures: bpy.props.BoolProperty(name="Import Textures", default=True)
-	# importNames: bpy.props.BoolProperty(name="Import Names", default=True)
+	# importTextures: BoolProperty(name="Import Textures", default=True)
+	# importNames: BoolProperty(name="Import Names", default=True)
 
 	# patches
-	importPatches: bpy.props.BoolProperty(name="Import Patches", default=True)
-	expandImportPatches: bpy.props.BoolProperty(default=False)
-	patchImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
-	patchImportAsControlGrid: bpy.props.BoolProperty(default=False)
+	importPatches: BoolProperty(name="Import Patches", default=True)
+	expandImportPatches: BoolProperty(default=False)
+	patchImportGrouping: EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
+	patchImportAsControlGrid: BoolProperty(default=False)
 
 	# models & instances
-	importModels: bpy.props.BoolProperty(name="Import Models", default=False)
-	expandImportModel: bpy.props.BoolProperty(default=False)
-	# modelImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
-	instanceImportGrouping: bpy.props.EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='NONE')
+	importModels: BoolProperty(name="Import Models", default=False)
+	expandImportModel: BoolProperty(default=False)
+	# modelImportGrouping: EnumProperty(name='Grouping', items=enum_ssx2_patch_group, default='BATCH')
+	instanceImportGrouping: EnumProperty(name='Grouping', items=enum_ssx2_instance_group, default='NONE')
 
 	# splines
-	importSplines: bpy.props.BoolProperty(name="Import Splines", default=False)
-	expandImportSplines: bpy.props.BoolProperty(default=False)
-	splineImportAsNURBS: bpy.props.BoolProperty(default=False)
+	importSplines: BoolProperty(name="Import Splines", default=False)
+	expandImportSplines: BoolProperty(default=False)
+	splineImportAsNURBS: BoolProperty(default=False)
 
 	# paths
-	importPaths: bpy.props.BoolProperty(name="Import Paths", default=False)
-	importPathsAsEmpties: bpy.props.BoolProperty(default=False)
-	expandImportPaths: bpy.props.BoolProperty(default=False)
+	importPaths: BoolProperty(name="Import Paths", default=False)
+	importPathsAsEmpties: BoolProperty(default=False)
+	expandImportPaths: BoolProperty(default=False)
 
 	# lights
-	importLights: bpy.props.BoolProperty(name="Import Lights", default=False)
-	lightSpotSize: bpy.props.FloatProperty(name="Spot Light Size", default=2.0943951, min=0.0, max=pi)
-	lightSpotBlend: bpy.props.FloatProperty(name="Spot Light Blend", default=1.0, min=0.0, max=1.0)
+	importLights: BoolProperty(name="Import Lights", default=False)
+	lightSpotSize: FloatProperty(name="Spot Light Size", default=2.0943951, min=0.0, max=pi)
+	lightSpotBlend: FloatProperty(name="Spot Light Blend", default=1.0, min=0.0, max=1.0)
 
-	lightDirectionalMultiplier: bpy.props.FloatProperty(name="Spot Directional Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
-	lightSpotMultiplier: bpy.props.FloatProperty(name="Spot Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
-	lightPointMultiplier: bpy.props.FloatProperty(name="Point Light Multiplier", default=1000.0, soft_min=-100.0, soft_max=10000.0)
-	lightAmbientMultiplier: bpy.props.FloatProperty(name="Ambient Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
+	lightDirectionalMultiplier: FloatProperty(name="Spot Directional Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
+	lightSpotMultiplier: FloatProperty(name="Spot Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
+	lightPointMultiplier: FloatProperty(name="Point Light Multiplier", default=1000.0, soft_min=-100.0, soft_max=10000.0)
+	lightAmbientMultiplier: FloatProperty(name="Ambient Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
 
 
 
 	# export
-	exportFolderPath: bpy.props.StringProperty(subtype='DIR_PATH', default="",
+	exportFolderPath: StringProperty(subtype='DIR_PATH', default="",
 		description="Export folder path")
-	exportAutoBuild: bpy.props.BoolProperty(name="Auto Build", default=False)
+	exportAutoBuild: BoolProperty(name="Auto Build", default=False)
 
-	exportPatches: bpy.props.BoolProperty(name="Export Patches", default=True)
-	exportPatchesCages: bpy.props.BoolProperty(name="Cages", default=True)
-	exportPatchesOverride: bpy.props.BoolProperty(name="Override", default=False)
+	exportPatches: BoolProperty(name="Export Patches", default=True)
+	exportPatchesCages: BoolProperty(name="Cages", default=True)
+	exportPatchesOverride: BoolProperty(name="Override", default=False)
 
-	exportSplines: bpy.props.BoolProperty(name="Export Splines", default=False)
-	exportSplinesOverride: bpy.props.BoolProperty(name="Override", default=False,
+	exportSplines: BoolProperty(name="Export Splines", default=False)
+	exportSplinesOverride: BoolProperty(name="Override", default=False,
 		description="Overrides existing JSON splines. Will delete JSON contents if 'Splines' collection is empty")
 
-	exportPathsGeneral: bpy.props.BoolProperty(name="Export Paths General", default=False)
-	exportPathsShowoff: bpy.props.BoolProperty(name="Export Paths Showoff", default=False)
+	exportPathsGeneral: BoolProperty(name="Export Paths General", default=False)
+	exportPathsShowoff: BoolProperty(name="Export Paths Showoff", default=False)
 
-	exportModels: bpy.props.BoolProperty(name="Export Models", default=False)
-	exportInstances: bpy.props.BoolProperty(name="Export Instances", default=False)
+	exportModels: BoolProperty(name="Export Models", default=False)
+	exportInstances: BoolProperty(name="Export Instances", default=False)
 
-class SSX2_WorldModelCollectionPropGroup(bpy.types.PropertyGroup):
-	unknown3: bpy.props.IntProperty(name="Unknown3")
-	anim_time: bpy.props.FloatProperty(name="AnimTime")
+class SSX2_WorldModelCollectionPropGroup(PropertyGroup):
+	unknown3: IntProperty(name="Unknown3")
+	anim_time: FloatProperty(name="AnimTime")
 
-class SSX2_WorldModelObjectPropGroup(bpy.types.PropertyGroup):
-	flags: bpy.props.BoolProperty(name="Flags")
-	animation: bpy.props.IntProperty(name="Animation") # temp. replace with appropriate data later
-	animated: bpy.props.BoolProperty(name="Animated", default=False) # to show and hide panel
+class SSX2_WorldModelObjectPropGroup(PropertyGroup):
+	flags: BoolProperty(name="Flags")
+	animation: IntProperty(name="Animation") # temp. replace with appropriate data later
+	animated: BoolProperty(name="Animated", default=False) # to show and hide panel
 
 
 
-class SSX2_WorldPathEventPropGroup(bpy.types.PropertyGroup):
-	# name: bpy.props.StringProperty(name="", subtype='NONE',
+class SSX2_WorldPathEventPropGroup(PropertyGroup):
+	# name: StringProperty(name="", subtype='NONE',
 	# 	description="Name of the event")
-	type_enum: bpy.props.EnumProperty(name='Type', items=enum_ssx2_path_event_type)
-	type_custom: bpy.props.IntProperty(name="Type custom",
+	type_enum: EnumProperty(name='Type', items=enum_ssx2_path_event_type)
+	type_custom: IntProperty(name="Type custom",
 		description="",
 		min=-1,
 		max=1000)
-	value: bpy.props.IntProperty(name="Value",
+	value: IntProperty(name="Value",
 		description="",
 		min=-1,
 		max=1000)
-	start: bpy.props.FloatProperty(name="Start", min=0.0, update=update_event_start_end)
-	end: bpy.props.FloatProperty(name="End", min=0.0, update=update_event_start_end)
+	start: FloatProperty(name="Start", min=0.0, update=update_event_start_end)
+	end: FloatProperty(name="End", min=0.0, update=update_event_start_end)
 
-	checked: bpy.props.BoolProperty(name="", default=False)
+	checked: BoolProperty(name="", default=False)
 
-class SSX2_WorldPathPropGroup(bpy.types.PropertyGroup):
-	# mode: bpy.props.EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
-	reset: bpy.props.BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
+class SSX2_WorldPathPropGroup(PropertyGroup):
+	# mode: EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
+	reset: BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
 		description="Can be warped to when reset")
-	start: bpy.props.BoolProperty(name="Start Path", default=False, # FOR AIPATHS ONLY?
+	start: BoolProperty(name="Start Path", default=False, # FOR AIPATHS ONLY?
 		description="Acts as Start/Spawn Path")
 
-	aipaths_u3: bpy.props.IntProperty(name="AiPaths u1",
+	aipaths_u3: IntProperty(name="AiPaths u1",
 		description="",)
 		# min=-1,
 		# max=1000)
 
-	eventpaths_u2: bpy.props.FloatProperty(name="EventPaths u2",
+	eventpaths_u2: FloatProperty(name="EventPaths u2",
 		description="")
 
-	visible_event_index: bpy.props.IntProperty(default=-1)
+	visible_event_index: IntProperty(default=-1)
 
-	events: bpy.props.CollectionProperty(type=SSX2_WorldPathEventPropGroup)
+	events: CollectionProperty(type=SSX2_WorldPathEventPropGroup)
 
-	# active_event_index = bpy.props.IntProperty(default=0)
+	# active_event_index = IntProperty(default=0)
 
-class SSX2_WorldSplinePropGroup(bpy.types.PropertyGroup): # ssx2_SplineProps
-	type: bpy.props.EnumProperty(name='Spline Type', items=enum_ssx2_surface_type_spline)
+class SSX2_WorldSplinePropGroup(PropertyGroup): # ssx2_SplineProps
+	type: EnumProperty(name='Spline Type', items=enum_ssx2_surface_type_spline)
 
 	# change these to enum? spline_hide_mode = (NONE, SHOWOFF, RACE)
 	#	assuming showoff and race set to True hides it in every mode
 	#
-	# hideShowoff: bpy.props.BoolProperty(name="Hide Showoff", default=False,
+	# hideShowoff: BoolProperty(name="Hide Showoff", default=False,
 	# 	description="Hide in showoff modes.")
-	# hideRace: bpy.props.BoolProperty(name="Hide Race", default=False,
+	# hideRace: BoolProperty(name="Hide Race", default=False,
 	# 	description="Hide in race modes.")
 
-class SSX2_WorldUIPropGroup(bpy.types.PropertyGroup): # ssx2_WorldUIProps class definition
-	type: bpy.props.EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
-	patchSelectByType: bpy.props.EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
+class SSX2_WorldUIPropGroup(PropertyGroup): # ssx2_WorldUIProps class definition
+	type: EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
+	patchSelectByType: EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
 		description="Select all patches with the same type")
 
 
@@ -3383,18 +3394,18 @@ def ssx2_world_register():
 	for c in classes:
 		register_class(c)
 
-	bpy.types.Scene.ssx2_WorldProjectMode = bpy.props.EnumProperty(name='Project Mode', items=enum_ssx2_world_project_mode, default='JSON')
+	bpy.types.Scene.ssx2_WorldProjectMode = EnumProperty(name='Project Mode', items=enum_ssx2_world_project_mode, default='JSON')
 
-	bpy.types.Scene.ssx2_WorldImportExportProps = bpy.props.PointerProperty(type=SSX2_WorldImportExportPropGroup)
-	bpy.types.Scene.ssx2_WorldUIProps = bpy.props.PointerProperty(type=SSX2_WorldUIPropGroup)
-	bpy.types.Collection.ssx2_ModelCollectionProps = bpy.props.PointerProperty(type=SSX2_WorldModelCollectionPropGroup)
-	bpy.types.Object.ssx2_ModelObjectProps = bpy.props.PointerProperty(type=SSX2_WorldModelObjectPropGroup)
-	bpy.types.Object.ssx2_SplineProps = bpy.props.PointerProperty(type=SSX2_WorldSplinePropGroup)
-	bpy.types.Object.ssx2_PathProps = bpy.props.PointerProperty(type=SSX2_WorldPathPropGroup)
-	bpy.types.Object.ssx2_EmptyMode = bpy.props.EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
-	bpy.types.Object.ssx2_CurveMode = bpy.props.EnumProperty(name='Curve Mode', items=enum_ssx2_curve_mode)
+	bpy.types.Scene.ssx2_WorldImportExportProps = PointerProperty(type=SSX2_WorldImportExportPropGroup)
+	bpy.types.Scene.ssx2_WorldUIProps = PointerProperty(type=SSX2_WorldUIPropGroup)
+	bpy.types.Collection.ssx2_ModelCollectionProps = PointerProperty(type=SSX2_WorldModelCollectionPropGroup)
+	bpy.types.Object.ssx2_ModelObjectProps = PointerProperty(type=SSX2_WorldModelObjectPropGroup)
+	bpy.types.Object.ssx2_SplineProps = PointerProperty(type=SSX2_WorldSplinePropGroup)
+	bpy.types.Object.ssx2_PathProps = PointerProperty(type=SSX2_WorldPathPropGroup)
+	bpy.types.Object.ssx2_EmptyMode = EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
+	bpy.types.Object.ssx2_CurveMode = EnumProperty(name='Curve Mode', items=enum_ssx2_curve_mode)
 
-	bpy.types.Object.ssx2_ModelForInstance = bpy.props.PointerProperty(type=bpy.types.Collection, poll=poll_model_for_inst, update=update_model_for_inst)
+	bpy.types.Object.ssx2_ModelForInstance = PointerProperty(type=bpy.types.Collection, poll=poll_model_for_inst, update=update_model_for_inst)
 
 
 def ssx2_world_unregister():

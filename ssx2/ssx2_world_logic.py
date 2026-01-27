@@ -15,6 +15,8 @@ from bpy.props import (
 
 )
 
+
+
 def update_sequence_name(self, context):
 	if self.disable_name_update_func:
 		self.disable_name_update_func = False
@@ -33,7 +35,7 @@ def update_sequence_name(self, context):
 
 		self.disable_name_update_func = True
 		self.name = new_name
-		
+
 
 
 class LogicImporters:
@@ -508,22 +510,7 @@ class SSX2_OP_LogicTest(Operator):
 
 
 
-
-classes = (
-	SSX2_PG_WorldEffectUndefined,
-	SSX2_PG_WorldEffectDeadNode,
-	SSX2_PG_WorldEffectTextureFlip,
-	SSX2_PG_WorldEffectWait,
-
-	SSX2_PG_WorldEffectRef,
-	SSX2_PG_WorldEffects,
-
-	SSX2_PG_WorldLogicSequence,
-	SSX2_PG_WorldLogicSlotsSet,
-
-	SSX2_OP_EffectMoveUpDown,
-	SSX2_OP_LogicTest,
-)
+### Functions
 
 def update_sequence_choice_constant(self, context):
 	choice_name = self.ssx2_LogicSequenceChoiceConstant
@@ -596,6 +583,24 @@ def update_sequence_choice_slot7(self, context):
 		self.ssx2_LogicSequenceChoiceSlot7 = ""
 
 
+classes = (
+	SSX2_PG_WorldEffectUndefined,
+	SSX2_PG_WorldEffectDeadNode,
+	SSX2_PG_WorldEffectTextureFlip,
+	SSX2_PG_WorldEffectWait,
+
+	SSX2_PG_WorldEffectRef,
+	SSX2_PG_WorldEffects,
+
+	SSX2_PG_WorldLogicSequence,
+	SSX2_PG_WorldLogicSlotsSet,
+
+	SSX2_OP_EffectMoveUpDown,
+	SSX2_OP_LogicTest,
+)
+
+
+
 
 def ssx2_world_logic_register():
 	for c in classes:
@@ -627,6 +632,7 @@ def ssx2_world_logic_unregister():
 
 	del bpy.types.Object.ssx2_LogicSlotsSet
 	del bpy.types.Scene.ssx2_LogicSequences
+	del bpy.types.Scene.ssx2_Effects
 
 	for c in classes:
 		unregister_class(c)
