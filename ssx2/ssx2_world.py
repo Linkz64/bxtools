@@ -3233,7 +3233,7 @@ class SSX2_OP_ChooseMultitoolExe(Operator, ImportHelper):
 
 ### PropertyGroups
 
-class SSX2_WorldImportExportPropGroup(PropertyGroup):
+class SSX2_PG_WorldImportExport(PropertyGroup):
 	importFolderPath: StringProperty(name="", subtype='DIR_PATH', 
 		default="",
 		description="Folder that contains the world files")
@@ -3296,18 +3296,18 @@ class SSX2_WorldImportExportPropGroup(PropertyGroup):
 	exportModels: BoolProperty(name="Export Models", default=False)
 	exportInstances: BoolProperty(name="Export Instances", default=False)
 
-class SSX2_WorldModelCollectionPropGroup(PropertyGroup):
+class SSX2_PG_WorldModelCollection(PropertyGroup):
 	unknown3: IntProperty(name="Unknown3")
 	anim_time: FloatProperty(name="AnimTime")
 
-class SSX2_WorldModelObjectPropGroup(PropertyGroup):
+class SSX2_PG_WorldModelObject(PropertyGroup):
 	flags: BoolProperty(name="Flags")
 	animation: IntProperty(name="Animation") # temp. replace with appropriate data later
 	animated: BoolProperty(name="Animated", default=False) # to show and hide panel
 
 
 
-class SSX2_WorldPathEventPropGroup(PropertyGroup):
+class SSX2_PG_WorldPathEvent(PropertyGroup):
 	# name: StringProperty(name="", subtype='NONE',
 	# 	description="Name of the event")
 	type_enum: EnumProperty(name='Type', items=enum_ssx2_path_event_type)
@@ -3324,7 +3324,7 @@ class SSX2_WorldPathEventPropGroup(PropertyGroup):
 
 	checked: BoolProperty(name="", default=False)
 
-class SSX2_WorldPathPropGroup(PropertyGroup):
+class SSX2_PG_WorldPath(PropertyGroup):
 	# mode: EnumProperty(name='Path Mode', items=enum_ssx2_path_mode)         # Ai / Events
 	reset: BoolProperty(name="Reset", default=True, # FOR AIPATHS ONLY?
 		description="Can be warped to when reset")
@@ -3341,11 +3341,11 @@ class SSX2_WorldPathPropGroup(PropertyGroup):
 
 	visible_event_index: IntProperty(default=-1)
 
-	events: CollectionProperty(type=SSX2_WorldPathEventPropGroup)
+	events: CollectionProperty(type=SSX2_PG_WorldPathEvent)
 
 	# active_event_index = IntProperty(default=0)
 
-class SSX2_WorldSplinePropGroup(PropertyGroup): # ssx2_SplineProps
+class SSX2_PG_WorldSpline(PropertyGroup): # ssx2_SplineProps
 	type: EnumProperty(name='Spline Type', items=enum_ssx2_surface_type_spline)
 
 	# change these to enum? spline_hide_mode = (NONE, SHOWOFF, RACE)
@@ -3356,20 +3356,20 @@ class SSX2_WorldSplinePropGroup(PropertyGroup): # ssx2_SplineProps
 	# hideRace: BoolProperty(name="Hide Race", default=False,
 	# 	description="Hide in race modes.")
 
-class SSX2_WorldUIPropGroup(PropertyGroup): # ssx2_WorldUIProps class definition
+class SSX2_PG_WorldUI(PropertyGroup): # ssx2_WorldUIProps class definition
 	type: EnumProperty(name='Surface Type', items=enum_ssx2_surface_type)
 	patchSelectByType: EnumProperty(name='Select by Surface Type', items=enum_ssx2_surface_type_extended, update=update_select_by_surface_type,
 		description="Select all patches with the same type")
 
 
 classes = (
-	SSX2_WorldImportExportPropGroup,
-	SSX2_WorldUIPropGroup,
-	SSX2_WorldModelCollectionPropGroup,
-	SSX2_WorldModelObjectPropGroup,
-	SSX2_WorldSplinePropGroup,
-	SSX2_WorldPathEventPropGroup,
-	SSX2_WorldPathPropGroup,
+	SSX2_PG_WorldImportExport,
+	SSX2_PG_WorldUI,
+	SSX2_PG_WorldModelCollection,
+	SSX2_PG_WorldModelObject,
+	SSX2_PG_WorldSpline,
+	SSX2_PG_WorldPathEvent,
+	SSX2_PG_WorldPath,
 
 	SSX2_OP_BakeTest,
 
@@ -3396,12 +3396,12 @@ def ssx2_world_register():
 
 	bpy.types.Scene.ssx2_WorldProjectMode = EnumProperty(name='Project Mode', items=enum_ssx2_world_project_mode, default='JSON')
 
-	bpy.types.Scene.ssx2_WorldImportExportProps = PointerProperty(type=SSX2_WorldImportExportPropGroup)
-	bpy.types.Scene.ssx2_WorldUIProps = PointerProperty(type=SSX2_WorldUIPropGroup)
-	bpy.types.Collection.ssx2_ModelCollectionProps = PointerProperty(type=SSX2_WorldModelCollectionPropGroup)
-	bpy.types.Object.ssx2_ModelObjectProps = PointerProperty(type=SSX2_WorldModelObjectPropGroup)
-	bpy.types.Object.ssx2_SplineProps = PointerProperty(type=SSX2_WorldSplinePropGroup)
-	bpy.types.Object.ssx2_PathProps = PointerProperty(type=SSX2_WorldPathPropGroup)
+	bpy.types.Scene.ssx2_WorldImportExportProps = PointerProperty(type=SSX2_PG_WorldImportExport)
+	bpy.types.Scene.ssx2_WorldUIProps = PointerProperty(type=SSX2_PG_WorldUI)
+	bpy.types.Collection.ssx2_ModelCollectionProps = PointerProperty(type=SSX2_PG_WorldModelCollection)
+	bpy.types.Object.ssx2_ModelObjectProps = PointerProperty(type=SSX2_PG_WorldModelObject)
+	bpy.types.Object.ssx2_SplineProps = PointerProperty(type=SSX2_PG_WorldSpline)
+	bpy.types.Object.ssx2_PathProps = PointerProperty(type=SSX2_PG_WorldPath)
 	bpy.types.Object.ssx2_EmptyMode = EnumProperty(name='Empty Mode', items=enum_ssx2_empty_mode)
 	bpy.types.Object.ssx2_CurveMode = EnumProperty(name='Curve Mode', items=enum_ssx2_curve_mode)
 
