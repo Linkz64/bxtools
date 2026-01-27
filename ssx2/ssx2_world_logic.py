@@ -55,6 +55,7 @@ class LogicImporters:
 			},
 
 			4: self.import_wait,
+			14: self.import_multiplier,
 			24: self.import_teleport,
 
 		}
@@ -158,6 +159,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'texture_flip'
 
+	def import_multiplier(self, seq, json_fx):
+		fx_index = len(self.effects.multiplier)
+
+		fx = self.effects.multiplier.add()
+		fx.factor = json_fx["MultiplierScore"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'multiplier'
+
 	def import_teleport(self, seq, json_fx):
 		fx_index = len(self.effects.teleport)
 
@@ -222,6 +233,12 @@ class LogicDraw:
 		col.prop(effect, "length", text="Length")
 		col.prop(effect, "u4", text="Unknown 4")
 
+	def draw_multiplier(self, layout, index):
+		effect = self.effects.multiplier[index]
+		layout.prop(effect, "checked", text="Multiplier")
+		# layout.label(text="Wait")
+		layout.prop(effect, "factor", text="Factor")
+
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
 		layout.prop(effect, "checked", text="Teleport")
@@ -234,6 +251,7 @@ LogicDraw.effect_drawers = {
 	"dead_node": LogicDraw.draw_dead_node,
 	"wait": LogicDraw.draw_wait,
 	"texture_flip": LogicDraw.draw_texture_flip,
+	"multiplier": LogicDraw.draw_multiplier,
 	"teleport": LogicDraw.draw_teleport,
 }
 
@@ -242,6 +260,7 @@ enum_ssx2_effect_types = (
 	('dead_node', "Dead Node", ""),
 	('wait', "Wait", ""), # aka sleep
 	('texture_flip', "Texture Flip", ""),
+	('multiplier', "Multiplier", ""),
 	('teleport', "Teleport", ""),
 )
 
@@ -268,6 +287,10 @@ class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
+
+class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	factor: FloatProperty()
 
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -324,7 +347,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 13
 	# reset: CollectionProperty(type=)
 	# # type 14
-	# multiplier: CollectionProperty(type=)
+	multiplier: CollectionProperty(type=SSX2_PG_WorldEffectMultiplier)
 	# # type 17
 	# boost: CollectionProperty(type=)
 	# # type 18
@@ -614,6 +637,7 @@ classes = (
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectWait,
+	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectTeleport,
 
 	SSX2_PG_WorldEffectRef,
