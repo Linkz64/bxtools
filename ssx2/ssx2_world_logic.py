@@ -16,8 +16,11 @@ from bpy.props import (
 )
 
 def update_sequence_name(self, context):
-	name = self.name
+	if self.disable_name_update_func:
+		self.disable_name_update_func = False
+		return
 
+	name = self.name
 	name_list = [seq.name for seq in context.scene.ssx2_LogicSequences]
 
 	if name_list.count(name) > 1:
@@ -28,7 +31,9 @@ def update_sequence_name(self, context):
 			count += 1
 			new_name = f"{name}.{count:03}"
 
+		self.disable_name_update_func = True
 		self.name = new_name
+		
 
 
 class LogicImporters:
@@ -64,10 +69,11 @@ class LogicImporters:
 
 			seq = self.sequences.add()
 
+			# seq.disable_name_update_func = True
+
 			seq.name = "Sequence " + str(num_seq) \
 				if seq_name == "Effect " + str(i) \
 				else seq_name
-
 
 
 			for j, json_fx in enumerate(json_seq["Effects"]):
@@ -352,6 +358,7 @@ class SSX2_WorldEffectRef(PropertyGroup):
 
 class SSX2_WorldLogicSequence(PropertyGroup):
 	name: StringProperty(update=update_sequence_name)
+	disable_name_update_func: BoolProperty()
 	expanded: BoolProperty() 
 	effect_refs: CollectionProperty(type=SSX2_WorldEffectRef)
 	
