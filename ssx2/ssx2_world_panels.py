@@ -463,7 +463,7 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 
 class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 	bl_label = ""
-	bl_idname = "SSX2_PT_Testttttttttttttttttttttttttttttttt"
+	bl_idname = "SSX2_PT_logic_slots_set"
 	bl_parent_id = "OBJECT_PT_SSX2_Empty"
 	# bl_options = {"HIDE_HEADER"}
 
@@ -490,7 +490,6 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 	def draw(self, context):
 		col = self.layout.column()
-		self.layout.label(text="wow")
 		
 		scene = context.scene
 		obj = context.object
@@ -499,16 +498,16 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 		sequences = scene.ssx2_LogicSequences
 		
 		indices = (
-			("Constant", slots.constant),
-			("Collision", slots.collision),
-			("Slot 3", slots.slot3),
-			("Slot 4", slots.slot4),
-			("Logic Trigger", slots.logic_trigger),
-			("Slot 6", slots.slot6),
-			("Slot 7", slots.slot7),
+			(0, "Constant", slots.constant, 'ssx2_LogicSequenceChoiceConstant'),
+			(1, "Collision", slots.collision, 'ssx2_LogicSequenceChoiceCollision'),
+			(2, "Slot 3", slots.slot3, 'ssx2_LogicSequenceChoiceSlot3'),
+			(3, "Slot 4", slots.slot4, 'ssx2_LogicSequenceChoiceSlot4'),
+			(4, "Logic Trigger", slots.logic_trigger, 'ssx2_LogicSequenceChoiceLogicTrigger'),
+			(5, "Slot 6", slots.slot6, 'ssx2_LogicSequenceChoiceSlot6'),
+			(6, "Slot 7", slots.slot7, 'ssx2_LogicSequenceChoiceSlot7'),
 		)
 
-		for slot_name, seq_idx in indices:
+		for slot_i, slot_name, seq_idx, seq_choice in indices:
 			
 			if seq_idx == -1:
 				
@@ -518,38 +517,27 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 				seq_header.label(text=slot_name)
 
-				seq_header.operator(
-					SSX2_OP_WorldLogicSlotSetTESTING.bl_idname,
-					text="Nothing"
-				).index = -1
+				# seq_header.operator(
+				# 	SSX2_OP_WorldLogicSlotSetTESTING.bl_idname,
+				# 	text="Nothing"
+				# ).index = -1
 
 
-				logic_draw = LogicDraw(scene)
-
+				seq_header.prop_search(
+					scene,
+					seq_choice,
+					scene,
+					"ssx2_LogicSequences",
+					icon='VIEWZOOM',
+					text="",
+				)
 
 				continue
 
 
 
-
 			else:
 				seq = sequences[seq_idx]
-
-
-
-				col.prop_search(
-					scene,
-					"ssx2_LogicSequenceChoiceTEST",
-					scene,
-					"ssx2_LogicSequences",
-					icon='VIEWZOOM'
-				)
-
-				if scene.ssx2_LogicSequenceChoiceTEST:
-					col.label(text=f"Choice: {scene.ssx2_LogicSequenceChoiceTEST}")
-
-
-
 
 
 				seq_box = col.box()
@@ -565,39 +553,37 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 				# probably would have to be a scene property with 7 bools
 				# or an int inside the object's logicslots propgroup which can be bit shifted into bools 
 
-				
 
 				seq_header.operator(
-					SSX2_OP_WorldLogicSlotSetTESTING.bl_idname,
+					SSX2_OP_WorldLogicSlotClear.bl_idname,
 					text=str(sequences[seq_idx].name),
-				).index = seq_idx
+					icon='X'
+				).slot_i = slot_i
 
 
 				logic_draw = LogicDraw(scene)
-
 			
-			
-			# box_row.prop(seq, "name", text="")
+				# box_row.prop(seq, "name", text="")
 
-			if seq.expanded:
-				for j, fx_ref in enumerate(seq.effect_refs):
-					# print("kind", fx_ref.kind, "index" fx_ref.index)
+				if seq.expanded:
+					for j, fx_ref in enumerate(seq.effect_refs):
+						# print("kind", fx_ref.kind, "index" fx_ref.index)
 
-					fx_box = seq_box.box()
+						fx_box = seq_box.box()
 
-					row_a = fx_box.row(align=True)
+						row_a = fx_box.row(align=True)
 
-					# box_col = fx_box.column()
-					# fx_box = fx_box.grid_flow()
-					
+						# box_col = fx_box.column()
+						# fx_box = fx_box.grid_flow()
+						
 
-					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+						logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
 
 
-					row_a.separator()
+						row_a.separator()
 
-					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, seq_idx, j)
-					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, seq_idx, j)
+						row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, seq_idx, j)
+						row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, seq_idx, j)
 
 
 class SSX2_CurvePropPanel(SSX2_Panel):
@@ -805,22 +791,35 @@ class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_OP_WorldLogicSlotSetTESTING(bpy.types.Operator):
-	bl_idname = "wm.ssx2_logic_slot_set_testing"
+class SSX2_OP_WorldLogicSlotClear(bpy.types.Operator):
+	bl_idname = "wm.ssx2_logic_slot_clear"
 	bl_label = ""
-	bl_description = "Logic Slot Set Testing"
+	bl_description = "Clear this slot"
+	bl_options = {'REGISTER', 'UNDO'}
 
-	index: bpy.props.IntProperty()
+	slot_i: bpy.props.IntProperty()
 
 	def execute(self, context):
 
-		if self.index == -1:
-			print(-1)
-		else:
+		slot_i = self.slot_i
 
-			seq = context.scene.ssx2_LogicSequences[self.index]
+		obj = bpy.context.active_object
 
-			print(seq)
+		if slot_i == 0:
+			obj.ssx2_LogicSlotsSet.constant = -1
+		if slot_i == 1:
+			obj.ssx2_LogicSlotsSet.collision = -1
+		if slot_i == 2:
+			obj.ssx2_LogicSlotsSet.slot3 = -1
+		if slot_i == 3:
+			obj.ssx2_LogicSlotsSet.slot4 = -1
+		if slot_i == 4:
+			obj.ssx2_LogicSlotsSet.logic_trigger = -1
+		if slot_i == 5:
+			obj.ssx2_LogicSlotsSet.slot6 = -1
+		if slot_i == 6:
+			obj.ssx2_LogicSlotsSet.slot7 = -1
+
 
 		return {'FINISHED'}
 
@@ -886,7 +885,7 @@ classes = (
 
 	SSX2_OP_WorldExpandUIBoxes,
 	SSX2_OP_WorldLogicExpandSequence,
-	SSX2_OP_WorldLogicSlotSetTESTING,
+	SSX2_OP_WorldLogicSlotClear,
 	SSX2_OP_WorldShowPathEvent,
 )
 
