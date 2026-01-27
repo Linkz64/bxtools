@@ -46,6 +46,7 @@ class LogicImporters:
 		self.data = data
 
 		self.num_seq_start = len(sequences)
+		self.defer_refs_teleport = []
 
 		self.importers = {
 			0: {
@@ -54,6 +55,7 @@ class LogicImporters:
 			},
 
 			4: self.import_wait,
+			24: self.import_teleport,
 
 		}
 
@@ -156,6 +158,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'texture_flip'
 
+	def import_teleport(self, seq, json_fx):
+		fx_index = len(self.effects.teleport)
+
+		self.effects.teleport.add()
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'teleport'
+
+		self.defer_refs_teleport.append((fx_index, json_fx["TeleportInstanceIndex"]))
 
 
 
@@ -210,19 +222,27 @@ class LogicDraw:
 		col.prop(effect, "length", text="Length")
 		col.prop(effect, "u4", text="Unknown 4")
 
+	def draw_teleport(self, layout, index):
+		effect = self.effects.teleport[index]
+		layout.prop(effect, "checked", text="Teleport")
+		# layout.label(text="Wait")
+		layout.prop(effect, "target", text="Target")
+
 
 LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
 	"dead_node": LogicDraw.draw_dead_node,
 	"wait": LogicDraw.draw_wait,
 	"texture_flip": LogicDraw.draw_texture_flip,
+	"teleport": LogicDraw.draw_teleport,
 }
 
-enum_ssx2_effect_types = ( # move to constants?
+enum_ssx2_effect_types = (
 	('undefined', "UNDEFINED", ""),
 	('dead_node', "Dead Node", ""),
 	('wait', "Wait", ""), # aka sleep
-	('texture_flip', "Texture Flip", "")
+	('texture_flip', "Texture Flip", ""),
+	('teleport', "Teleport", ""),
 )
 
 
@@ -248,6 +268,12 @@ class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
+
+class SSX2_PG_WorldEffectTeleport(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	target: PointerProperty(type=bpy.types.Object)
+
+
 
 
 class SSX2_PG_WorldEffects(PropertyGroup):
@@ -306,7 +332,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 21
 	# function_run: CollectionProperty(type=)
 	# # type 24
-	# teleport: CollectionProperty(type=)
+	teleport: CollectionProperty(type=SSX2_PG_WorldEffectTeleport)
 	# # type 25
 	# spline_effect: CollectionProperty(type=)
 
@@ -588,6 +614,7 @@ classes = (
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectWait,
+	SSX2_PG_WorldEffectTeleport,
 
 	SSX2_PG_WorldEffectRef,
 	SSX2_PG_WorldEffects,

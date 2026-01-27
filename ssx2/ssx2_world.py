@@ -1047,14 +1047,14 @@ class SSX2_OP_WorldImport(Operator):
 
 		json_logic_slot_sets = data["EffectSlots"]
 
-		test = LogicImporters(
+		logic_importer = LogicImporters(
 			scene, 
 			scene.ssx2_LogicSequences, 
 			scene.ssx2_Effects,
 			data,
 		)
 
-		num_seq_start = test.num_seq_start
+		num_seq_start = logic_importer.num_seq_start
 
 
 
@@ -1480,9 +1480,14 @@ class SSX2_OP_WorldImport(Operator):
 		with open(instances_file_path, 'r') as f:
 			data = json.load(f)
 
+		instance_refs = []
+
 		for i, json_inst in enumerate(data["Instances"]):
 			#print(json_inst["InstanceName"])
 			empty = bpy.data.objects.new(json_inst["InstanceName"], None)
+
+			instance_refs.append(empty)
+
 			empty.empty_display_size = 100 / 100 # WorldScale
 			empty.rotation_mode = 'QUATERNION'
 			empty.empty_display_type = 'ARROWS'
@@ -1572,6 +1577,12 @@ class SSX2_OP_WorldImport(Operator):
 
 			else:
 				instances_collection.objects.link(empty)
+
+
+		effects = scene.ssx2_Effects
+		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
+			effects.teleport[fx_index].target = instance_refs[teleport_target]
+
 
 		print("importing instances took", time.time() - import_instances_time_start)
 
