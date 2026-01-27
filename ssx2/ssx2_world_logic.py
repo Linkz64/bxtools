@@ -65,7 +65,7 @@ class LogicImporters:
 
 		for i, json_seq in enumerate(self.data["EffectHeaders"]):
 			seq_name = json_seq["EffectName"]
-			print("\n seq:", i, seq_name)
+			print("\n seq:", i, "name:", seq_name)
 
 			seq = self.sequences.add()
 

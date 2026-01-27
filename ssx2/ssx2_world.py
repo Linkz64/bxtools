@@ -1495,15 +1495,26 @@ class SSX2_OP_WorldImport(bpy.types.Operator):
 			# if json_inst["EffectSlotIndex"] != -1:
 			slots_set = empty.ssx2_LogicSlotsSet
 
-			json_logic_slot_set = json_logic_slot_sets[json_inst["EffectSlotIndex"]]
+			if json_inst["EffectSlotIndex"] != -1:
+				json_logic_slot_set = json_logic_slot_sets[json_inst["EffectSlotIndex"]]
 
-			slots_set.constant = json_logic_slot_set["PersistantEffectSlot"] + num_seq_start
-			slots_set.collision = json_logic_slot_set["CollisionEffectSlot"] + num_seq_start
-			slots_set.slot3 = json_logic_slot_set["Slot3"] + num_seq_start
-			slots_set.slot4 = json_logic_slot_set["Slot4"] + num_seq_start
-			slots_set.logic_trigger = json_logic_slot_set["EffectTriggerSlot"] + num_seq_start
-			slots_set.slot6 = json_logic_slot_set["Slot6"] + num_seq_start
-			slots_set.slot7 = json_logic_slot_set["Slot7"] + num_seq_start
+				slot_constant = json_logic_slot_set["PersistantEffectSlot"]
+				slot_collision = json_logic_slot_set["CollisionEffectSlot"]
+				slot_slot3 = json_logic_slot_set["Slot3"]
+				slot_slot4 = json_logic_slot_set["Slot4"]
+				slot_logic_trigger = json_logic_slot_set["EffectTriggerSlot"]
+				slot_slot6 = json_logic_slot_set["Slot6"]
+				slot_slot7 = json_logic_slot_set["Slot7"]
+
+				slots_set.constant = -1 if slot_constant == -1 else num_seq_start + slot_constant
+				slots_set.collision = -1 if slot_collision == -1 else num_seq_start + slot_collision
+				slots_set.slot3 = -1 if slot_slot3 == -1 else num_seq_start + slot_slot3
+				slots_set.slot4 = -1 if slot_slot4 == -1 else num_seq_start + slot_slot4
+				slots_set.logic_trigger = -1 if slot_logic_trigger == -1 else num_seq_start + slot_logic_trigger
+				slots_set.slot6 = -1 if slot_slot6 == -1 else num_seq_start + slot_slot6
+				slots_set.slot7 = -1 if slot_slot7 == -1 else num_seq_start + slot_slot7
+
+
 
 
 			for key in json_inst:
