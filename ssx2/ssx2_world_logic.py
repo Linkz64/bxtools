@@ -227,15 +227,15 @@ enum_ssx2_effect_types = ( # move to constants?
 
 ### Properties
 
-class SSX2_WorldEffectUndefined(PropertyGroup):
+class SSX2_PG_WorldEffectUndefined(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	json_string: StringProperty()
 
-class SSX2_WorldEffectDeadNode(PropertyGroup):
+class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	mode: IntProperty() # TODO: Convert to Enum
 
-class SSX2_WorldEffectTextureFlip(PropertyGroup):
+class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
 	direction: IntProperty()
@@ -243,23 +243,23 @@ class SSX2_WorldEffectTextureFlip(PropertyGroup):
 	length: FloatProperty()
 	u4: IntProperty()
 
-class SSX2_WorldEffectWait(PropertyGroup):
+class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
 
 
-class SSX2_WorldEffects(PropertyGroup):
+class SSX2_PG_WorldEffects(PropertyGroup):
 
-	undefined: CollectionProperty(type=SSX2_WorldEffectUndefined)
+	undefined: CollectionProperty(type=SSX2_PG_WorldEffectUndefined)
 
 	# type 0
 	# t0_s0: CollectionProperty(type=)
 	# t0_s2: CollectionProperty(type=)
-	dead_node: CollectionProperty(type=SSX2_WorldEffectDeadNode)
+	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
 	# counter: CollectionProperty(type=)
 	# t0_s7: CollectionProperty(type=)
 	# uv_scroll: CollectionProperty(type=)
-	texture_flip: CollectionProperty(type=SSX2_WorldEffectTextureFlip)
+	texture_flip: CollectionProperty(type=SSX2_PG_WorldEffectTextureFlip)
 	# fence_flex: CollectionProperty(type=)
 	# t0_s13: CollectionProperty(type=)
 	# t0_s14: CollectionProperty(type=)
@@ -283,7 +283,7 @@ class SSX2_WorldEffects(PropertyGroup):
 	# # type 3
 	# t3_s0: CollectionProperty(type=)
 	# # type 4
-	wait: CollectionProperty(type=SSX2_WorldEffectWait)
+	wait: CollectionProperty(type=SSX2_PG_WorldEffectWait)
 	# # type 5
 	# t5_s0: CollectionProperty(type=)
 
@@ -351,22 +351,22 @@ class SSX2_WorldEffects(PropertyGroup):
 	
 	"""
 
-class SSX2_WorldEffectRef(PropertyGroup):
+class SSX2_PG_WorldEffectRef(PropertyGroup):
 	index: IntProperty()
 	kind: EnumProperty(items=enum_ssx2_effect_types)
 
 
-class SSX2_WorldLogicSequence(PropertyGroup):
+class SSX2_PG_WorldLogicSequence(PropertyGroup):
 	name: StringProperty(update=update_sequence_name)
 	disable_name_update_func: BoolProperty()
 	expanded: BoolProperty() 
-	effect_refs: CollectionProperty(type=SSX2_WorldEffectRef)
+	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 	
 	# I could do it with indices:
 	# checked: CollectionProperty(type=?)
 
 
-class SSX2_WorldLogicSlotsSet(PropertyGroup):
+class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
 	constant: IntProperty(default=-1)
 	collision: IntProperty(default=-1)
 	slot3: IntProperty(default=-1)
@@ -510,16 +510,16 @@ class SSX2_OP_LogicTest(Operator):
 
 
 classes = (
-	SSX2_WorldEffectUndefined,
-	SSX2_WorldEffectDeadNode,
-	SSX2_WorldEffectTextureFlip,
-	SSX2_WorldEffectWait,
+	SSX2_PG_WorldEffectUndefined,
+	SSX2_PG_WorldEffectDeadNode,
+	SSX2_PG_WorldEffectTextureFlip,
+	SSX2_PG_WorldEffectWait,
 
-	SSX2_WorldEffectRef,
-	SSX2_WorldEffects,
+	SSX2_PG_WorldEffectRef,
+	SSX2_PG_WorldEffects,
 
-	SSX2_WorldLogicSequence,
-	SSX2_WorldLogicSlotsSet,
+	SSX2_PG_WorldLogicSequence,
+	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_OP_EffectMoveUpDown,
 	SSX2_OP_LogicTest,
@@ -597,15 +597,14 @@ def update_sequence_choice_slot7(self, context):
 
 
 
-
 def ssx2_world_logic_register():
 	for c in classes:
 		register_class(c)
 
 
-	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_WorldEffects)
-	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_WorldLogicSequence)
-	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_WorldLogicSlotsSet)
+	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_PG_WorldEffects)
+	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_PG_WorldLogicSequence)
+	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
 	bpy.types.Scene.ssx2_LogicSequenceChoiceConstant = StringProperty(name="Choice Constant", update=update_sequence_choice_constant)
 	bpy.types.Scene.ssx2_LogicSequenceChoiceCollision = StringProperty(name="Choice Collision", update=update_sequence_choice_collision)
