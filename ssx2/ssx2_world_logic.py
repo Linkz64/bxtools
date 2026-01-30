@@ -46,6 +46,7 @@ class LogicImporters:
 		self.data = data
 
 		self.num_seq_start = len(sequences)
+		self.defer_refs_run_on_target = []
 		self.defer_refs_teleport = []
 
 		self.importers = {
@@ -55,6 +56,7 @@ class LogicImporters:
 			},
 
 			4: self.import_wait,
+			7: self.import_run_on_target,
 			14: self.import_multiplier,
 			24: self.import_teleport,
 
@@ -144,6 +146,18 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'wait'
 
+	def import_run_on_target(self, seq, json_fx):
+		fx_index = len(self.effects.run_on_target)
+
+		self.effects.run_on_target.add()
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'run_on_target'
+
+		json_fx = json_fx["Instance"]
+		self.defer_refs_run_on_target.append((fx_index, json_fx["InstanceIndex"], json_fx["EffectIndex"]))
+
 	def import_texture_flip(self, seq, json_fx):
 		json_fx = json_fx["type0"]["TextureFlip"]
 		fx_index = len(self.effects.texture_flip)
@@ -210,14 +224,25 @@ class LogicDraw:
 	def draw_dead_node(self, layout, index):
 		effect = self.effects.dead_node[index]
 		layout.prop(effect, "checked", text="Dead Node")
-		# layout.label(text="Dead Node")
 		layout.prop(effect, "mode", text="Mode")
 
 	def draw_wait(self, layout, index):
 		effect = self.effects.wait[index]
 		layout.prop(effect, "checked", text="Wait")
-		# layout.label(text="Wait")
 		layout.prop(effect, "time", text="Time")
+
+	def draw_run_on_target(self, layout, index):
+		effect = self.effects.run_on_target[index]
+		layout.prop(effect, "checked", text="Run on Target")
+		layout.prop(effect, "target_instance", text="")
+		layout.prop_search(
+			effect,
+			"target_sequence",
+			bpy.context.scene,
+			"ssx2_LogicSequences",
+			icon='VIEWZOOM',
+			text="",
+		)
 
 	def draw_texture_flip(self, layout, index):
 		effect = self.effects.texture_flip[index]
@@ -225,7 +250,6 @@ class LogicDraw:
 		col = layout.column()
 
 		col.prop(effect, "checked", text="Texture Flip")
-		# layout.label(text="Texture Flip")
 
 		col.prop(effect, "u0", text="Unknown 0")
 		col.prop(effect, "direction", text="Direction")
@@ -236,13 +260,11 @@ class LogicDraw:
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
 		layout.prop(effect, "checked", text="Multiplier")
-		# layout.label(text="Wait")
 		layout.prop(effect, "factor", text="Factor")
 
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
 		layout.prop(effect, "checked", text="Teleport")
-		# layout.label(text="Wait")
 		layout.prop(effect, "target", text="Target")
 
 
@@ -250,6 +272,7 @@ LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
 	"dead_node": LogicDraw.draw_dead_node,
 	"wait": LogicDraw.draw_wait,
+	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"multiplier": LogicDraw.draw_multiplier,
 	"teleport": LogicDraw.draw_teleport,
@@ -258,7 +281,8 @@ LogicDraw.effect_drawers = {
 enum_ssx2_effect_types = (
 	('undefined', "UNDEFINED", ""),
 	('dead_node', "Dead Node", ""),
-	('wait', "Wait", ""), # aka sleep
+	('wait', "Wait", ""),
+	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
 	('multiplier', "Multiplier", ""),
 	('teleport', "Teleport", ""),
@@ -267,6 +291,31 @@ enum_ssx2_effect_types = (
 
 
 ### Properties
+
+class SSX2_PG_WorldEffectRef(PropertyGroup):
+	index: IntProperty()
+	kind: EnumProperty(items=enum_ssx2_effect_types)
+
+
+class SSX2_PG_WorldLogicSequence(PropertyGroup):
+	name: StringProperty(update=update_sequence_name)
+	disable_name_update_func: BoolProperty()
+	expanded: BoolProperty()
+	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
+	
+	# I could do it with indices:
+	# checked: CollectionProperty(type=?)
+
+
+class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
+	constant: IntProperty(default=-1)
+	collision: IntProperty(default=-1)
+	slot3: IntProperty(default=-1)
+	slot4: IntProperty(default=-1)
+	logic_trigger: IntProperty(default=-1)
+	slot6: IntProperty(default=-1)
+	slot7: IntProperty(default=-1)
+
 
 class SSX2_PG_WorldEffectUndefined(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -288,6 +337,11 @@ class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
 
+class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	target_instance: PointerProperty(type=bpy.types.Object)
+	target_sequence: StringProperty()
+
 class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	factor: FloatProperty()
@@ -301,7 +355,7 @@ class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 
 class SSX2_PG_WorldEffects(PropertyGroup):
 
-	undefined: CollectionProperty(type=SSX2_PG_WorldEffectUndefined)
+	undefined: CollectionProperty(type=SSX2_PG_WorldEffectUndefined) # aka JSON
 
 	# type 0
 	# t0_s0: CollectionProperty(type=)
@@ -339,7 +393,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# t5_s0: CollectionProperty(type=)
 
 	# # type 7
-	# instance_effect: CollectionProperty(type=)
+	run_on_target: CollectionProperty(type=SSX2_PG_WorldEffectRunOnTarget) # aka Script?
 	# # type 8
 	# play_sound: CollectionProperty(type=)
 	# # type 9
@@ -365,11 +419,11 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 0
 	│   ├── Sub 0
 	│   ├── Sub 2
-	│   ├── Sub 5 (Dead Node)
+	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter)
 	│   ├── Sub 7
 	│   ├── Sub 10 (UV Scroll)
-	│   ├── Sub 11 (Texture Flip)
+	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence Flex)
 	│   ├── Sub 13
 	│   ├── Sub 14
@@ -387,9 +441,9 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 1
 	│   └── Sub 2
 	├── Type 3
-	├── Type 4 (Wait)
+	├── Type 4 (Wait) --------------------
 	├── Type 5
-	├── Type 7 (Instance Effect)
+	├── Type 7 (Instance Effect, Run on Target)  --------------------
 	├── Type 8 (Play Sound)
 	├── Type 9
 	├── Type 13 (Reset)
@@ -397,34 +451,19 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 17 (Boost)
 	├── Type 18 (Trick Boost)
 	├── Type 21 (Function Run)
-	├── Type 24 (Teleport)
+	├── Type 24 (Teleport) --------------------
 	└── Type 25 (Spline Effect)
 	
 	"""
 
-class SSX2_PG_WorldEffectRef(PropertyGroup):
-	index: IntProperty()
-	kind: EnumProperty(items=enum_ssx2_effect_types)
 
 
-class SSX2_PG_WorldLogicSequence(PropertyGroup):
-	name: StringProperty(update=update_sequence_name)
-	disable_name_update_func: BoolProperty()
-	expanded: BoolProperty() 
-	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
-	
-	# I could do it with indices:
-	# checked: CollectionProperty(type=?)
 
 
-class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
-	constant: IntProperty(default=-1)
-	collision: IntProperty(default=-1)
-	slot3: IntProperty(default=-1)
-	slot4: IntProperty(default=-1)
-	logic_trigger: IntProperty(default=-1)
-	slot6: IntProperty(default=-1)
-	slot7: IntProperty(default=-1)
+
+
+
+
 
 
 
@@ -633,18 +672,19 @@ def update_sequence_choice_slot7(self, context):
 
 
 classes = (
+	SSX2_PG_WorldEffectRef,
+	SSX2_PG_WorldLogicSequence,
+	SSX2_PG_WorldLogicSlotsSet,
+
 	SSX2_PG_WorldEffectUndefined,
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectWait,
+	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectTeleport,
 
-	SSX2_PG_WorldEffectRef,
 	SSX2_PG_WorldEffects,
-
-	SSX2_PG_WorldLogicSequence,
-	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_OP_EffectMoveUpDown,
 	SSX2_OP_LogicTest,

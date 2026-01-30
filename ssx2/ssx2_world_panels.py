@@ -459,7 +459,7 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 
 			col.separator()
 
-			
+
 
 class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 	bl_label = ""
@@ -532,7 +532,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 					text="",
 				)
 
-				continue
+				# continue
 
 
 
