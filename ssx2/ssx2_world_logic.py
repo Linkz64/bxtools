@@ -217,22 +217,25 @@ class LogicDraw:
 
 	def draw_undefined(self, layout, index):
 		effect = self.effects.undefined[index]
-
+		layout.label(text="", icon='FILE_TEXT')
 		layout.prop(effect, "checked", text="JSON")
 		layout.prop(effect, "json_string", text="", expand=True)
 
 	def draw_dead_node(self, layout, index):
 		effect = self.effects.dead_node[index]
+		layout.label(text="", icon='GHOST_ENABLED')
 		layout.prop(effect, "checked", text="Dead Node")
 		layout.prop(effect, "mode", text="Mode")
 
 	def draw_wait(self, layout, index):
 		effect = self.effects.wait[index]
+		layout.label(text="", icon='TIME')
 		layout.prop(effect, "checked", text="Wait")
 		layout.prop(effect, "time", text="Time")
 
 	def draw_run_on_target(self, layout, index):
 		effect = self.effects.run_on_target[index]
+		layout.label(text="", icon='CON_OBJECTSOLVER')
 		layout.prop(effect, "checked", text="Run on Target")
 		layout.prop(effect, "target_instance", text="")
 		layout.prop_search(
@@ -247,8 +250,9 @@ class LogicDraw:
 	def draw_texture_flip(self, layout, index):
 		effect = self.effects.texture_flip[index]
 
-		col = layout.column()
+		layout.label(text="", icon='RENDERLAYERS')
 
+		col = layout.column()
 		col.prop(effect, "checked", text="Texture Flip")
 
 		col.prop(effect, "u0", text="Unknown 0")
@@ -259,11 +263,13 @@ class LogicDraw:
 
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
+		layout.label(text="", icon='FREEZE')
 		layout.prop(effect, "checked", text="Multiplier")
 		layout.prop(effect, "factor", text="Factor")
 
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
+		layout.label(text="", icon='CON_TRACKTO')
 		layout.prop(effect, "checked", text="Teleport")
 		layout.prop(effect, "target", text="Target")
 
