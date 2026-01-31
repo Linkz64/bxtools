@@ -469,35 +469,41 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 	"""
 	├── Type 0
-	│   ├── Sub 0
-	│   ├── Sub 2
+	│   ├── Sub 0 (Roller)
+	│   ├── Sub 2 (Debounce)
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter)
-	│   ├── Sub 7 (Direction Boost)
+	│   ├── Sub 7 (Push Boost)
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence Flex)
-	│   ├── Sub 13
-	│   ├── Sub 14
-	│   ├── Sub 15
+	│   ├── Sub 13 (Flag)
+	│   ├── Sub 14 (Cracked)
+	│   ├── Sub 15 (LapBoost)
+	│   ├── Sub 16 (RandomBoost) ???unused???
 	│   ├── Sub 17 (Crowd)
-	│   ├── Sub 18
-	│   ├── Sub 20
-	│   ├── Sub 23
-	│   ├── Sub 24
+	│   ├── Sub 18 (ZBoost)
+	│   ├── Sub 19 (UVScrollTexFlip) ???unused???
+	│   ├── Sub 20 (cMeshAnim)
+	│   ├── Sub 21 (TrickTrigger) ???unused???
+	│   ├── Sub 22 (Particle) ???unused???
+	│   ├── Sub 23 (Movie)
+	│   ├── Sub 24 (TubeEndBoost)
 	│   ├── Sub 256 (AnimObject)
-	│   ├── Sub 257
-	│   └── Sub 258
+	│   ├── Sub 257 (AnimDelta)
+	│   └── Sub 258 (AnimCombo)
+	│   └── Sub 259 (AnimTexFlip) ???unused???
+	├── Type 1 (Camera) ???unused???
 	├── Type 2
 	│   ├── Sub 0 (Emitter)
-	│   ├── Sub 1
-	│   └── Sub 2
-	├── Type 3
+	│   ├── Sub 1 (SplinePath)
+	│   └── Sub 2 (CollideEmitter)
+	├── Type 3 # similar to 9
 	├── Type 4 (Wait) --------------------
-	├── Type 5
+	├── Type 5 # int, int, float
 	├── Type 7 (Instance Effect, Run on Target)  --------------------
 	├── Type 8 (Play Sound)
-	├── Type 9
+	├── Type 9 # similar to 3
 	├── Type 13 (Reset)
 	├── Type 14 (Multiplier)
 	├── Type 17 (Speed Boost) --------------------
