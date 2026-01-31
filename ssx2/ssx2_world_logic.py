@@ -51,6 +51,7 @@ class LogicImporters:
 
 		self.importers = {
 			0: {
+				2: self.import_debounce,
 				5: self.import_dead_node,
 				11: self.import_texture_flip,
 			},
@@ -127,6 +128,16 @@ class LogicImporters:
 
 			# if i == 1:
 			# 	break
+
+	def import_debounce(self, seq, json_fx):
+		fx_index = len(self.effects.debounce)
+
+		fx = self.effects.debounce.add()
+		fx.duration = json_fx["type0"]["Debounce"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'debounce'
 
 	def import_dead_node(self, seq, json_fx):
 		fx_index = len(self.effects.dead_node)
@@ -243,6 +254,12 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="JSON")
 		layout.prop(effect, "json_string", text="", expand=True)
 
+	def draw_debounce(self, layout, index):
+		effect = self.effects.debounce[index]
+		layout.label(text="", icon='MOD_TIME')
+		layout.prop(effect, "checked", text="Debounce")
+		layout.prop(effect, "duration", text="Duration")
+
 	def draw_dead_node(self, layout, index):
 		effect = self.effects.dead_node[index]
 		layout.label(text="", icon='GHOST_ENABLED')
@@ -310,6 +327,7 @@ class LogicDraw:
 
 LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
+	"debounce": LogicDraw.draw_debounce,
 	"dead_node": LogicDraw.draw_dead_node,
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
@@ -321,7 +339,8 @@ LogicDraw.effect_drawers = {
 }
 
 enum_ssx2_effect_types = (
-	('undefined', "UNDEFINED", ""),
+	('undefined', "JSON", ""),
+	('debounce', "Debounce", ""),
 	('dead_node', "Dead Node", ""),
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
@@ -361,13 +380,18 @@ class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
 	slot7: IntProperty(default=-1)
 
 
-class SSX2_PG_WorldEffectUndefined(PropertyGroup):
+
+class SSX2_PG_WorldEffectUndefined(PropertyGroup): # JSON
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	json_string: StringProperty()
 
+class SSX2_PG_WorldEffectDebounce(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	duration: FloatProperty()
+
 class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	mode: IntProperty() # TODO: Convert to Enum
+	mode: IntProperty()
 
 class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -411,7 +435,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 	# type 0
 	# t0_s0: CollectionProperty(type=)
-	# t0_s2: CollectionProperty(type=)
+	debounce: CollectionProperty(type=SSX2_PG_WorldEffectDebounce)
 	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
 	# counter: CollectionProperty(type=)
 	# t0_s7: CollectionProperty(type=)
@@ -470,13 +494,13 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	"""
 	├── Type 0
 	│   ├── Sub 0 (Roller)
-	│   ├── Sub 2 (Debounce)
+	│   ├── Sub 2 (Debounce) --------------------
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter)
 	│   ├── Sub 7 (Push Boost)
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
-	│   ├── Sub 12 (Fence Flex)
+	│   ├── Sub 12 (Fence)
 	│   ├── Sub 13 (Flag)
 	│   ├── Sub 14 (Cracked)
 	│   ├── Sub 15 (LapBoost)
@@ -735,6 +759,7 @@ classes = (
 	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_PG_WorldEffectUndefined,
+	SSX2_PG_WorldEffectDebounce,
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectWait,
