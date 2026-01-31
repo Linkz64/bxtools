@@ -58,6 +58,7 @@ class LogicImporters:
 			4: self.import_wait,
 			7: self.import_run_on_target,
 			14: self.import_multiplier,
+			17: self.import_speed_boost,
 			24: self.import_teleport,
 
 		}
@@ -183,6 +184,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'multiplier'
 
+	def import_speed_boost(self, seq, json_fx):
+		fx_index = len(self.effects.speed_boost)
+
+		fx = self.effects.speed_boost.add()
+		fx.duration = json_fx["type17"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'speed_boost'
+
 	def import_teleport(self, seq, json_fx):
 		fx_index = len(self.effects.teleport)
 
@@ -267,6 +278,12 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Multiplier")
 		layout.prop(effect, "factor", text="Factor")
 
+	def draw_speed_boost(self, layout, index):
+		effect = self.effects.speed_boost[index]
+		layout.label(text="", icon='COLORSET_01_VEC')
+		layout.prop(effect, "checked", text="Speed Boost")
+		layout.prop(effect, "duration", text="Duration")
+
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
 		layout.label(text="", icon='CON_TRACKTO')
@@ -281,6 +298,7 @@ LogicDraw.effect_drawers = {
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"multiplier": LogicDraw.draw_multiplier,
+	"speed_boost": LogicDraw.draw_speed_boost,
 	"teleport": LogicDraw.draw_teleport,
 }
 
@@ -291,6 +309,7 @@ enum_ssx2_effect_types = (
 	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
 	('multiplier', "Multiplier", ""),
+	('speed_boost', "Speed Boost", ""),
 	('teleport', "Teleport", ""),
 )
 
@@ -352,6 +371,10 @@ class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	factor: FloatProperty()
 
+class SSX2_PG_WorldEffectSpeedBoost(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	duration: FloatProperty()
+
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	target: PointerProperty(type=bpy.types.Object)
@@ -409,7 +432,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 14
 	multiplier: CollectionProperty(type=SSX2_PG_WorldEffectMultiplier)
 	# # type 17
-	# boost: CollectionProperty(type=)
+	speed_boost: CollectionProperty(type=SSX2_PG_WorldEffectSpeedBoost)
 	# # type 18
 	# trick_boost: CollectionProperty(type=)
 	# # type 21
@@ -427,7 +450,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 2
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter)
-	│   ├── Sub 7
+	│   ├── Sub 7 (Direction Boost)
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence Flex)
@@ -454,7 +477,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 9
 	├── Type 13 (Reset)
 	├── Type 14 (Multiplier)
-	├── Type 17 (Boost)
+	├── Type 17 (Speed Boost) --------------------
 	├── Type 18 (Trick Boost)
 	├── Type 21 (Function Run)
 	├── Type 24 (Teleport) --------------------
@@ -688,6 +711,7 @@ classes = (
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectMultiplier,
+	SSX2_PG_WorldEffectSpeedBoost,
 	SSX2_PG_WorldEffectTeleport,
 
 	SSX2_PG_WorldEffects,
