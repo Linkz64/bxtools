@@ -59,6 +59,7 @@ class LogicImporters:
 			7: self.import_run_on_target,
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
+			18: self.import_trick_boost,
 			24: self.import_teleport,
 
 		}
@@ -194,6 +195,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'speed_boost'
 
+	def import_trick_boost(self, seq, json_fx):
+		fx_index = len(self.effects.trick_boost)
+
+		fx = self.effects.trick_boost.add()
+		fx.amount = json_fx["type18"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'trick_boost'
+
 	def import_teleport(self, seq, json_fx):
 		fx_index = len(self.effects.teleport)
 
@@ -284,6 +295,12 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Speed Boost")
 		layout.prop(effect, "duration", text="Duration")
 
+	def draw_trick_boost(self, layout, index):
+		effect = self.effects.trick_boost[index]
+		layout.label(text="", icon='COLORSET_03_VEC')
+		layout.prop(effect, "checked", text="Trick Boost")
+		layout.prop(effect, "amount", text="Amount")
+
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
 		layout.label(text="", icon='CON_TRACKTO')
@@ -299,6 +316,7 @@ LogicDraw.effect_drawers = {
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
+	"trick_boost": LogicDraw.draw_trick_boost,
 	"teleport": LogicDraw.draw_teleport,
 }
 
@@ -310,6 +328,7 @@ enum_ssx2_effect_types = (
 	('texture_flip', "Texture Flip", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
+	('trick_boost', "Trick Boost", ""),
 	('teleport', "Teleport", ""),
 )
 
@@ -375,6 +394,10 @@ class SSX2_PG_WorldEffectSpeedBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	duration: FloatProperty()
 
+class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	amount: FloatProperty()
+
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	target: PointerProperty(type=bpy.types.Object)
@@ -434,7 +457,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 17
 	speed_boost: CollectionProperty(type=SSX2_PG_WorldEffectSpeedBoost)
 	# # type 18
-	# trick_boost: CollectionProperty(type=)
+	trick_boost: CollectionProperty(type=SSX2_PG_WorldEffectTrickBoost)
 	# # type 21
 	# function_run: CollectionProperty(type=)
 	# # type 24
@@ -478,7 +501,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 13 (Reset)
 	├── Type 14 (Multiplier)
 	├── Type 17 (Speed Boost) --------------------
-	├── Type 18 (Trick Boost)
+	├── Type 18 (Trick Boost) --------------------
 	├── Type 21 (Function Run)
 	├── Type 24 (Teleport) --------------------
 	└── Type 25 (Spline Effect)
@@ -712,6 +735,7 @@ classes = (
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
+	SSX2_PG_WorldEffectTrickBoost,
 	SSX2_PG_WorldEffectTeleport,
 
 	SSX2_PG_WorldEffects,
