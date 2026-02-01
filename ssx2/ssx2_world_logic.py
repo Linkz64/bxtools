@@ -7,13 +7,14 @@ from bpy.props import (
 	CollectionProperty,
 	EnumProperty,
 	FloatProperty,
-	# FloatVectorProperty,
+	FloatVectorProperty,
 	IntProperty,
 	IntVectorProperty,
 	PointerProperty,
 	StringProperty,
 
 )
+from mathutils import Vector
 
 
 
@@ -53,6 +54,7 @@ class LogicImporters:
 			0: {
 				2: self.import_debounce,
 				5: self.import_dead_node,
+				7: self.import_push_boost,
 				11: self.import_texture_flip,
 			},
 
@@ -148,6 +150,25 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'dead_node'
+
+	def import_push_boost(self, seq, json_fx):
+		fx_index = len(self.effects.push_boost)
+
+		fx = self.effects.push_boost.add()
+
+		json_fx = json_fx["type0"]["Boost"]
+		fx.mode = json_fx["Mode"]
+		fx.unknown1 = json_fx["U1"]
+		fx.amount1 = json_fx["U2"]
+		fx.amount2 = json_fx["BoostAmount"]
+
+		dir_vec = Vector(json_fx["BoostDir"])
+		quat = dir_vec.to_track_quat('Y', 'Z')
+		fx.direction = quat.to_euler()
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'push_boost'
 
 	def import_wait(self, seq, json_fx):
 		fx_index = len(self.effects.wait)
@@ -266,6 +287,17 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Dead Node")
 		layout.prop(effect, "mode", text="Mode")
 
+	def draw_push_boost(self, layout, index):
+		effect = self.effects.push_boost[index]
+		layout.label(text="", icon='MOD_INSTANCE')
+		col = layout.column()
+		col.prop(effect, "checked", text="Push Boost")
+		col.prop(effect, "mode", text="Mode")
+		col.prop(effect, "unknown1", text="Unknown")
+		col.prop(effect, "amount1", text="Amount1")
+		col.prop(effect, "amount2", text="Amount2")
+		col.prop(effect, "direction", text="Direction")
+
 	def draw_wait(self, layout, index):
 		effect = self.effects.wait[index]
 		layout.label(text="", icon='TIME')
@@ -329,6 +361,7 @@ LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
 	"debounce": LogicDraw.draw_debounce,
 	"dead_node": LogicDraw.draw_dead_node,
+	"push_boost": LogicDraw.draw_push_boost,
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
@@ -342,6 +375,7 @@ enum_ssx2_effect_types = (
 	('undefined', "JSON", ""),
 	('debounce', "Debounce", ""),
 	('dead_node', "Dead Node", ""),
+	('push_boost', "Push Boost", ""),
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
@@ -393,6 +427,14 @@ class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	mode: IntProperty()
 
+class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	mode: IntProperty()
+	unknown1: FloatProperty()
+	amount1: FloatProperty() # multiplier?
+	amount2: FloatProperty() # speed? distance?
+	direction: FloatVectorProperty(subtype='EULER')
+
 class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
@@ -438,7 +480,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	debounce: CollectionProperty(type=SSX2_PG_WorldEffectDebounce)
 	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
 	# counter: CollectionProperty(type=)
-	# t0_s7: CollectionProperty(type=)
+	push_boost: CollectionProperty(type=SSX2_PG_WorldEffectPushBoost)
 	# uv_scroll: CollectionProperty(type=)
 	texture_flip: CollectionProperty(type=SSX2_PG_WorldEffectTextureFlip)
 	# fence_flex: CollectionProperty(type=)
@@ -497,7 +539,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 2 (Debounce) --------------------
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter)
-	│   ├── Sub 7 (Push Boost)
+	│   ├── Sub 7 (Push Boost) --------------------
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence)
@@ -761,6 +803,7 @@ classes = (
 	SSX2_PG_WorldEffectUndefined,
 	SSX2_PG_WorldEffectDebounce,
 	SSX2_PG_WorldEffectDeadNode,
+	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
