@@ -57,6 +57,7 @@ class LogicImporters:
 				7: self.import_push_boost,
 				11: self.import_texture_flip,
 				15: self.import_lap_boost,
+				18: self.import_z_boost,
 			},
 
 			4: self.import_wait,
@@ -223,6 +224,22 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'lap_boost'
 
+	def import_z_boost(self, seq, json_fx):
+		fx_index = len(self.effects.z_boost)
+
+		fx = self.effects.z_boost.add()
+		json_fx = json_fx["type0"]["type0Sub18"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'z_boost'
 
 	def import_multiplier(self, seq, json_fx):
 		fx_index = len(self.effects.multiplier)
@@ -361,6 +378,20 @@ class LogicDraw:
 		col.prop(effect, "u3", text="Unknown 3")
 		col.prop(effect, "u4", text="Unknown 4")
 
+	def draw_z_boost(self, layout, index):
+		effect = self.effects.z_boost[index]
+		layout.label(text="", icon="MOD_INSTANCE")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Z Boost")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
 		layout.label(text="", icon='FREEZE')
@@ -395,6 +426,7 @@ LogicDraw.effect_drawers = {
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"lap_boost": LogicDraw.draw_lap_boost,
+	"z_boost": LogicDraw.draw_z_boost,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
@@ -410,6 +442,7 @@ enum_ssx2_effect_types = (
 	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
 	('lap_boost', "Lap Boost", ""),
+	('z_boost', "Z Boost", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
@@ -482,6 +515,16 @@ class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
 	u3: IntProperty()
 	u4: FloatProperty()
 
+class SSX2_PG_WorldEffectZBoost(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: FloatProperty()
+	u1: FloatProperty()
+	u2: IntProperty()
+	u3: IntProperty()
+	u4: FloatProperty()
+	u5: FloatProperty()
+	u6: FloatProperty()
+
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
@@ -527,7 +570,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# t0_s14: CollectionProperty(type=)
 	lap_boost: CollectionProperty(type=SSX2_PG_WorldEffectLapBoost)
 	# crowd: CollectionProperty(type=)
-	# t0_s18: CollectionProperty(type=)
+	z_boost: CollectionProperty(type=SSX2_PG_WorldEffectZBoost)
 	# t0_s20: CollectionProperty(type=)
 	# t0_s23: CollectionProperty(type=)
 	# t0_s24: CollectionProperty(type=)
@@ -845,6 +888,7 @@ classes = (
 	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectLapBoost,
+	SSX2_PG_WorldEffectZBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectMultiplier,
