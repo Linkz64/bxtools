@@ -56,6 +56,7 @@ class LogicImporters:
 				5: self.import_dead_node,
 				7: self.import_push_boost,
 				11: self.import_texture_flip,
+				15: self.import_lap_boost,
 			},
 
 			4: self.import_wait,
@@ -158,7 +159,7 @@ class LogicImporters:
 
 		json_fx = json_fx["type0"]["Boost"]
 		fx.mode = json_fx["Mode"]
-		fx.unknown1 = json_fx["U1"]
+		fx.u1 = json_fx["U1"]
 		fx.amount1 = json_fx["U2"]
 		fx.amount2 = json_fx["BoostAmount"]
 
@@ -206,6 +207,22 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'texture_flip'
+
+	def import_lap_boost(self, seq, json_fx):
+		fx_index = len(self.effects.lap_boost)
+
+		fx = self.effects.lap_boost.add()
+		json_fx = json_fx["type0"]["type0Sub15"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'lap_boost'
+
 
 	def import_multiplier(self, seq, json_fx):
 		fx_index = len(self.effects.multiplier)
@@ -293,7 +310,7 @@ class LogicDraw:
 		col = layout.column()
 		col.prop(effect, "checked", text="Push Boost")
 		col.prop(effect, "mode", text="Mode")
-		col.prop(effect, "unknown1", text="Unknown")
+		col.prop(effect, "u1", text="Unknown")
 		col.prop(effect, "amount1", text="Amount1")
 		col.prop(effect, "amount2", text="Amount2")
 		col.prop(effect, "direction", text="Direction")
@@ -332,6 +349,18 @@ class LogicDraw:
 		col.prop(effect, "length", text="Length")
 		col.prop(effect, "u4", text="Unknown 4")
 
+	def draw_lap_boost(self, layout, index):
+		effect = self.effects.lap_boost[index]
+		layout.label(text="", icon="MOD_INSTANCE")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Lap Boost")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
 		layout.label(text="", icon='FREEZE')
@@ -365,6 +394,7 @@ LogicDraw.effect_drawers = {
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
+	"lap_boost": LogicDraw.draw_lap_boost,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
@@ -379,6 +409,7 @@ enum_ssx2_effect_types = (
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
+	('lap_boost', "Lap Boost", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
@@ -430,7 +461,7 @@ class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	mode: IntProperty()
-	unknown1: FloatProperty()
+	u1: FloatProperty()
 	amount1: FloatProperty() # multiplier?
 	amount2: FloatProperty() # speed? distance?
 	direction: FloatVectorProperty(subtype='EULER')
@@ -442,6 +473,14 @@ class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	speed: FloatProperty()
 	length: FloatProperty()
 	u4: IntProperty()
+
+class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: FloatProperty()
+	u1: FloatProperty()
+	u2: IntProperty()
+	u3: IntProperty()
+	u4: FloatProperty()
 
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -486,7 +525,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# fence_flex: CollectionProperty(type=)
 	# t0_s13: CollectionProperty(type=)
 	# t0_s14: CollectionProperty(type=)
-	# t0_s15: CollectionProperty(type=)
+	lap_boost: CollectionProperty(type=SSX2_PG_WorldEffectLapBoost)
 	# crowd: CollectionProperty(type=)
 	# t0_s18: CollectionProperty(type=)
 	# t0_s20: CollectionProperty(type=)
@@ -545,7 +584,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 12 (Fence)
 	│   ├── Sub 13 (Flag)
 	│   ├── Sub 14 (Cracked)
-	│   ├── Sub 15 (LapBoost)
+	│   ├── Sub 15 (LapBoost) --------------------
 	│   ├── Sub 16 (RandomBoost) ???unused???
 	│   ├── Sub 17 (Crowd)
 	│   ├── Sub 18 (ZBoost)
@@ -805,6 +844,7 @@ classes = (
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
+	SSX2_PG_WorldEffectLapBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectMultiplier,
