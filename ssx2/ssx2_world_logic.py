@@ -63,6 +63,7 @@ class LogicImporters:
 
 			4: self.import_wait,
 			7: self.import_run_on_target,
+			13: self.import_reset,
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
 			18: self.import_trick_boost,
@@ -263,6 +264,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'end_boost'
 
+	def import_reset(self, seq, json_fx):
+		fx_index = len(self.effects.reset)
+
+		fx = self.effects.reset.add()
+		fx.u0 = json_fx["type13"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'reset'
+
 	def import_multiplier(self, seq, json_fx):
 		fx_index = len(self.effects.multiplier)
 
@@ -434,6 +445,12 @@ class LogicDraw:
 		col.prop(effect, "u17", text="Unknown 17")
 		col.prop(effect, "u18", text="Unknown 18")
 
+	def draw_reset(self, layout, index):
+		effect = self.effects.reset[index]
+		layout.label(text="", icon='FILE_REFRESH')
+		layout.prop(effect, "checked", text="Reset Rider")
+		layout.prop(effect, "u0", text="Unknown")
+
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
 		layout.label(text="", icon='FREEZE')
@@ -470,6 +487,7 @@ LogicDraw.effect_drawers = {
 	"lap_boost": LogicDraw.draw_lap_boost,
 	"z_boost": LogicDraw.draw_z_boost,
 	"end_boost": LogicDraw.draw_end_boost,
+	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
@@ -487,6 +505,7 @@ enum_ssx2_effect_types = (
 	('lap_boost', "Lap Boost", ""),
 	('z_boost', "Z Boost", ""),
 	('end_boost', "End Boost", ""),
+	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
@@ -594,6 +613,10 @@ class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	target_instance: PointerProperty(type=bpy.types.Object)
 	target_sequence: StringProperty()
 
+class SSX2_PG_WorldEffectReset(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: FloatProperty()
+
 class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	factor: FloatProperty()
@@ -659,7 +682,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 9
 
 	# # type 13
-	# reset: CollectionProperty(type=)
+	reset: CollectionProperty(type=SSX2_PG_WorldEffectReset)
 	# # type 14
 	multiplier: CollectionProperty(type=SSX2_PG_WorldEffectMultiplier)
 	# # type 17
@@ -712,8 +735,8 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 7 (Instance Effect, Run on Target)  --------------------
 	├── Type 8 (Play Sound)
 	├── Type 9 # similar to 3
-	├── Type 13 (Reset)
-	├── Type 14 (Multiplier)
+	├── Type 13 (Reset) --------------------
+	├── Type 14 (Multiplier) --------------------
 	├── Type 17 (Speed Boost) --------------------
 	├── Type 18 (Trick Boost) --------------------
 	├── Type 21 (Function Run)
@@ -952,6 +975,7 @@ classes = (
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
+	SSX2_PG_WorldEffectReset,
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
 	SSX2_PG_WorldEffectTrickBoost,
