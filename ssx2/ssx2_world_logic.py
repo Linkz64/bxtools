@@ -58,6 +58,7 @@ class LogicImporters:
 				7: self.import_push_boost,
 				11: self.import_texture_flip,
 				12: self.import_fence,
+				13: self.import_flag,
 				15: self.import_lap_boost,
 				17: self.import_crowd,
 				18: self.import_z_boost,
@@ -244,6 +245,20 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'fence'
+
+	def import_flag(self, seq, json_fx):
+		fx_index = len(self.effects.flag)
+
+		fx = self.effects.flag.add()
+		json_fx = json_fx["type0"]["type0Sub13"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'flag'
 
 	def import_lap_boost(self, seq, json_fx):
 		fx_index = len(self.effects.lap_boost)
@@ -469,6 +484,16 @@ class LogicDraw:
 		layout.prop(effect, "u0", text="Unknown")
 		layout.prop(effect, "flex_amount", text="Flex Amount")
 
+	def draw_flag(self, layout, index):
+		effect = self.effects.flag[index]
+		layout.label(text="", icon='BOOKMARKS')
+		col = layout.column()
+		col.prop(effect, "checked", text="Flag")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+
 	def draw_lap_boost(self, layout, index):
 		effect = self.effects.lap_boost[index]
 		layout.label(text="", icon="MOD_INSTANCE")
@@ -567,6 +592,7 @@ LogicDraw.effect_drawers = {
 	"sound": LogicDraw.draw_sound,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"fence": LogicDraw.draw_fence,
+	"flag": LogicDraw.draw_flag,
 	"lap_boost": LogicDraw.draw_lap_boost,
 	"crowd": LogicDraw.draw_crowd,
 	"z_boost": LogicDraw.draw_z_boost,
@@ -589,6 +615,7 @@ enum_ssx2_effect_types = (
 	('sound', "Sound", ""),
 	('texture_flip', "Texture Flip", ""),
 	('fence', "Fence", ""),
+	('flag', "Flag", ""),
 	('lap_boost', "Lap Boost", ""),
 	('crowd', "Crowd", ""),
 	('z_boost', "Z Boost", ""),
@@ -667,6 +694,13 @@ class SSX2_PG_WorldEffectFence(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
 	flex_amount: FloatProperty()
+
+class SSX2_PG_WorldEffectFlag(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: FloatProperty()
+	u2: FloatProperty()
+	u3: IntProperty()
 
 class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -757,7 +791,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# uv_scroll: CollectionProperty(type=)
 	texture_flip: CollectionProperty(type=SSX2_PG_WorldEffectTextureFlip)
 	fence: CollectionProperty(type=SSX2_PG_WorldEffectFence)
-	# t0_s13: CollectionProperty(type=)
+	flag: CollectionProperty(type=SSX2_PG_WorldEffectFlag)
 	# t0_s14: CollectionProperty(type=)
 	lap_boost: CollectionProperty(type=SSX2_PG_WorldEffectLapBoost)
 	crowd: CollectionProperty(type=SSX2_PG_WorldEffectCrowd)
@@ -816,7 +850,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence) --------------------
-	│   ├── Sub 13 (Flag)
+	│   ├── Sub 13 (Flag) --------------------
 	│   ├── Sub 14 (Cracked)
 	│   ├── Sub 15 (LapBoost) --------------------
 	│   ├── Sub 16 (RandomBoost) ???unused???
@@ -1080,6 +1114,7 @@ classes = (
 	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectFence,
+	SSX2_PG_WorldEffectFlag,
 	SSX2_PG_WorldEffectLapBoost,
 	SSX2_PG_WorldEffectCrowd,
 	SSX2_PG_WorldEffectZBoost,
