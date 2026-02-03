@@ -57,6 +57,7 @@ class LogicImporters:
 				7: self.import_push_boost,
 				11: self.import_texture_flip,
 				15: self.import_lap_boost,
+				17: self.import_crowd,
 				18: self.import_z_boost,
 				24: self.import_end_boost,
 			},
@@ -222,6 +223,19 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'lap_boost'
+
+	def import_crowd(self, seq, json_fx):
+		fx_index = len(self.effects.crowd)
+
+		fx = self.effects.crowd.add()
+		json_fx = json_fx["type0"]["CrowdEffect"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'crowd'
 
 	def import_z_boost(self, seq, json_fx):
 		fx_index = len(self.effects.z_boost)
@@ -411,6 +425,16 @@ class LogicDraw:
 		col.prop(effect, "u3", text="Unknown 3")
 		col.prop(effect, "u4", text="Unknown 4")
 
+	def draw_crowd(self, layout, index):
+		effect = self.effects.crowd[index]
+		layout.label(text="", icon="COMMUNITY")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Crowd")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+
 	def draw_z_boost(self, layout, index):
 		effect = self.effects.z_boost[index]
 		layout.label(text="", icon="MOD_INSTANCE")
@@ -485,6 +509,7 @@ LogicDraw.effect_drawers = {
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"lap_boost": LogicDraw.draw_lap_boost,
+	"crowd": LogicDraw.draw_crowd,
 	"z_boost": LogicDraw.draw_z_boost,
 	"end_boost": LogicDraw.draw_end_boost,
 	"reset": LogicDraw.draw_reset,
@@ -503,6 +528,7 @@ enum_ssx2_effect_types = (
 	('run_on_target', "Run on Target", ""),
 	('texture_flip', "Texture Flip", ""),
 	('lap_boost', "Lap Boost", ""),
+	('crowd', "Crowd", ""),
 	('z_boost', "Z Boost", ""),
 	('end_boost', "End Boost", ""),
 	('reset', "Reset Rider", ""),
@@ -578,6 +604,12 @@ class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
 	u3: IntProperty()
 	u4: FloatProperty()
 
+class SSX2_PG_WorldEffectCrowd(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: IntProperty()
+	u2: IntProperty()
+
 class SSX2_PG_WorldEffectZBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: FloatProperty()
@@ -652,7 +684,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# t0_s13: CollectionProperty(type=)
 	# t0_s14: CollectionProperty(type=)
 	lap_boost: CollectionProperty(type=SSX2_PG_WorldEffectLapBoost)
-	# crowd: CollectionProperty(type=)
+	crowd: CollectionProperty(type=SSX2_PG_WorldEffectCrowd)
 	z_boost: CollectionProperty(type=SSX2_PG_WorldEffectZBoost)
 	# t0_s20: CollectionProperty(type=)
 	# t0_s23: CollectionProperty(type=)
@@ -712,7 +744,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 14 (Cracked)
 	│   ├── Sub 15 (LapBoost) --------------------
 	│   ├── Sub 16 (RandomBoost) ???unused???
-	│   ├── Sub 17 (Crowd)
+	│   ├── Sub 17 (Crowd) --------------------
 	│   ├── Sub 18 (ZBoost) --------------------
 	│   ├── Sub 19 (UVScrollTexFlip) ???unused???
 	│   ├── Sub 20 (cMeshAnim)
@@ -971,6 +1003,7 @@ classes = (
 	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectLapBoost,
+	SSX2_PG_WorldEffectCrowd,
 	SSX2_PG_WorldEffectZBoost,
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectWait,
