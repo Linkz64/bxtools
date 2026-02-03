@@ -64,6 +64,7 @@ class LogicImporters:
 
 			4: self.import_wait,
 			7: self.import_run_on_target,
+			8: self.import_sound,
 			13: self.import_reset,
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
@@ -193,6 +194,16 @@ class LogicImporters:
 
 		json_fx = json_fx["Instance"]
 		self.defer_refs_run_on_target.append((fx_index, json_fx["InstanceIndex"], json_fx["EffectIndex"]))
+
+	def import_sound(self, seq, json_fx):
+		fx_index = len(self.effects.sound)
+
+		fx = self.effects.sound.add()
+		fx.sound_id = json_fx["SoundPlay"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'sound'
 
 	def import_texture_flip(self, seq, json_fx):
 		json_fx = json_fx["type0"]["TextureFlip"]
@@ -399,6 +410,12 @@ class LogicDraw:
 			text="",
 		)
 
+	def draw_sound(self, layout, index):
+		effect = self.effects.sound[index]
+		layout.label(text="", icon='OUTLINER_DATA_SPEAKER')
+		layout.prop(effect, "checked", text="Sound")
+		layout.prop(effect, "sound_id", text="ID")
+
 	def draw_texture_flip(self, layout, index):
 		effect = self.effects.texture_flip[index]
 
@@ -507,6 +524,7 @@ LogicDraw.effect_drawers = {
 	"push_boost": LogicDraw.draw_push_boost,
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
+	"sound": LogicDraw.draw_sound,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"lap_boost": LogicDraw.draw_lap_boost,
 	"crowd": LogicDraw.draw_crowd,
@@ -526,6 +544,7 @@ enum_ssx2_effect_types = (
 	('push_boost', "Push Boost", ""),
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
+	('sound', "Sound", ""),
 	('texture_flip', "Texture Flip", ""),
 	('lap_boost', "Lap Boost", ""),
 	('crowd', "Crowd", ""),
@@ -645,6 +664,10 @@ class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	target_instance: PointerProperty(type=bpy.types.Object)
 	target_sequence: StringProperty()
 
+class SSX2_PG_WorldEffectSound(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	sound_id: IntProperty()
+
 class SSX2_PG_WorldEffectReset(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: FloatProperty()
@@ -710,7 +733,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 7
 	run_on_target: CollectionProperty(type=SSX2_PG_WorldEffectRunOnTarget) # aka Script?
 	# # type 8
-	# play_sound: CollectionProperty(type=)
+	sound: CollectionProperty(type=SSX2_PG_WorldEffectSound)
 	# # type 9
 
 	# # type 13
@@ -1008,6 +1031,7 @@ classes = (
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
+	SSX2_PG_WorldEffectSound,
 	SSX2_PG_WorldEffectReset,
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
