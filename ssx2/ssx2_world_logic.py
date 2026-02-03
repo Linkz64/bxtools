@@ -54,6 +54,7 @@ class LogicImporters:
 			0: {
 				2: self.import_debounce,
 				5: self.import_dead_node,
+				6: self.import_counter,
 				7: self.import_push_boost,
 				11: self.import_texture_flip,
 				15: self.import_lap_boost,
@@ -156,6 +157,17 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'dead_node'
+
+	def import_counter(self, seq, json_fx):
+		fx_index = len(self.effects.counter)
+
+		fx = self.effects.counter.add()
+		fx.count = json_fx["type0"]["Counter"]["Count"]
+		fx.u1 = json_fx["type0"]["Counter"]["U1"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'counter'
 
 	def import_push_boost(self, seq, json_fx):
 		fx_index = len(self.effects.push_boost)
@@ -379,6 +391,13 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Dead Node")
 		layout.prop(effect, "mode", text="Mode")
 
+	def draw_counter(self, layout, index):
+		effect = self.effects.counter[index]
+		layout.label(text="", icon='ADD')
+		layout.prop(effect, "checked", text="Counter")
+		layout.prop(effect, "count", text="Count")
+		layout.prop(effect, "u1", text="Unknown 1")
+
 	def draw_push_boost(self, layout, index):
 		effect = self.effects.push_boost[index]
 		layout.label(text="", icon='MOD_INSTANCE')
@@ -521,6 +540,7 @@ LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
 	"debounce": LogicDraw.draw_debounce,
 	"dead_node": LogicDraw.draw_dead_node,
+	"counter": LogicDraw.draw_counter,
 	"push_boost": LogicDraw.draw_push_boost,
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
@@ -541,6 +561,7 @@ enum_ssx2_effect_types = (
 	('undefined', "JSON", ""),
 	('debounce', "Debounce", ""),
 	('dead_node', "Dead Node", ""),
+	('counter', "Counter", ""),
 	('push_boost', "Push Boost", ""),
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
@@ -598,6 +619,11 @@ class SSX2_PG_WorldEffectDebounce(PropertyGroup):
 class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	mode: IntProperty()
+
+class SSX2_PG_WorldEffectCounter(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	count: IntProperty()
+	u1: IntProperty()
 
 class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -699,7 +725,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# t0_s0: CollectionProperty(type=)
 	debounce: CollectionProperty(type=SSX2_PG_WorldEffectDebounce)
 	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
-	# counter: CollectionProperty(type=)
+	counter: CollectionProperty(type=SSX2_PG_WorldEffectCounter)
 	push_boost: CollectionProperty(type=SSX2_PG_WorldEffectPushBoost)
 	# uv_scroll: CollectionProperty(type=)
 	texture_flip: CollectionProperty(type=SSX2_PG_WorldEffectTextureFlip)
@@ -758,7 +784,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 0 (Roller)
 	│   ├── Sub 2 (Debounce) --------------------
 	│   ├── Sub 5 (Dead Node) --------------------
-	│   ├── Sub 6 (Counter)
+	│   ├── Sub 6 (Counter) --------------------
 	│   ├── Sub 7 (Push Boost) --------------------
 	│   ├── Sub 10 (UV Scroll)
 	│   ├── Sub 11 (Texture Flip) --------------------
@@ -788,7 +814,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 4 (Wait) --------------------
 	├── Type 5 # int, int, float
 	├── Type 7 (Instance Effect, Run on Target)  --------------------
-	├── Type 8 (Play Sound)
+	├── Type 8 (Play Sound) --------------------
 	├── Type 9 # similar to 3
 	├── Type 13 (Reset) --------------------
 	├── Type 14 (Multiplier) --------------------
@@ -1023,6 +1049,7 @@ classes = (
 	SSX2_PG_WorldEffectUndefined,
 	SSX2_PG_WorldEffectDebounce,
 	SSX2_PG_WorldEffectDeadNode,
+	SSX2_PG_WorldEffectCounter,
 	SSX2_PG_WorldEffectPushBoost,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectLapBoost,
