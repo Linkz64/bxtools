@@ -52,6 +52,7 @@ class LogicImporters:
 
 		self.importers = {
 			0: {
+				0: self.import_roller,
 				2: self.import_debounce,
 				5: self.import_dead_node,
 				6: self.import_counter,
@@ -141,6 +142,17 @@ class LogicImporters:
 
 			# if i == 1:
 			# 	break
+	
+
+	def import_roller(self, seq, json_fx):
+		fx_index = len(self.effects.roller)
+
+		fx = self.effects.roller.add()
+		fx.duration = json_fx["type0"]["type0Sub0"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'roller'
 
 	def import_debounce(self, seq, json_fx):
 		fx_index = len(self.effects.debounce)
@@ -437,6 +449,18 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="JSON")
 		layout.prop(effect, "json_string", text="", expand=True)
 
+	def draw_roller(self, layout, index):
+		effect = self.effects.roller[index]
+		layout.label(text="", icon='PHYSICS')
+		col = layout.column()
+		col.prop(effect, "checked", text="Roller")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+
 	def draw_debounce(self, layout, index):
 		effect = self.effects.debounce[index]
 		layout.label(text="", icon='MOD_TIME')
@@ -635,6 +659,7 @@ class LogicDraw:
 
 LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
+	"roller": LogicDraw.draw_roller,
 	"debounce": LogicDraw.draw_debounce,
 	"dead_node": LogicDraw.draw_dead_node,
 	"counter": LogicDraw.draw_counter,
@@ -660,6 +685,7 @@ LogicDraw.effect_drawers = {
 
 enum_ssx2_effect_types = (
 	('undefined', "JSON", ""),
+	('roller', "Roller", ""),
 	('debounce', "Debounce", ""),
 	('dead_node', "Dead Node", ""),
 	('counter', "Counter", ""),
@@ -716,6 +742,15 @@ class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
 class SSX2_PG_WorldEffectUndefined(PropertyGroup): # JSON
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	json_string: StringProperty()
+
+class SSX2_PG_WorldEffectRoller(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: FloatProperty()
+	u1: FloatProperty()
+	u2: FloatProperty()
+	u3: FloatProperty()
+	u4: FloatProperty()
+	u5: FloatProperty()
 
 class SSX2_PG_WorldEffectDebounce(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -853,7 +888,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	undefined: CollectionProperty(type=SSX2_PG_WorldEffectUndefined) # aka JSON
 
 	# type 0
-	# t0_s0: CollectionProperty(type=)
+	roller: CollectionProperty(type=SSX2_PG_WorldEffectRoller)
 	debounce: CollectionProperty(type=SSX2_PG_WorldEffectDebounce)
 	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
 	counter: CollectionProperty(type=SSX2_PG_WorldEffectCounter)
@@ -912,7 +947,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 	"""
 	├── Type 0
-	│   ├── Sub 0 (Roller)
+	│   ├── Sub 0 (Roller) --------------------
 	│   ├── Sub 2 (Debounce) --------------------
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter) --------------------
@@ -1178,6 +1213,7 @@ classes = (
 	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_PG_WorldEffectUndefined,
+	SSX2_PG_WorldEffectRoller,
 	SSX2_PG_WorldEffectDebounce,
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectCounter,
