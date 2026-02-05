@@ -66,6 +66,7 @@ class LogicImporters:
 				17: self.import_crowd,
 				18: self.import_z_boost,
 				20: self.import_mesh_anim,
+				23: self.import_movie,
 				24: self.import_end_boost,
 			},
 
@@ -374,6 +375,12 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'mesh_anim'
 
+	def import_movie(self, seq, json_fx):
+		self.effects.movie.add()
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = len(self.effects.movie)
+		fx_ref.kind = 'movie'
+
 	def import_end_boost(self, seq, json_fx):
 		fx_index = len(self.effects.end_boost)
 
@@ -650,6 +657,13 @@ class LogicDraw:
 		col.prop(effect, "u8", text="Unknown 8")
 		col.prop(effect, "u9", text="Unknown 9")
 
+	def draw_movie(self, layout, index):
+		effect = self.effects.movie[index]
+		layout.label(text="", icon="SEQUENCE")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Movie")
+
 	def draw_end_boost(self, layout, index):
 		effect = self.effects.end_boost[index]
 		layout.label(text="", icon="MOD_INSTANCE")
@@ -720,6 +734,7 @@ LogicDraw.effect_drawers = {
 	"crowd": LogicDraw.draw_crowd,
 	"z_boost": LogicDraw.draw_z_boost,
 	"mesh_anim": LogicDraw.draw_mesh_anim,
+	"movie": LogicDraw.draw_movie,
 	"end_boost": LogicDraw.draw_end_boost,
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
@@ -747,6 +762,7 @@ enum_ssx2_effect_types = (
 	('crowd', "Crowd", ""),
 	('z_boost', "Z Boost", ""),
 	('mesh_anim', "Mesh Anim", ""),
+	('movie', "Movie", ""),
 	('end_boost', "End Boost", ""),
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
@@ -890,6 +906,9 @@ class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
 	u8: FloatProperty()
 	u9: FloatProperty()
 
+class SSX2_PG_WorldEffectMovie(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+
 class SSX2_PG_WorldEffectEndBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
@@ -961,7 +980,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	crowd: CollectionProperty(type=SSX2_PG_WorldEffectCrowd)
 	z_boost: CollectionProperty(type=SSX2_PG_WorldEffectZBoost)
 	mesh_anim: CollectionProperty(type=SSX2_PG_WorldEffectMeshAnim)
-	# t0_s23: CollectionProperty(type=)
+	movie: CollectionProperty(type=SSX2_PG_WorldEffectMovie)
 	end_boost: CollectionProperty(type=SSX2_PG_WorldEffectEndBoost)
 	# anim_object: CollectionProperty(type=)
 	# t0_s257: CollectionProperty(type=)
@@ -1024,7 +1043,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 20 (MeshAnim) --------------------
 	│   ├── Sub 21 (TrickTrigger) ???unused???
 	│   ├── Sub 22 (Particle) ???unused???
-	│   ├── Sub 23 (Movie)
+	│   ├── Sub 23 (Movie) --------------------
 	│   ├── Sub 24 (EndBoost) --------------------
 	│   ├── Sub 256 (AnimObject)
 	│   ├── Sub 257 (AnimDelta)
@@ -1286,6 +1305,7 @@ classes = (
 	SSX2_PG_WorldEffectCrowd,
 	SSX2_PG_WorldEffectZBoost,
 	SSX2_PG_WorldEffectMeshAnim,
+	SSX2_PG_WorldEffectMovie,
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
