@@ -65,6 +65,7 @@ class LogicImporters:
 				15: self.import_lap_boost,
 				17: self.import_crowd,
 				18: self.import_z_boost,
+				20: self.import_mesh_anim,
 				24: self.import_end_boost,
 			},
 
@@ -148,7 +149,13 @@ class LogicImporters:
 		fx_index = len(self.effects.roller)
 
 		fx = self.effects.roller.add()
-		fx.duration = json_fx["type0"]["type0Sub0"]
+		json_fx = json_fx["type0"]["type0Sub0"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
 
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
@@ -346,6 +353,26 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'z_boost'
+
+	def import_mesh_anim(self, seq, json_fx):
+		fx_index = len(self.effects.mesh_anim)
+
+		fx = self.effects.mesh_anim.add()
+		json_fx = json_fx["type0"]["type0Sub20"]
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+		fx.u7 = json_fx["U7"]
+		fx.u8 = json_fx["U8"]
+		fx.u9 = json_fx["U9"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'mesh_anim'
 
 	def import_end_boost(self, seq, json_fx):
 		fx_index = len(self.effects.end_boost)
@@ -606,6 +633,23 @@ class LogicDraw:
 		col.prop(effect, "u5", text="Unknown 5")
 		col.prop(effect, "u6", text="Unknown 6")
 
+	def draw_mesh_anim(self, layout, index):
+		effect = self.effects.mesh_anim[index]
+		layout.label(text="", icon="RENDER_ANIMATION")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Mesh Anim")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+		col.prop(effect, "u7", text="Unknown 7")
+		col.prop(effect, "u8", text="Unknown 8")
+		col.prop(effect, "u9", text="Unknown 9")
+
 	def draw_end_boost(self, layout, index):
 		effect = self.effects.end_boost[index]
 		layout.label(text="", icon="MOD_INSTANCE")
@@ -675,6 +719,7 @@ LogicDraw.effect_drawers = {
 	"lap_boost": LogicDraw.draw_lap_boost,
 	"crowd": LogicDraw.draw_crowd,
 	"z_boost": LogicDraw.draw_z_boost,
+	"mesh_anim": LogicDraw.draw_mesh_anim,
 	"end_boost": LogicDraw.draw_end_boost,
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
@@ -701,6 +746,7 @@ enum_ssx2_effect_types = (
 	('lap_boost', "Lap Boost", ""),
 	('crowd', "Crowd", ""),
 	('z_boost', "Z Boost", ""),
+	('mesh_anim', "Mesh Anim", ""),
 	('end_boost', "End Boost", ""),
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
@@ -831,6 +877,19 @@ class SSX2_PG_WorldEffectZBoost(PropertyGroup):
 	u5: FloatProperty()
 	u6: FloatProperty()
 
+class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: FloatProperty()
+	u2: FloatProperty()
+	u3: IntProperty()
+	u4: IntProperty()
+	u5: IntProperty()
+	u6: FloatProperty()
+	u7: FloatProperty()
+	u8: FloatProperty()
+	u9: FloatProperty()
+
 class SSX2_PG_WorldEffectEndBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	u0: IntProperty()
@@ -901,7 +960,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	lap_boost: CollectionProperty(type=SSX2_PG_WorldEffectLapBoost)
 	crowd: CollectionProperty(type=SSX2_PG_WorldEffectCrowd)
 	z_boost: CollectionProperty(type=SSX2_PG_WorldEffectZBoost)
-	# t0_s20: CollectionProperty(type=)
+	mesh_anim: CollectionProperty(type=SSX2_PG_WorldEffectMeshAnim)
 	# t0_s23: CollectionProperty(type=)
 	end_boost: CollectionProperty(type=SSX2_PG_WorldEffectEndBoost)
 	# anim_object: CollectionProperty(type=)
@@ -962,7 +1021,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 17 (Crowd) --------------------
 	│   ├── Sub 18 (ZBoost) --------------------
 	│   ├── Sub 19 (UVScrollTexFlip) ???unused???
-	│   ├── Sub 20 (cMeshAnim)
+	│   ├── Sub 20 (MeshAnim) --------------------
 	│   ├── Sub 21 (TrickTrigger) ???unused???
 	│   ├── Sub 22 (Particle) ???unused???
 	│   ├── Sub 23 (Movie)
@@ -1226,6 +1285,7 @@ classes = (
 	SSX2_PG_WorldEffectLapBoost,
 	SSX2_PG_WorldEffectCrowd,
 	SSX2_PG_WorldEffectZBoost,
+	SSX2_PG_WorldEffectMeshAnim,
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
