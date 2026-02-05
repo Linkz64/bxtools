@@ -56,6 +56,7 @@ class LogicImporters:
 				5: self.import_dead_node,
 				6: self.import_counter,
 				7: self.import_push_boost,
+				10: self.import_uv_scroll,
 				11: self.import_texture_flip,
 				12: self.import_fence,
 				13: self.import_flag,
@@ -219,6 +220,22 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'sound'
+
+	def import_uv_scroll(self, seq, json_fx):
+		json_fx = json_fx["type0"]["UVScroll"]
+		fx_index = len(self.effects.uv_scroll)
+
+		fx = self.effects.uv_scroll.add()
+		fx.mode = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'uv_scroll'
 
 	def import_texture_flip(self, seq, json_fx):
 		json_fx = json_fx["type0"]["TextureFlip"]
@@ -476,6 +493,21 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Sound")
 		layout.prop(effect, "sound_id", text="ID")
 
+	def draw_uv_scroll(self, layout, index):
+		effect = self.effects.uv_scroll[index]
+
+		layout.label(text="", icon='UV')
+
+		col = layout.column()
+		col.prop(effect, "checked", text="UV Scroll")
+
+		col.prop(effect, "mode", text="Mode")
+		col.prop(effect, "u1", text="Scroll U")
+		col.prop(effect, "u2", text="Scroll V")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+
 	def draw_texture_flip(self, layout, index):
 		effect = self.effects.texture_flip[index]
 
@@ -610,6 +642,7 @@ LogicDraw.effect_drawers = {
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"sound": LogicDraw.draw_sound,
+	"uv_scroll": LogicDraw.draw_uv_scroll,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"fence": LogicDraw.draw_fence,
 	"flag": LogicDraw.draw_flag,
@@ -634,6 +667,7 @@ enum_ssx2_effect_types = (
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
 	('sound', "Sound", ""),
+	('uv_scroll', "UV Scroll", ""),
 	('texture_flip', "Texture Flip", ""),
 	('fence', "Fence", ""),
 	('flag', "Flag", ""),
@@ -703,6 +737,15 @@ class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 	amount1: FloatProperty() # multiplier?
 	amount2: FloatProperty() # speed? distance?
 	direction: FloatVectorProperty(subtype='EULER')
+
+class SSX2_PG_WorldEffectUVScroll(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	mode: IntProperty()
+	u1: FloatProperty()
+	u2: FloatProperty()
+	u3: FloatProperty()
+	u4: FloatProperty()
+	u5: IntProperty()
 
 class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -815,7 +858,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	dead_node: CollectionProperty(type=SSX2_PG_WorldEffectDeadNode)
 	counter: CollectionProperty(type=SSX2_PG_WorldEffectCounter)
 	push_boost: CollectionProperty(type=SSX2_PG_WorldEffectPushBoost)
-	# uv_scroll: CollectionProperty(type=)
+	uv_scroll: CollectionProperty(type=SSX2_PG_WorldEffectUVScroll)
 	texture_flip: CollectionProperty(type=SSX2_PG_WorldEffectTextureFlip)
 	fence: CollectionProperty(type=SSX2_PG_WorldEffectFence)
 	flag: CollectionProperty(type=SSX2_PG_WorldEffectFlag)
@@ -874,7 +917,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 5 (Dead Node) --------------------
 	│   ├── Sub 6 (Counter) --------------------
 	│   ├── Sub 7 (Push Boost) --------------------
-	│   ├── Sub 10 (UV Scroll)
+	│   ├── Sub 10 (UV Scroll) --------------------
 	│   ├── Sub 11 (Texture Flip) --------------------
 	│   ├── Sub 12 (Fence) --------------------
 	│   ├── Sub 13 (Flag) --------------------
@@ -1139,6 +1182,7 @@ classes = (
 	SSX2_PG_WorldEffectDeadNode,
 	SSX2_PG_WorldEffectCounter,
 	SSX2_PG_WorldEffectPushBoost,
+	SSX2_PG_WorldEffectUVScroll,
 	SSX2_PG_WorldEffectTextureFlip,
 	SSX2_PG_WorldEffectFence,
 	SSX2_PG_WorldEffectFlag,
