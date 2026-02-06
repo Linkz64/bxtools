@@ -1590,6 +1590,11 @@ class SSX2_OP_WorldImport(Operator):
 		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
 			effects.teleport[fx_index].target = instance_refs[teleport_target]
 
+		if self.io.importSplines:
+			for fx_index, spline_index, u0 in logic_importer.defer_refs_spline_manager:
+				effects.spline_manager[fx_index].spline = self.spline_objects[spline_index]
+				effects.spline_manager[fx_index].u0 = u0
+
 
 		print("importing instances took", time.time() - import_instances_time_start)
 
@@ -1744,6 +1749,8 @@ class SSX2_OP_WorldImport(Operator):
 					curve_obj.ssx2_SplineProps.type = str(json_spline["SplineStyle"])
 
 					collection.objects.link(curve_obj)
+
+					self.spline_objects.append(curve_obj)
 
 		# SELECT ALL AT THE END AND SET ORIGIN
 		#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
@@ -1924,6 +1931,11 @@ class SSX2_OP_WorldImport(Operator):
 			run_without_update(self.create_patches_json)
 
 			print("importing patches took:", time.time() - temp_time_start, "seconds")
+
+
+		if self.io.importSplines: # <------------------------------- Import Splines
+			self.spline_objects = []
+			run_without_update(self.create_splines_json)
 
 
 		if self.io.importModels: # <------------------------------- Import Models & Instances
@@ -2196,8 +2208,7 @@ class SSX2_OP_WorldImport(Operator):
 				#break # only general
 
 
-		if self.io.importSplines: # <------------------------------- Import Splines
-			run_without_update(self.create_splines_json)
+
 
 		if self.io.importLights:
 			run_without_update(self.create_lights_json)

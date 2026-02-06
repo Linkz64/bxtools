@@ -49,6 +49,7 @@ class LogicImporters:
 		self.num_seq_start = len(sequences)
 		self.defer_refs_run_on_target = []
 		self.defer_refs_teleport = []
+		self.defer_refs_spline_manager = []
 
 		self.importers = {
 			0: {
@@ -78,6 +79,7 @@ class LogicImporters:
 			17: self.import_speed_boost,
 			18: self.import_trick_boost,
 			24: self.import_teleport,
+			25: self.import_spline_manager,
 
 		}
 
@@ -376,10 +378,11 @@ class LogicImporters:
 		fx_ref.kind = 'mesh_anim'
 
 	def import_movie(self, seq, json_fx):
-		self.effects.movie.add()
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = len(self.effects.movie)
 		fx_ref.kind = 'movie'
+
+		self.effects.movie.add()
 
 	def import_end_boost(self, seq, json_fx):
 		fx_index = len(self.effects.end_boost)
@@ -456,6 +459,16 @@ class LogicImporters:
 
 		self.defer_refs_teleport.append((fx_index, json_fx["TeleportInstanceIndex"]))
 
+	def import_spline_manager(self, seq, json_fx):
+		fx_index = len(self.effects.spline_manager)
+
+		self.effects.spline_manager.add()
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'spline_manager'
+
+		self.defer_refs_spline_manager.append((fx_index, json_fx["SplineIndex"], json_fx["Effect"]))
 
 
 
@@ -714,6 +727,12 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Teleport")
 		layout.prop(effect, "target", text="Target")
 
+	def draw_spline_manager(self, layout, index):
+		effect = self.effects.spline_manager[index]
+		layout.label(text="", icon='CURVE_DATA')
+		layout.prop(effect, "checked", text="Spline Manager")
+		layout.prop(effect, "spline", text="Spline")
+		layout.prop(effect, "u0", text="Unknown")
 
 LogicDraw.effect_drawers = {
 	"undefined": LogicDraw.draw_undefined,
@@ -741,6 +760,7 @@ LogicDraw.effect_drawers = {
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
 	"teleport": LogicDraw.draw_teleport,
+	"spline_manager": LogicDraw.draw_spline_manager,
 }
 
 enum_ssx2_effect_types = (
@@ -769,6 +789,7 @@ enum_ssx2_effect_types = (
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
 	('teleport', "Teleport", ""),
+	('spline_manager', "Spline Manager", ""),
 )
 
 
@@ -931,7 +952,7 @@ class SSX2_PG_WorldEffectWait(PropertyGroup):
 
 class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	target_instance: PointerProperty(type=bpy.types.Object)
+	target_instance: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
 	target_sequence: StringProperty()
 
 class SSX2_PG_WorldEffectSound(PropertyGroup):
@@ -956,7 +977,12 @@ class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
 
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	target: PointerProperty(type=bpy.types.Object)
+	target: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
+
+class SSX2_PG_WorldEffectSplineManager(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	spline: PointerProperty(type=bpy.types.Curve)
+	u0: IntProperty()
 
 
 
@@ -1019,7 +1045,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# # type 24
 	teleport: CollectionProperty(type=SSX2_PG_WorldEffectTeleport)
 	# # type 25
-	# spline_effect: CollectionProperty(type=)
+	spline_manager: CollectionProperty(type=SSX2_PG_WorldEffectSplineManager)
 
 
 
@@ -1056,17 +1082,28 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   └── Sub 2 (CollideEmitter)
 	├── Type 3 # similar to 9
 	├── Type 4 (Wait) --------------------
-	├── Type 5 # int, int, float
+	├── Type 5
+	│   ├── Sub 0
+	│   ├── Sub 1 # int, int, float
+	│   ├── Sub 2
+	│   └── Sub 3 # int, short, short?, int
+	├── Type 6 (BoostMeterFill6) !!! works in showoff - not implemented in json !!! # int
 	├── Type 7 (Instance Effect, Run on Target)  --------------------
 	├── Type 8 (Play Sound) --------------------
 	├── Type 9 # similar to 3
+	├── Type 10 (?) ?? unused ??? # jumps to stubbed function
+	├── Type 11 (?) ?? unused ??? # jumps to stubbed function
 	├── Type 13 (Reset) --------------------
 	├── Type 14 (Multiplier) --------------------
+	├── Type 15 (BoostMeterFill15) !!! works in showoff - not implemented in json !!! # float
+	├── Type 16 (TimeBonus) !!! works in showoff, bugs ui in other modes - not implemented in json !!! # float
 	├── Type 17 (Speed Boost) --------------------
 	├── Type 18 (Trick Boost) --------------------
 	├── Type 21 (Function Run)
+	├── Type 23 (?) !!! works !!! # camera related: float, float
 	├── Type 24 (Teleport) --------------------
-	└── Type 25 (Spline Effect)
+	├── Type 25 (Spline Manager) --------------------
+	└── Type 26 (?) ??? unused ???
 	
 	"""
 
@@ -1315,6 +1352,7 @@ classes = (
 	SSX2_PG_WorldEffectSpeedBoost,
 	SSX2_PG_WorldEffectTrickBoost,
 	SSX2_PG_WorldEffectTeleport,
+	SSX2_PG_WorldEffectSplineManager,
 
 	SSX2_PG_WorldEffects,
 
