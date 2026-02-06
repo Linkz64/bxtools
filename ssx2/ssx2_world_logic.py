@@ -1050,60 +1050,68 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 
 	"""
+
+	<<<<<<<<<<<<<<<< = To check/implement
+	showoffs = any showoff based mode
+
+	Names are a mix of original names and custom names.
+
 	├── Type 0
-	│   ├── Sub 0 (Roller) --------------------
-	│   ├── Sub 2 (Debounce) --------------------
-	│   ├── Sub 5 (Dead Node) --------------------
-	│   ├── Sub 6 (Counter) --------------------
-	│   ├── Sub 7 (Push Boost) --------------------
-	│   ├── Sub 10 (UV Scroll) --------------------
-	│   ├── Sub 11 (Texture Flip) --------------------
-	│   ├── Sub 12 (Fence) --------------------
-	│   ├── Sub 13 (Flag) --------------------
-	│   ├── Sub 14 (Cracked) --------------------
-	│   ├── Sub 15 (LapBoost) --------------------
-	│   ├── Sub 16 (RandomBoost) ???unused???
-	│   ├── Sub 17 (Crowd) --------------------
-	│   ├── Sub 18 (ZBoost) --------------------
-	│   ├── Sub 19 (UVScrollTexFlip) ???unused???
-	│   ├── Sub 20 (MeshAnim) --------------------
-	│   ├── Sub 21 (TrickTrigger) ???unused???
-	│   ├── Sub 22 (Particle) ???unused???
-	│   ├── Sub 23 (Movie) --------------------
-	│   ├── Sub 24 (EndBoost) --------------------
-	│   ├── Sub 256 (AnimObject)
-	│   ├── Sub 257 (AnimDelta)
-	│   └── Sub 258 (AnimCombo)
-	│   └── Sub 259 (AnimTexFlip) ???unused???
-	├── Type 1 (Camera) ???unused???
+	│   ├── Sub 0 (Roller)
+	│   ├── Sub 2 (Debounce)
+	│   ├── Sub 5 (DeadNode)
+	│   ├── Sub 6 (Counter)
+	│   ├── Sub 7 (PushBoost)
+	│   ├── Sub 8 (Timer) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 9 (Rail) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 10 (UVScroll)
+	│   ├── Sub 11 (TextureFlip)
+	│   ├── Sub 12 (Fence)
+	│   ├── Sub 13 (Flag)
+	│   ├── Sub 14 (Cracked)
+	│   ├── Sub 15 (LapBoost)
+	│   ├── Sub 16 (RandomBoost) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 17 (Crowd)
+	│   ├── Sub 18 (ZBoost)
+	│   ├── Sub 19 (UVScrollTexFlip) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 20 (MeshAnim)
+	│   ├── Sub 21 (TrickTrigger) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 22 (Particle) <<<<<<<<<<<<<<<< unused?
+	│   ├── Sub 23 (Movie)
+	│   ├── Sub 24 (EndBoost)
+	│   ├── Sub 256 (AnimObject) <<<<<<<<<<<<<<<<
+	│   ├── Sub 257 (AnimDelta) <<<<<<<<<<<<<<<<
+	│   └── Sub 258 (AnimCombo) <<<<<<<<<<<<<<<<
+	│   └── Sub 259 (AnimTexFlip) <<<<<<<<<<<<<<<< unused?
+	├── Type 1 (Camera) <<<<<<<<<<<<<<<< unused?
 	├── Type 2
-	│   ├── Sub 0 (Emitter)
-	│   ├── Sub 1 (SplinePath)
-	│   └── Sub 2 (CollideEmitter)
-	├── Type 3 # similar to 9
-	├── Type 4 (Wait) --------------------
+	│   ├── Sub 0 (Emitter) <<<<<<<<<<<<<<<<
+	│   ├── Sub 1 (SplinePath) <<<<<<<<<<<<<<<<
+	│   └── Sub 2 (CollideEmitter) <<<<<<<<<<<<<<<<
+	├── Type 3 <<<<<<<<<<<<<<<< similar to 9
+	├── Type 4 (Wait)
 	├── Type 5
-	│   ├── Sub 0
-	│   ├── Sub 1 # int, int, float
-	│   ├── Sub 2
-	│   └── Sub 3 # int, short, short?, int
-	├── Type 6 (BoostMeterFill6) !!! works in showoff - not implemented in json !!! # int
-	├── Type 7 (Instance Effect, Run on Target)  --------------------
-	├── Type 8 (Play Sound) --------------------
-	├── Type 9 # similar to 3
-	├── Type 10 (?) ?? unused ??? # jumps to stubbed function
-	├── Type 11 (?) ?? unused ??? # jumps to stubbed function
-	├── Type 13 (Reset) --------------------
-	├── Type 14 (Multiplier) --------------------
-	├── Type 15 (BoostMeterFill15) !!! works in showoff - not implemented in json !!! # float
-	├── Type 16 (TimeBonus) !!! works in showoff, bugs ui in other modes - not implemented in json !!! # float
-	├── Type 17 (Speed Boost) --------------------
-	├── Type 18 (Trick Boost) --------------------
-	├── Type 21 (Function Run)
-	├── Type 23 (?) !!! works !!! # camera related: float, float
-	├── Type 24 (Teleport) --------------------
-	├── Type 25 (Spline Manager) --------------------
-	└── Type 26 (?) ??? unused ???
+	│   ├── Sub 0 <<<<<<<<<<<<<<<<
+	│   ├── Sub 1 <<<<<<<<<<<<<<<< {int, int, float}
+	│   ├── Sub 2 <<<<<<<<<<<<<<<<
+	│   └── Sub 3 <<<<<<<<<<<<<<<< {int, short?, short?, int}
+	├── Type 6 (BoostMeterFill6) <<<<<<<<<<<<<<<< {int} | unused, working. showoffs only.
+	├── Type 7 (RunOnTarget)
+	├── Type 8 (Sound)
+	├── Type 9 <<<<<<<<<<<<<<<< similar to 3
+	├── Type 10 (?) unused? jumps to stubbed function
+	├── Type 11 (?) unused? jumps to stubbed function
+	├── Type 13 (Reset)
+	├── Type 14 (Multiplier)
+	├── Type 15 (BoostMeterFill15) <<<<<<<<<<<<<<<<  {float} | unused, working. showoffs only.
+	├── Type 16 (TimeBonus) <<<<<<<<<<<<<<<< {float} | unused, working. best in showoffs.
+	├── Type 17 (SpeedBoost)
+	├── Type 18 (TrickBoost)
+	├── Type 21 (Function Run) <<<<<<<<<<<<<<<<
+	├── Type 23 (?) <<<<<<<<<<<<<<<< {float, float} | camera related
+	├── Type 24 (Teleport)
+	├── Type 25 (SplineManager)
+	└── Type 26 (?) <<<<<<<<<<<<<<<< unused?
 	
 	"""
 
