@@ -921,7 +921,7 @@ class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
 	u2: FloatProperty()
 	u3: IntProperty()
 	u4: IntProperty()
-	u5: IntProperty()
+	u5: IntProperty()   # TODO: change to float here and on import
 	u6: FloatProperty()
 	u7: FloatProperty()
 	u8: FloatProperty()
@@ -1382,6 +1382,7 @@ def ssx2_world_logic_register():
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
 	bpy.types.Scene.ssx2_LogicSequenceSearch = StringProperty(search=search_sequence, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
+	bpy.types.Scene.ssx2_LogicSlotsExpand = IntProperty()
 
 	bpy.types.Scene.ssx2_LogicSequenceChoiceConstant = StringProperty(name="Choice Constant", update=update_sequence_choice_constant)
 	bpy.types.Scene.ssx2_LogicSequenceChoiceCollision = StringProperty(name="Choice Collision", update=update_sequence_choice_collision)

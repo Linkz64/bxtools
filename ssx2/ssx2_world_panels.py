@@ -542,21 +542,18 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 
 			else:
+				slot_expand = (scene.ssx2_LogicSlotsExpand >> slot_i) & 1
 				seq = sequences[seq_idx]
-
 
 				seq_box = col.box()
 				seq_header = seq_box.row()
 				seq_header = seq_header.split(factor=0.3)
 
-				# box_row = seq_box.row(align=True)
 				seq_header.operator(
-					SSX2_OP_WorldLogicExpandSequence.bl_idname,\
-					icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
-					else 'DISCLOSURE_TRI_RIGHT',emboss=False,text=slot_name).index = seq_idx # TODO this is a temp operator............
-				# ^ swap with new operator only for instance panel ^
-				# probably would have to be a scene property with 7 bools
-				# or an int inside the object's logicslots propgroup which can be bit shifted into bools 
+					SSX2_OP_WorldLogicExpandSlot.bl_idname,\
+					icon='DISCLOSURE_TRI_DOWN' if slot_expand\
+					else 'DISCLOSURE_TRI_RIGHT',emboss=False,text=slot_name).index = slot_i
+
 
 
 				seq_header.operator(
@@ -570,7 +567,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 			
 				# box_row.prop(seq, "name", text="")
 
-				if seq.expanded:
+				if slot_expand:
 					for j, fx_ref in enumerate(seq.effect_refs):
 						# print("kind", fx_ref.kind, "index" fx_ref.index)
 
@@ -796,6 +793,17 @@ class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+class SSX2_OP_WorldLogicExpandSlot(bpy.types.Operator):
+	bl_idname = "wm.ssx2_expand_logic_slot"
+	bl_label = ""
+	bl_description = "Expand box"
+
+	index: bpy.props.IntProperty()
+
+	def execute(self, context):
+		bpy.context.scene.ssx2_LogicSlotsExpand ^= 1 << self.index
+		return {'FINISHED'}
+
 class SSX2_OP_WorldLogicSlotClear(bpy.types.Operator):
 	bl_idname = "wm.ssx2_logic_slot_clear"
 	bl_label = ""
@@ -890,6 +898,7 @@ classes = (
 
 	SSX2_OP_WorldExpandUIBoxes,
 	SSX2_OP_WorldLogicExpandSequence,
+	SSX2_OP_WorldLogicExpandSlot,
 	SSX2_OP_WorldLogicSlotClear,
 	SSX2_OP_WorldShowPathEvent,
 )
