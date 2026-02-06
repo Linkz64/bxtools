@@ -346,7 +346,12 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 
 		logic_draw = LogicDraw(scene)
 
+		search = scene.ssx2_LogicSequenceSearch
+		col.prop(scene, "ssx2_LogicSequenceSearch", icon='VIEWZOOM', text="")
+
 		for i, seq in enumerate(scene.ssx2_LogicSequences):
+			if search.lower() not in seq.name.lower():
+				continue
 
 			seq_box = col.box()
 			box_row = seq_box.row(align=True)
