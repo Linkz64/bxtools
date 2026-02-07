@@ -69,6 +69,7 @@ class LogicImporters:
 				20: self.import_mesh_anim,
 				23: self.import_movie,
 				24: self.import_end_boost,
+				256: self.import_anim_object,
 			},
 
 			4: self.import_wait,
@@ -408,6 +409,25 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'end_boost'
 
+	def import_anim_object(self, seq, json_fx):
+		fx_index = len(self.effects.anim_object)
+
+		fx = self.effects.anim_object.add()
+		json_fx = json_fx["type0"]["type0Sub256"]
+
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+		fx.u7 = json_fx["U7"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'anim_object'
+
 	def import_reset(self, seq, json_fx):
 		fx_index = len(self.effects.reset)
 
@@ -697,6 +717,21 @@ class LogicDraw:
 		col.prop(effect, "u17", text="Unknown 17")
 		col.prop(effect, "u18", text="Unknown 18")
 
+	def draw_anim_object(self, layout, index):
+		effect = self.effects.anim_object[index]
+		layout.label(text="", icon="RENDER_ANIMATION")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Anim Object")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+		col.prop(effect, "u7", text="Unknown 7")
+
 	def draw_reset(self, layout, index):
 		effect = self.effects.reset[index]
 		layout.label(text="", icon='FILE_REFRESH')
@@ -755,6 +790,7 @@ LogicDraw.effect_drawers = {
 	"mesh_anim": LogicDraw.draw_mesh_anim,
 	"movie": LogicDraw.draw_movie,
 	"end_boost": LogicDraw.draw_end_boost,
+	"anim_object": LogicDraw.draw_anim_object,
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
@@ -784,6 +820,7 @@ enum_ssx2_effect_types = (
 	('mesh_anim', "Mesh Anim", ""),
 	('movie', "Movie", ""),
 	('end_boost', "End Boost", ""),
+	('anim_object', "Anim Object", ""),
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
@@ -946,6 +983,17 @@ class SSX2_PG_WorldEffectEndBoost(PropertyGroup):
 	u17: FloatProperty()
 	u18: FloatProperty()
 
+class SSX2_PG_WorldEffectAnimObject(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: FloatProperty()
+	u2: FloatProperty()
+	u3: FloatProperty()
+	u4: FloatProperty()
+	u5: FloatProperty()
+	u6: IntProperty()
+	u7: IntProperty()
+
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
@@ -1008,7 +1056,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	mesh_anim: CollectionProperty(type=SSX2_PG_WorldEffectMeshAnim)
 	movie: CollectionProperty(type=SSX2_PG_WorldEffectMovie)
 	end_boost: CollectionProperty(type=SSX2_PG_WorldEffectEndBoost)
-	# anim_object: CollectionProperty(type=)
+	anim_object: CollectionProperty(type=SSX2_PG_WorldEffectAnimObject)
 	# t0_s257: CollectionProperty(type=)
 	# t0_s258: CollectionProperty(type=)
 
@@ -1079,7 +1127,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 22 (Particle) <<<<<<<<<<<<<<<< unused?
 	│   ├── Sub 23 (Movie)
 	│   ├── Sub 24 (EndBoost)
-	│   ├── Sub 256 (AnimObject) <<<<<<<<<<<<<<<<
+	│   ├── Sub 256 (AnimObject)
 	│   ├── Sub 257 (AnimDelta) <<<<<<<<<<<<<<<<
 	│   └── Sub 258 (AnimCombo) <<<<<<<<<<<<<<<<
 	│   └── Sub 259 (AnimTexFlip) <<<<<<<<<<<<<<<< unused?
@@ -1091,14 +1139,14 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 3 <<<<<<<<<<<<<<<< similar to 9
 	├── Type 4 (Wait)
 	├── Type 5
-	│   ├── Sub 0 <<<<<<<<<<<<<<<<
-	│   ├── Sub 1 <<<<<<<<<<<<<<<< {int, int, float}
-	│   ├── Sub 2 <<<<<<<<<<<<<<<<
-	│   └── Sub 3 <<<<<<<<<<<<<<<< {int, short?, short?, int}
+	│   ├── Sub 0 (?) <<<<<<<<<<<<<<<<
+	│   ├── Sub 1 (?) <<<<<<<<<<<<<<<< {int, int, float}
+	│   ├── Sub 2 (?) <<<<<<<<<<<<<<<<
+	│   └── Sub 3 (?) <<<<<<<<<<<<<<<< {int, short?, short?, int}
 	├── Type 6 (BoostMeterFill6) <<<<<<<<<<<<<<<< {int} | unused, working. showoffs only.
 	├── Type 7 (RunOnTarget)
 	├── Type 8 (Sound)
-	├── Type 9 <<<<<<<<<<<<<<<< similar to 3
+	├── Type 9 (?) <<<<<<<<<<<<<<<< similar to 3
 	├── Type 10 (?) unused? jumps to stubbed function
 	├── Type 11 (?) unused? jumps to stubbed function
 	├── Type 13 (Reset)
@@ -1355,6 +1403,7 @@ classes = (
 	SSX2_PG_WorldEffectMeshAnim,
 	SSX2_PG_WorldEffectMovie,
 	SSX2_PG_WorldEffectEndBoost,
+	SSX2_PG_WorldEffectAnimObject,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
