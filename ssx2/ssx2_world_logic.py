@@ -17,6 +17,8 @@ from bpy.props import (
 from mathutils import Vector
 
 
+import struct
+
 
 def update_sequence_name(self, context):
 	if self.disable_name_update_func:
@@ -70,6 +72,7 @@ class LogicImporters:
 				23: self.import_movie,
 				24: self.import_end_boost,
 				256: self.import_anim_object,
+				257: self.import_anim_delta,
 			},
 
 			4: self.import_wait,
@@ -419,7 +422,7 @@ class LogicImporters:
 		fx.u1 = json_fx["U1"]
 		fx.u2 = json_fx["U2"]
 		fx.u3 = json_fx["U3"]
-		fx.u4 = json_fx["U4"]
+		fx.u4 = struct.unpack('f', struct.pack('i', json_fx["U4"]))[0]
 		fx.u5 = json_fx["U5"]
 		fx.u6 = json_fx["U6"]
 		fx.u7 = json_fx["U7"]
@@ -427,6 +430,25 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'anim_object'
+
+	def import_anim_delta(self, seq, json_fx):
+		fx_index = len(self.effects.anim_delta)
+
+		fx = self.effects.anim_delta.add()
+		json_fx = json_fx["type0"]["type0Sub257"]
+
+		fx.u0 = json_fx["U0"]
+		fx.u1 = struct.unpack('f', struct.pack('i', json_fx["U1"]))[0]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+		fx.u7 = json_fx["U7"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'anim_delta'
 
 	def import_reset(self, seq, json_fx):
 		fx_index = len(self.effects.reset)
@@ -732,6 +754,21 @@ class LogicDraw:
 		col.prop(effect, "u6", text="Unknown 6")
 		col.prop(effect, "u7", text="Unknown 7")
 
+	def draw_anim_delta(self, layout, index):
+		effect = self.effects.anim_delta[index]
+		layout.label(text="", icon="RENDER_ANIMATION")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Anim Delta")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+		col.prop(effect, "u7", text="Unknown 7")
+
 	def draw_reset(self, layout, index):
 		effect = self.effects.reset[index]
 		layout.label(text="", icon='FILE_REFRESH')
@@ -791,6 +828,7 @@ LogicDraw.effect_drawers = {
 	"movie": LogicDraw.draw_movie,
 	"end_boost": LogicDraw.draw_end_boost,
 	"anim_object": LogicDraw.draw_anim_object,
+	"anim_delta": LogicDraw.draw_anim_delta,	
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
@@ -821,6 +859,7 @@ enum_ssx2_effect_types = (
 	('movie', "Movie", ""),
 	('end_boost', "End Boost", ""),
 	('anim_object', "Anim Object", ""),
+	('anim_delta', "Anim Delta", ""),	
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
@@ -989,7 +1028,18 @@ class SSX2_PG_WorldEffectAnimObject(PropertyGroup):
 	u1: FloatProperty()
 	u2: FloatProperty()
 	u3: FloatProperty()
-	u4: FloatProperty()
+	u4: FloatProperty() # TODO: Update JSON (s32 to f32)
+	u5: FloatProperty()
+	u6: IntProperty()
+	u7: IntProperty()
+
+class SSX2_PG_WorldEffectAnimDelta(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: FloatProperty() # TODO: Update JSON (s32 to f32)
+	u2: FloatProperty()
+	u3: FloatProperty()
+	u4: IntProperty()
 	u5: FloatProperty()
 	u6: IntProperty()
 	u7: IntProperty()
@@ -1057,7 +1107,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	movie: CollectionProperty(type=SSX2_PG_WorldEffectMovie)
 	end_boost: CollectionProperty(type=SSX2_PG_WorldEffectEndBoost)
 	anim_object: CollectionProperty(type=SSX2_PG_WorldEffectAnimObject)
-	# t0_s257: CollectionProperty(type=)
+	anim_delta: CollectionProperty(type=SSX2_PG_WorldEffectAnimDelta)
 	# t0_s258: CollectionProperty(type=)
 
 
@@ -1128,7 +1178,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 23 (Movie)
 	│   ├── Sub 24 (EndBoost)
 	│   ├── Sub 256 (AnimObject)
-	│   ├── Sub 257 (AnimDelta) <<<<<<<<<<<<<<<<
+	│   ├── Sub 257 (AnimDelta)
 	│   └── Sub 258 (AnimCombo) <<<<<<<<<<<<<<<<
 	│   └── Sub 259 (AnimTexFlip) <<<<<<<<<<<<<<<< unused?
 	├── Type 1 (Camera) <<<<<<<<<<<<<<<< unused?
@@ -1404,6 +1454,7 @@ classes = (
 	SSX2_PG_WorldEffectMovie,
 	SSX2_PG_WorldEffectEndBoost,
 	SSX2_PG_WorldEffectAnimObject,
+	SSX2_PG_WorldEffectAnimDelta,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
