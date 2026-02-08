@@ -76,6 +76,10 @@ class LogicImporters:
 				258: self.import_anim_combo,
 			},
 
+			2: {
+				0: self.import_emitter,
+			},
+
 			4: self.import_wait,
 			7: self.import_run_on_target,
 			8: self.import_sound,
@@ -131,14 +135,22 @@ class LogicImporters:
 							import_func(seq, json_fx)
 
 							type_found = True
+					
+					elif json_fx["MainType"] == 2:
+						# sub_type = json_fx["type0"]["SubType"]
+
+						import_func = _main.get(json_fx["type2"]["SubType"])
+
+						if import_func is not None:
+							import_func(seq, json_fx)
+
+							type_found = True
 
 
 				
 				if type_found == False:
-
 					fx = self.effects.undefined.add()
 					fx.json_string = str(json_fx).replace("'", '"')
-					# fx.json_string = "Hello there!"
 
 					fx_ref = seq.effect_refs.add()
 					fx_ref.index = num_fx_undef
@@ -473,6 +485,68 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'anim_combo'
+
+	def import_emitter(self, seq, json_fx):
+		fx_index = len(self.effects.emitter)
+
+		fx = self.effects.emitter.add()
+		json_fx = json_fx["type2"]["type2Sub0"]
+
+		fx.u0 = json_fx["U0"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.u3 = json_fx["U3"]
+		fx.u4 = json_fx["U4"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+		fx.u7 = json_fx["U7"]
+		fx.u8 = json_fx["U8"]
+		fx.u9 = json_fx["U9"]
+		fx.u10 = json_fx["U10"]
+		fx.u11 = json_fx["U11"]
+		fx.u12 = json_fx["U12"]
+		fx.u13 = json_fx["U13"]
+		fx.u14 = json_fx["U14"]
+		fx.u15 = json_fx["U15"]
+		fx.u16 = json_fx["U16"]
+		fx.u17 = json_fx["U17"]
+		fx.u18 = json_fx["U18"]
+		fx.u19 = json_fx["U19"]
+		fx.u20 = json_fx["U20"]
+		fx.u21 = json_fx["U21"]
+		fx.u22 = json_fx["U22"]
+		fx.u23 = json_fx["U23"]
+		fx.u24 = json_fx["U24"]
+		fx.u25 = json_fx["U25"]
+		fx.u26 = json_fx["U26"]
+		fx.u27 = json_fx["U27"]
+		fx.u28 = json_fx["U28"]
+		fx.u29 = json_fx["U29"]
+		fx.u30 = json_fx["U30"]
+		fx.u31 = json_fx["U31"]
+		fx.u32 = json_fx["U32"]
+		fx.u33 = json_fx["U33"]
+		fx.u34 = json_fx["U34"]
+		fx.u35 = json_fx["U35"]
+		fx.u36 = json_fx["U36"]
+		fx.u37 = json_fx["U37"]
+		fx.u38 = json_fx["U38"]
+		fx.u39 = json_fx["U39"]
+		fx.u40 = json_fx["U40"]
+		fx.u41 = json_fx["U41"]
+		fx.u42 = json_fx["U42"]
+		fx.u43 = json_fx["U43"]
+		fx.u44 = json_fx["U44"]
+		fx.u45 = json_fx["U45"]
+		fx.u46 = json_fx["U46"]
+		fx.u47 = json_fx["U47"]
+		fx.u48 = json_fx["U48"]
+		fx.u49 = json_fx["U49"]
+		fx.u50 = json_fx["U50"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'emitter'
 
 	def import_reset(self, seq, json_fx):
 		fx_index = len(self.effects.reset)
@@ -812,6 +886,64 @@ class LogicDraw:
 		col.prop(effect, "u10", text="Unknown 10")
 		col.prop(effect, "u11", text="Unknown 11")
 
+	def draw_emitter(self, layout, index):
+		effect = self.effects.emitter[index]
+		layout.label(text="", icon="PARTICLES")
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Emitter")
+		col.prop(effect, "u0", text="Unknown 0")
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "u3", text="Unknown 3")
+		col.prop(effect, "u4", text="Unknown 4")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+		col.prop(effect, "u7", text="Unknown 7")
+		col.prop(effect, "u8", text="Unknown 8")
+		col.prop(effect, "u9", text="Unknown 9")
+		col.prop(effect, "u10", text="Unknown 10")
+		col.prop(effect, "u11", text="Unknown 11")
+		col.prop(effect, "u12", text="Unknown 12")
+		col.prop(effect, "u13", text="Unknown 13")
+		col.prop(effect, "u14", text="Unknown 14")
+		col.prop(effect, "u15", text="Unknown 15")
+		col.prop(effect, "u16", text="Unknown 16")
+		col.prop(effect, "u17", text="Unknown 17")
+		col.prop(effect, "u18", text="Unknown 18")
+		col.prop(effect, "u19", text="Unknown 19")
+		col.prop(effect, "u20", text="Unknown 20")
+		col.prop(effect, "u21", text="Unknown 21")
+		col.prop(effect, "u22", text="Unknown 22")
+		col.prop(effect, "u23", text="Unknown 23")
+		col.prop(effect, "u24", text="Unknown 24")
+		col.prop(effect, "u25", text="Unknown 25")
+		col.prop(effect, "u26", text="Unknown 26")
+		col.prop(effect, "u27", text="Unknown 27")
+		col.prop(effect, "u28", text="Unknown 28")
+		col.prop(effect, "u29", text="Unknown 29")
+		col.prop(effect, "u30", text="Unknown 30")
+		col.prop(effect, "u31", text="Unknown 31")
+		col.prop(effect, "u32", text="Unknown 32")
+		col.prop(effect, "u33", text="Unknown 33")
+		col.prop(effect, "u34", text="Unknown 34")
+		col.prop(effect, "u35", text="Unknown 35")
+		col.prop(effect, "u36", text="Unknown 36")
+		col.prop(effect, "u37", text="Unknown 37")
+		col.prop(effect, "u38", text="Unknown 38")
+		col.prop(effect, "u39", text="Unknown 39")
+		col.prop(effect, "u40", text="Unknown 40")
+		col.prop(effect, "u41", text="Unknown 41")
+		col.prop(effect, "u42", text="Unknown 42")
+		col.prop(effect, "u43", text="Unknown 43")
+		col.prop(effect, "u44", text="Unknown 44")
+		col.prop(effect, "u45", text="Unknown 45")
+		col.prop(effect, "u46", text="Unknown 46")
+		col.prop(effect, "u47", text="Unknown 47")
+		col.prop(effect, "u48", text="Unknown 48")
+		col.prop(effect, "u49", text="Unknown 49")
+		col.prop(effect, "u50", text="Unknown 50")
+
 	def draw_reset(self, layout, index):
 		effect = self.effects.reset[index]
 		layout.label(text="", icon='FILE_REFRESH')
@@ -873,6 +1005,7 @@ LogicDraw.effect_drawers = {
 	"anim_object": LogicDraw.draw_anim_object,
 	"anim_delta": LogicDraw.draw_anim_delta,
 	"anim_combo": LogicDraw.draw_anim_combo,
+	"emitter": LogicDraw.draw_emitter,
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
@@ -905,6 +1038,7 @@ enum_ssx2_effect_types = (
 	('anim_object', "Anim Object", ""),
 	('anim_delta', "Anim Delta", ""),
 	('anim_combo', "Anim Combo", ""),
+	('emitter', "Emitter", ""),
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
@@ -1104,6 +1238,60 @@ class SSX2_PG_WorldEffectAnimCombo(PropertyGroup):
 	u10: FloatProperty()
 	u11: IntProperty()
 
+class SSX2_PG_WorldEffectEmitter(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	u0: IntProperty()
+	u1: IntProperty()
+	u2: FloatProperty()
+	u3: FloatProperty()
+	u4: FloatProperty()
+	u5: FloatProperty()
+	u6: FloatProperty()
+	u7: FloatProperty()
+	u8: FloatProperty()
+	u9: IntProperty()
+	u10: FloatProperty()
+	u11: FloatProperty()
+	u12: FloatProperty()
+	u13: FloatProperty()
+	u14: FloatProperty()
+	u15: FloatProperty()
+	u16: FloatProperty()
+	u17: FloatProperty()
+	u18: FloatProperty()
+	u19: FloatProperty()
+	u20: FloatProperty()
+	u21: FloatProperty()
+	u22: FloatProperty()
+	u23: FloatProperty()
+	u24: FloatProperty()
+	u25: FloatProperty()
+	u26: FloatProperty()
+	u27: FloatProperty()
+	u28: FloatProperty()
+	u29: FloatProperty()
+	u30: FloatProperty()
+	u31: FloatProperty()
+	u32: FloatProperty()
+	u33: FloatProperty()
+	u34: FloatProperty()
+	u35: FloatProperty()
+	u36: FloatProperty()
+	u37: FloatProperty()
+	u38: FloatProperty()
+	u39: FloatProperty()
+	u40: FloatProperty()
+	u41: FloatProperty()
+	u42: FloatProperty()
+	u43: FloatProperty()
+	u44: FloatProperty()
+	u45: FloatProperty()
+	u46: FloatProperty()
+	u47: FloatProperty()
+	u48: FloatProperty()
+	u49: IntProperty()
+	u50: IntProperty()
+
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	time: FloatProperty()
@@ -1171,8 +1359,8 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	anim_combo: CollectionProperty(type=SSX2_PG_WorldEffectAnimCombo)
 
 
-	# # type 2
-	# emitter: CollectionProperty(type=)
+	# type 2
+	emitter: CollectionProperty(type=SSX2_PG_WorldEffectEmitter)
 	# t1_s1: CollectionProperty(type=)
 	# t1_s2: CollectionProperty(type=)
 
@@ -1516,6 +1704,7 @@ classes = (
 	SSX2_PG_WorldEffectAnimObject,
 	SSX2_PG_WorldEffectAnimDelta,
 	SSX2_PG_WorldEffectAnimCombo,
+	SSX2_PG_WorldEffectEmitter,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
