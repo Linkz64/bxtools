@@ -1586,7 +1586,6 @@ class SSX2_OP_WorldImport(Operator):
 			effects.run_on_target[fx_index].target_sequence = \
 				scene.ssx2_LogicSequences[num_seq_start + target_sequence].name
 
-
 		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
 			effects.teleport[fx_index].target = instance_refs[teleport_target]
 
@@ -1594,6 +1593,9 @@ class SSX2_OP_WorldImport(Operator):
 			for fx_index, spline_index, u0 in logic_importer.defer_refs_spline_manager:
 				effects.spline_manager[fx_index].spline = self.spline_objects[spline_index]
 				effects.spline_manager[fx_index].u0 = u0
+
+			for fx_index, spline_index in logic_importer.defer_refs_spline_path:
+				effects.spline_path[fx_index].spline = self.spline_objects[spline_index]
 
 
 		print("importing instances took", time.time() - import_instances_time_start)

@@ -49,6 +49,7 @@ class LogicImporters:
 		self.data = data
 
 		self.num_seq_start = len(sequences)
+		self.defer_refs_spline_path = []
 		self.defer_refs_run_on_target = []
 		self.defer_refs_teleport = []
 		self.defer_refs_spline_manager = []
@@ -78,6 +79,7 @@ class LogicImporters:
 
 			2: {
 				0: self.import_emitter,
+				1: self.import_spline_path,
 			},
 
 			4: self.import_wait,
@@ -135,7 +137,7 @@ class LogicImporters:
 							import_func(seq, json_fx)
 
 							type_found = True
-					
+
 					elif json_fx["MainType"] == 2:
 						# sub_type = json_fx["type0"]["SubType"]
 
@@ -548,6 +550,28 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'emitter'
 
+	def import_spline_path(self, seq, json_fx):
+		fx_index = len(self.effects.spline_path)
+
+		fx = self.effects.spline_path.add()
+		json_fx = json_fx["type2"]["SplineAnimation"]
+
+		# fx.spline = json_fx["SplineIndex"]
+		fx.u1 = json_fx["U1"]
+		fx.u2 = json_fx["U2"]
+		fx.instance_count = json_fx["InstanceCount"]
+		fx.speed = json_fx["AnimationSpeed"]
+		fx.u5 = json_fx["U5"]
+		fx.u6 = json_fx["U6"]
+		fx.u7 = json_fx["U7"]
+		fx.color = Vector((json_fx["R"], json_fx["G"], json_fx["B"]))
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'spline_path'
+
+		self.defer_refs_spline_path.append((fx_index, json_fx["SplineIndex"]))
+
 	def import_reset(self, seq, json_fx):
 		fx_index = len(self.effects.reset)
 
@@ -944,6 +968,23 @@ class LogicDraw:
 		col.prop(effect, "u49", text="Unknown 49")
 		col.prop(effect, "u50", text="Unknown 50")
 
+	def draw_spline_path(self, layout, index):
+		effect = self.effects.spline_path[index]
+		layout.label(text="", icon='CON_FOLLOWPATH')
+
+		col = layout.column()
+		col.prop(effect, "checked", text="Spline Path")
+		col.prop(effect, "spline", text="", icon='OUTLINER_OB_CURVE')
+		col.prop(effect, "u1", text="Unknown 1")
+		col.prop(effect, "u2", text="Unknown 2")
+		col.prop(effect, "instance_count", text="Instance Count")
+		col.prop(effect, "speed", text="Speed")
+		col.prop(effect, "u5", text="Unknown 5")
+		col.prop(effect, "u6", text="Unknown 6")
+		col.prop(effect, "u7", text="Unknown 7")
+		row = col.row()
+		row.prop(effect, "color", text="Color")
+
 	def draw_reset(self, layout, index):
 		effect = self.effects.reset[index]
 		layout.label(text="", icon='FILE_REFRESH')
@@ -1006,6 +1047,7 @@ LogicDraw.effect_drawers = {
 	"anim_delta": LogicDraw.draw_anim_delta,
 	"anim_combo": LogicDraw.draw_anim_combo,
 	"emitter": LogicDraw.draw_emitter,
+	"spline_path": LogicDraw.draw_spline_path,
 	"reset": LogicDraw.draw_reset,
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
@@ -1039,6 +1081,7 @@ enum_ssx2_effect_types = (
 	('anim_delta', "Anim Delta", ""),
 	('anim_combo', "Anim Combo", ""),
 	('emitter', "Emitter", ""),
+	('spline_path', "Spline Path", ""),
 	('reset', "Reset Rider", ""),
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
@@ -1292,9 +1335,21 @@ class SSX2_PG_WorldEffectEmitter(PropertyGroup):
 	u49: IntProperty()
 	u50: IntProperty()
 
+class SSX2_PG_WorldEffectSplinePath(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	spline: PointerProperty(type=bpy.types.Object) # TODO: Poll splines only
+	u1: IntProperty()
+	u2: IntProperty()
+	instance_count: IntProperty()
+	speed: FloatProperty()
+	u5: FloatProperty()
+	u6: IntProperty()
+	u7: FloatProperty()
+	color: FloatVectorProperty(subtype='COLOR_GAMMA')
+
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	time: FloatProperty()
+	time: FloatProperty() # TODO: Try TIME subtype
 
 class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -1315,7 +1370,7 @@ class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 
 class SSX2_PG_WorldEffectSpeedBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	duration: FloatProperty()
+	duration: FloatProperty() # TODO: Try TIME subtype
 
 class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -1327,7 +1382,7 @@ class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 
 class SSX2_PG_WorldEffectSplineManager(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
-	spline: PointerProperty(type=bpy.types.Curve)
+	spline: PointerProperty(type=bpy.types.Object)
 	u0: IntProperty()
 
 
@@ -1361,7 +1416,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 	# type 2
 	emitter: CollectionProperty(type=SSX2_PG_WorldEffectEmitter)
-	# t1_s1: CollectionProperty(type=)
+	spline_path: CollectionProperty(type=SSX2_PG_WorldEffectSplinePath)
 	# t1_s2: CollectionProperty(type=)
 
 
@@ -1431,8 +1486,8 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   └── Sub 259 (AnimTexFlip) <<<<<<<<<<<<<<<< unused?
 	├── Type 1 (Camera) <<<<<<<<<<<<<<<< unused?
 	├── Type 2
-	│   ├── Sub 0 (Emitter) <<<<<<<<<<<<<<<<
-	│   ├── Sub 1 (SplinePath) <<<<<<<<<<<<<<<<
+	│   ├── Sub 0 (Emitter)
+	│   ├── Sub 1 (SplinePath)
 	│   └── Sub 2 (CollideEmitter) <<<<<<<<<<<<<<<<
 	├── Type 3 <<<<<<<<<<<<<<<< similar to 9
 	├── Type 4 (Wait)
@@ -1705,6 +1760,7 @@ classes = (
 	SSX2_PG_WorldEffectAnimDelta,
 	SSX2_PG_WorldEffectAnimCombo,
 	SSX2_PG_WorldEffectEmitter,
+	SSX2_PG_WorldEffectSplinePath,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
