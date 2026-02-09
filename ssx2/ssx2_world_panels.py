@@ -332,9 +332,6 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 	bl_parent_id = 'BXT_PT_world_logic_panel'
 	bl_options = {'DEFAULT_CLOSED'}
 
-	# def draw_header(self, context):
-	# 	self.layout.label(text="", icon='CURVE_BEZCURVE')
-
 	def draw(self, context):
 		# row = self.layout.row()
 		# col = row.column()
@@ -382,6 +379,47 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 
 					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
 					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+
+
+class SSX2_WorldLogicFunctionsSubPanel(SSX2_Panel):
+	bl_idname = 'BXT_PT_world_effect_functions_panel'
+	bl_label = 'Functions'
+	bl_parent_id = 'BXT_PT_world_logic_panel'
+	bl_options = {'DEFAULT_CLOSED'}
+
+	def draw(self, context):
+		col = self.layout.column()
+		
+		scene = context.scene
+		logic_draw = LogicDraw(scene)
+
+		search = scene.ssx2_LogicSequenceSearch
+		col.prop(scene, "ssx2_LogicSequenceSearch", icon='VIEWZOOM', text="")
+
+		for i, seq in enumerate(scene.ssx2_LogicFunctions):
+			if search.lower() not in seq.name.lower():
+				continue
+
+			seq_box = col.box()
+			box_row = seq_box.row(align=True)
+			box_row.operator(SSX2_OP_WorldLogicExpandFunction.bl_idname,\
+				icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
+				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").index = i
+			
+			box_row.prop(seq, "name", text="")
+
+			if seq.expanded:
+				for j, fx_ref in enumerate(seq.effect_refs):
+					fx_box = seq_box.box()
+					row_a = fx_box.row(align=True)
+
+					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+
+					row_a.separator()
+
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
+					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+
 
 
 
@@ -793,6 +831,19 @@ class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+class SSX2_OP_WorldLogicExpandFunction(bpy.types.Operator):
+	bl_idname = "wm.ssx2_expand_logic_function"
+	bl_label = ""
+	bl_description = "Expand box"
+
+	index: bpy.props.IntProperty()
+
+	def execute(self, context):
+		seq = context.scene.ssx2_LogicFunctions[self.index]
+		seq.expanded = not seq.expanded 
+
+		return {'FINISHED'}
+
 class SSX2_OP_WorldLogicExpandSlot(bpy.types.Operator):
 	bl_idname = "wm.ssx2_expand_logic_slot"
 	bl_label = ""
@@ -883,6 +934,7 @@ classes = (
 	SSX2_WorldPathsSubPanel,
 	SSX2_WorldLogicSubPanel,
 	SSX2_WorldLogicSequencesSubPanel,
+	SSX2_WorldLogicFunctionsSubPanel,
 
 
 	SSX2_WorldImportPanel,
@@ -898,6 +950,7 @@ classes = (
 
 	SSX2_OP_WorldExpandUIBoxes,
 	SSX2_OP_WorldLogicExpandSequence,
+	SSX2_OP_WorldLogicExpandFunction,
 	SSX2_OP_WorldLogicExpandSlot,
 	SSX2_OP_WorldLogicSlotClear,
 	SSX2_OP_WorldShowPathEvent,
