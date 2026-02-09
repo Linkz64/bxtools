@@ -42,17 +42,21 @@ def update_sequence_name(self, context):
 
 
 class LogicImporters:
-	def __init__(self, scene, sequences, effects, data):
-		self.scene = scene
-		self.sequences = sequences
-		self.effects = effects
+	def __init__(self, data, scene):
 		self.data = data
 
-		self.num_seq_start = len(sequences)
+		self.sequences = scene.ssx2_LogicSequences
+		self.functions = scene.ssx2_LogicFunctions
+		self.effects = scene.ssx2_Effects
+
+		self.num_seq_start = len(self.sequences)
+		self.num_func_start = len(self.functions)
 		self.defer_refs_spline_path = []
 		self.defer_refs_run_on_target = []
 		self.defer_refs_teleport = []
 		self.defer_refs_spline_manager = []
+
+		self.num_fx_undef = len(self.effects.undefined)
 
 		self.importers = {
 			0: {
@@ -94,13 +98,12 @@ class LogicImporters:
 
 		}
 
-		self.import_all(data)
+		self.import_sequences(data)
+		self.import_functions(data)
 
-		# TODO: remove self.scene 
 
-	def import_all(self, json_string):
+	def import_sequences(self, json_string):
 		num_seq = self.num_seq_start
-		num_fx_undef = len(self.effects.undefined)
 
 		for i, json_seq in enumerate(self.data["EffectHeaders"]):
 			seq_name = json_seq["EffectName"]
@@ -114,57 +117,66 @@ class LogicImporters:
 				if seq_name == "Effect " + str(i) \
 				else seq_name
 
-
-			for j, json_fx in enumerate(json_seq["Effects"]):
-				# print("json_fx", json_fx)
-
-				type_found = False
-
-				main_type = json_fx["MainType"]
-
-				_main = self.importers.get(main_type)
-
-				if type(_main) is not dict and _main is not None:
-					_main(seq, json_fx)
-					type_found = True
-				else:
-					if json_fx["MainType"] == 0:
-						# sub_type = json_fx["type0"]["SubType"]
-
-						import_func = _main.get(json_fx["type0"]["SubType"])
-
-						if import_func is not None:
-							import_func(seq, json_fx)
-
-							type_found = True
-
-					elif json_fx["MainType"] == 2:
-						# sub_type = json_fx["type0"]["SubType"]
-
-						import_func = _main.get(json_fx["type2"]["SubType"])
-
-						if import_func is not None:
-							import_func(seq, json_fx)
-
-							type_found = True
-
-
-				
-				if type_found == False:
-					fx = self.effects.undefined.add()
-					fx.json_string = str(json_fx).replace("'", '"')
-
-					fx_ref = seq.effect_refs.add()
-					fx_ref.index = num_fx_undef
-					fx_ref.kind = 'undefined'
-
-					num_fx_undef += 1
-
-
+			self.import_effects(seq, json_seq["Effects"])
 			num_seq += 1
 
-			# if i == 1:
-			# 	break
+	def import_functions(self, json_string):
+		# num_func = self.num_func_start
+
+		for i, json_func in enumerate(self.data["Functions"]):
+			func_name = json_func["FunctionName"]
+			print("\n func:", i, "name:", func_name)
+
+			seq = self.functions.add()
+			seq.name = func_name
+
+			self.import_effects(seq, json_func["Effects"])
+			# num_func += 1
+
+
+	def import_effects(self, seq, json_effects):
+		for j, json_fx in enumerate(json_effects):
+			# print("json_fx", json_fx)
+
+			type_found = False
+
+			main_type = json_fx["MainType"]
+			_main = self.importers.get(main_type)
+
+			if type(_main) is not dict and _main is not None:
+				_main(seq, json_fx)
+				type_found = True
+			else:
+				if json_fx["MainType"] == 0:
+					# sub_type = json_fx["type0"]["SubType"]
+
+					import_func = _main.get(json_fx["type0"]["SubType"])
+
+					if import_func is not None:
+						import_func(seq, json_fx)
+
+						type_found = True
+
+				elif json_fx["MainType"] == 2:
+					# sub_type = json_fx["type0"]["SubType"]
+
+					import_func = _main.get(json_fx["type2"]["SubType"])
+
+					if import_func is not None:
+						import_func(seq, json_fx)
+
+						type_found = True
+
+			
+			if type_found == False:
+				fx = self.effects.undefined.add()
+				fx.json_string = str(json_fx).replace("'", '"')
+
+				fx_ref = seq.effect_refs.add()
+				fx_ref.index = self.num_fx_undef
+				fx_ref.kind = 'undefined'
+
+				self.num_fx_undef += 1
 	
 
 	def import_roller(self, seq, json_fx):
@@ -632,7 +644,9 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'spline_manager'
 
-		self.defer_refs_spline_manager.append((fx_index, json_fx["SplineIndex"], json_fx["Effect"]))
+		self.defer_refs_spline_manager.append(
+			(fx_index, json_fx["Spline"]["SplineIndex"], json_fx["Spline"]["Effect"])
+		)
 
 
 
@@ -1105,8 +1119,11 @@ class SSX2_PG_WorldLogicSequence(PropertyGroup):
 	expanded: BoolProperty()
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 	
-	# I could do it with indices:
-	# checked: CollectionProperty(type=?)
+class SSX2_PG_WorldLogicFunction(PropertyGroup):
+	name: StringProperty()
+	disable_name_update_func: BoolProperty()
+	expanded: BoolProperty()
+	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 
 
 class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
@@ -1488,7 +1505,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 2
 	│   ├── Sub 0 (Emitter)
 	│   ├── Sub 1 (SplinePath)
-	│   └── Sub 2 (CollideEmitter) <<<<<<<<<<<<<<<<
+	│   └── Sub 2 (CollideEmitter) <<<<<<<<<<<<<<<< REQUIRES FURTHER RESEARCH
 	├── Type 3 <<<<<<<<<<<<<<<< similar to 9
 	├── Type 4 (Wait)
 	├── Type 5
@@ -1737,6 +1754,7 @@ def search_sequence(self, context, edit_text):
 classes = (
 	SSX2_PG_WorldEffectRef,
 	SSX2_PG_WorldLogicSequence,
+	SSX2_PG_WorldLogicFunction,
 	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_PG_WorldEffectUndefined,
@@ -1785,6 +1803,7 @@ def ssx2_world_logic_register():
 
 	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_PG_WorldEffects)
 	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_PG_WorldLogicSequence)
+	bpy.types.Scene.ssx2_LogicFunctions = CollectionProperty(type=SSX2_PG_WorldLogicFunction)
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
 	bpy.types.Scene.ssx2_LogicSequenceSearch = StringProperty(search=search_sequence, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
@@ -1798,9 +1817,7 @@ def ssx2_world_logic_register():
 	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot6 = StringProperty(name="Choice Slot6", update=update_sequence_choice_slot6)
 	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot7 = StringProperty(name="Choice Slot7", update=update_sequence_choice_slot7)
 
-
 def ssx2_world_logic_unregister():
-
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceConstant
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceCollision
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot3
@@ -1809,9 +1826,11 @@ def ssx2_world_logic_unregister():
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot6
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot7
 
+	del bpy.types.Scene.ssx2_LogicSlotsExpand
 	del bpy.types.Scene.ssx2_LogicSequenceSearch
 
 	del bpy.types.Object.ssx2_LogicSlotsSet
+	del bpy.types.Scene.ssx2_LogicFunctions
 	del bpy.types.Scene.ssx2_LogicSequences
 	del bpy.types.Scene.ssx2_Effects
 

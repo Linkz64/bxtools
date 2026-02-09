@@ -1048,10 +1048,8 @@ class SSX2_OP_WorldImport(Operator):
 		json_logic_slot_sets = data["EffectSlots"]
 
 		logic_importer = LogicImporters(
-			scene, 
-			scene.ssx2_LogicSequences, 
-			scene.ssx2_Effects,
 			data,
+			scene,
 		)
 
 		num_seq_start = logic_importer.num_seq_start
