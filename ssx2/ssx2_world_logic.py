@@ -1775,6 +1775,9 @@ def update_sequence_choice_slot7(self, context):
 def search_sequence(self, context, edit_text):
 	return (seq.name for seq in self.ssx2_LogicSequences)
 
+def search_function(self, context, edit_text):
+	return (seq.name for seq in self.ssx2_LogicFunctions)
+
 
 classes = (
 	SSX2_PG_WorldEffectRef,
@@ -1833,6 +1836,7 @@ def ssx2_world_logic_register():
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
 	bpy.types.Scene.ssx2_LogicSequenceSearch = StringProperty(search=search_sequence, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
+	bpy.types.Scene.ssx2_LogicFunctionSearch = StringProperty(search=search_function, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
 	bpy.types.Scene.ssx2_LogicSlotsExpand = IntProperty()
 
 	bpy.types.Scene.ssx2_LogicSequenceChoiceConstant = StringProperty(name="Choice Constant", update=update_sequence_choice_constant)
@@ -1853,6 +1857,7 @@ def ssx2_world_logic_unregister():
 	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot7
 
 	del bpy.types.Scene.ssx2_LogicSlotsExpand
+	del bpy.types.Scene.ssx2_LogicFunctionSearch
 	del bpy.types.Scene.ssx2_LogicSequenceSearch
 
 	del bpy.types.Object.ssx2_LogicSlotsSet

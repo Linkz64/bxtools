@@ -393,8 +393,8 @@ class SSX2_WorldLogicFunctionsSubPanel(SSX2_Panel):
 		scene = context.scene
 		logic_draw = LogicDraw(scene)
 
-		search = scene.ssx2_LogicSequenceSearch
-		col.prop(scene, "ssx2_LogicSequenceSearch", icon='VIEWZOOM', text="")
+		search = scene.ssx2_LogicFunctionSearch
+		col.prop(scene, "ssx2_LogicFunctionSearch", icon='VIEWZOOM', text="")
 
 		for i, seq in enumerate(scene.ssx2_LogicFunctions):
 			if search.lower() not in seq.name.lower():
