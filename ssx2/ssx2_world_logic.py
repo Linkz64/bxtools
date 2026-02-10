@@ -53,6 +53,7 @@ class LogicImporters:
 		self.num_func_start = len(self.functions)
 		self.defer_refs_spline_path = []
 		self.defer_refs_run_on_target = []
+		self.defer_refs_function_run = []
 		self.defer_refs_teleport = []
 		self.defer_refs_spline_manager = []
 
@@ -93,6 +94,7 @@ class LogicImporters:
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
 			18: self.import_trick_boost,
+			21: self.import_function_run,
 			24: self.import_teleport,
 			25: self.import_spline_manager,
 
@@ -624,6 +626,17 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'trick_boost'
 
+	def import_function_run(self, seq, json_fx):
+		fx_index = len(self.effects.function_run)
+
+		self.effects.function_run.add()
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'function_run'
+
+		self.defer_refs_function_run.append((fx_index, json_fx["FunctionRunIndex"]))
+
 	def import_teleport(self, seq, json_fx):
 		fx_index = len(self.effects.teleport)
 
@@ -1023,6 +1036,12 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Trick Boost")
 		layout.prop(effect, "amount", text="Amount")
 
+	def draw_function_run(self, layout, index):
+		effect = self.effects.function_run[index]
+		layout.label(text="", icon='CONSOLE')
+		layout.prop(effect, "checked", text="Function Run")
+		layout.prop(effect, "name", text="")
+
 	def draw_teleport(self, layout, index):
 		effect = self.effects.teleport[index]
 		layout.label(text="", icon='CON_TRACKTO')
@@ -1066,6 +1085,7 @@ LogicDraw.effect_drawers = {
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
+	"function_run": LogicDraw.draw_function_run,
 	"teleport": LogicDraw.draw_teleport,
 	"spline_manager": LogicDraw.draw_spline_manager,
 }
@@ -1100,6 +1120,7 @@ enum_ssx2_effect_types = (
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
+	('function_run', "Function Run", ""),
 	('teleport', "Teleport", ""),
 	('spline_manager', "Spline Manager", ""),
 )
@@ -1393,6 +1414,10 @@ class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	amount: FloatProperty()
 
+class SSX2_PG_WorldEffectFunctionRun(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	# using built-in "name" for the function name
+
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	target: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
@@ -1437,32 +1462,32 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# t1_s2: CollectionProperty(type=)
 
 
-	# # type 3
+	# type 3
 	# t3_s0: CollectionProperty(type=)
-	# # type 4
+	# type 4
 	wait: CollectionProperty(type=SSX2_PG_WorldEffectWait)
-	# # type 5
+	# type 5
 	# t5_s0: CollectionProperty(type=)
 
-	# # type 7
-	run_on_target: CollectionProperty(type=SSX2_PG_WorldEffectRunOnTarget) # aka Script?
-	# # type 8
+	# type 7
+	run_on_target: CollectionProperty(type=SSX2_PG_WorldEffectRunOnTarget)
+	# type 8
 	sound: CollectionProperty(type=SSX2_PG_WorldEffectSound)
-	# # type 9
+	# type 9
 
-	# # type 13
+	# type 13
 	reset: CollectionProperty(type=SSX2_PG_WorldEffectReset)
-	# # type 14
+	# type 14
 	multiplier: CollectionProperty(type=SSX2_PG_WorldEffectMultiplier)
-	# # type 17
+	# type 17
 	speed_boost: CollectionProperty(type=SSX2_PG_WorldEffectSpeedBoost)
-	# # type 18
+	# type 18
 	trick_boost: CollectionProperty(type=SSX2_PG_WorldEffectTrickBoost)
-	# # type 21
-	# function_run: CollectionProperty(type=)
-	# # type 24
+	# type 21
+	function_run: CollectionProperty(type=SSX2_PG_WorldEffectFunctionRun)
+	# type 24
 	teleport: CollectionProperty(type=SSX2_PG_WorldEffectTeleport)
-	# # type 25
+	# type 25
 	spline_manager: CollectionProperty(type=SSX2_PG_WorldEffectSplineManager)
 
 
@@ -1786,6 +1811,7 @@ classes = (
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
 	SSX2_PG_WorldEffectTrickBoost,
+	SSX2_PG_WorldEffectFunctionRun,
 	SSX2_PG_WorldEffectTeleport,
 	SSX2_PG_WorldEffectSplineManager,
 

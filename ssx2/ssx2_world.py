@@ -1053,6 +1053,7 @@ class SSX2_OP_WorldImport(Operator):
 		)
 
 		num_seq_start = logic_importer.num_seq_start
+		num_func_start = logic_importer.num_func_start
 
 
 
@@ -1583,6 +1584,11 @@ class SSX2_OP_WorldImport(Operator):
 			effects.run_on_target[fx_index].target_instance = instance_refs[target_instance]
 			effects.run_on_target[fx_index].target_sequence = \
 				scene.ssx2_LogicSequences[num_seq_start + target_sequence].name
+
+		
+		for fx_index, function_index in logic_importer.defer_refs_function_run:
+			effects.function_run[fx_index].name = \
+				scene.ssx2_LogicFunctions[num_func_start + function_index].name
 
 		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
 			effects.teleport[fx_index].target = instance_refs[teleport_target]
