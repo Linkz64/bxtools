@@ -39,6 +39,25 @@ def update_sequence_name(self, context):
 		self.disable_name_update_func = True
 		self.name = new_name
 
+def update_function_name(self, context):
+	if self.disable_name_update_func:
+		self.disable_name_update_func = False
+		return
+
+	name = self.name
+	name_list = [seq.name for seq in context.scene.ssx2_LogicFunctions]
+
+	if name_list.count(name) > 1:
+		count = 1
+		new_name = f"{name}.{count:03}"
+
+		while new_name in name_list:
+			count += 1
+			new_name = f"{name}.{count:03}"
+
+		self.disable_name_update_func = True
+		self.name = new_name
+
 
 
 class LogicImporters:
@@ -1141,7 +1160,7 @@ class SSX2_PG_WorldLogicSequence(PropertyGroup):
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 	
 class SSX2_PG_WorldLogicFunction(PropertyGroup):
-	name: StringProperty()
+	name: StringProperty(update=update_function_name)
 	disable_name_update_func: BoolProperty()
 	expanded: BoolProperty()
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
