@@ -757,9 +757,11 @@ class LogicDraw:
 	def draw_run_on_target(self, layout, index):
 		effect = self.effects.run_on_target[index]
 		layout.label(text="", icon='CON_OBJECTSOLVER')
-		layout.prop(effect, "checked", text="Run on Target")
-		layout.prop(effect, "target_instance", text="")
-		layout.prop_search(
+
+		lyt_split = layout.split(factor=0.385)
+		lyt_split.prop(effect, "checked", text="Run on Target")
+		col = lyt_split.column()
+		col.prop_search(
 			effect,
 			"target_sequence",
 			bpy.context.scene,
@@ -767,6 +769,8 @@ class LogicDraw:
 			icon='VIEWZOOM',
 			text="",
 		)
+		col.prop(effect, "target_instance", text="")
+		
 
 	def draw_sound(self, layout, index):
 		effect = self.effects.sound[index]
