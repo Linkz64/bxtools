@@ -1052,8 +1052,8 @@ class SSX2_OP_WorldImport(Operator):
 			scene,
 		)
 
-		num_seq_start = logic_importer.num_seq_start
-		num_func_start = logic_importer.num_func_start
+		num_script_start = logic_importer.num_script_start
+		num_named_script_start = logic_importer.num_named_script_start
 
 
 
@@ -1521,13 +1521,13 @@ class SSX2_OP_WorldImport(Operator):
 				slot_slot6 = json_logic_slot_set["Slot6"]
 				slot_slot7 = json_logic_slot_set["Slot7"]
 
-				slots_set.constant = -1 if slot_constant == -1 else num_seq_start + slot_constant
-				slots_set.collision = -1 if slot_collision == -1 else num_seq_start + slot_collision
-				slots_set.slot3 = -1 if slot_slot3 == -1 else num_seq_start + slot_slot3
-				slots_set.slot4 = -1 if slot_slot4 == -1 else num_seq_start + slot_slot4
-				slots_set.logic_trigger = -1 if slot_logic_trigger == -1 else num_seq_start + slot_logic_trigger
-				slots_set.slot6 = -1 if slot_slot6 == -1 else num_seq_start + slot_slot6
-				slots_set.slot7 = -1 if slot_slot7 == -1 else num_seq_start + slot_slot7
+				slots_set.constant = -1 if slot_constant == -1 else num_script_start + slot_constant
+				slots_set.collision = -1 if slot_collision == -1 else num_script_start + slot_collision
+				slots_set.slot3 = -1 if slot_slot3 == -1 else num_script_start + slot_slot3
+				slots_set.slot4 = -1 if slot_slot4 == -1 else num_script_start + slot_slot4
+				slots_set.logic_trigger = -1 if slot_logic_trigger == -1 else num_script_start + slot_logic_trigger
+				slots_set.slot6 = -1 if slot_slot6 == -1 else num_script_start + slot_slot6
+				slots_set.slot7 = -1 if slot_slot7 == -1 else num_script_start + slot_slot7
 
 
 
@@ -1583,12 +1583,12 @@ class SSX2_OP_WorldImport(Operator):
 		for fx_index, target_instance, target_script in logic_importer.defer_refs_run_on_target:
 			effects.run_on_target[fx_index].target_instance = instance_refs[target_instance]
 			effects.run_on_target[fx_index].target_script = \
-				scene.ssx2_LogicScripts[num_seq_start + target_script].name
+				scene.ssx2_LogicScripts[num_script_start + target_script].name
 
 		
-		for fx_index, function_index in logic_importer.defer_refs_function_run:
-			effects.function_run[fx_index].name = \
-				scene.ssx2_LogicFunctions[num_func_start + function_index].name
+		for fx_index, named_script_index in logic_importer.defer_refs_run_named_script:
+			effects.run_named_script[fx_index].name = \
+				scene.ssx2_LogicNamedScripts[num_named_script_start + named_script_index].name
 
 		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
 			effects.teleport[fx_index].target = instance_refs[teleport_target]

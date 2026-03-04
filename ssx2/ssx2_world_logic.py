@@ -39,13 +39,13 @@ def update_script_name(self, context):
 		self.disable_name_update_func = True
 		self.name = new_name
 
-def update_function_name(self, context):
+def update_named_script_name(self, context):
 	if self.disable_name_update_func:
 		self.disable_name_update_func = False
 		return
 
 	name = self.name
-	name_list = [seq.name for seq in context.scene.ssx2_LogicFunctions]
+	name_list = [seq.name for seq in context.scene.ssx2_LogicNamedScripts]
 
 	if name_list.count(name) > 1:
 		count = 1
@@ -65,14 +65,14 @@ class LogicImporters:
 		self.data = data
 
 		self.scripts = scene.ssx2_LogicScripts
-		self.functions = scene.ssx2_LogicFunctions
+		self.named_script = scene.ssx2_LogicNamedScripts
 		self.effects = scene.ssx2_Effects
 
-		self.num_seq_start = len(self.scripts)
-		self.num_func_start = len(self.functions)
+		self.num_script_start = len(self.scripts)
+		self.num_named_script_start = len(self.named_script)
 		self.defer_refs_spline_path = []
 		self.defer_refs_run_on_target = []
-		self.defer_refs_function_run = []
+		self.defer_refs_run_named_script = []
 		self.defer_refs_teleport = []
 		self.defer_refs_spline_manager = []
 
@@ -113,18 +113,18 @@ class LogicImporters:
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
 			18: self.import_trick_boost,
-			21: self.import_function_run,
+			21: self.import_run_named_script,
 			24: self.import_teleport,
 			25: self.import_spline_manager,
 
 		}
 
 		self.import_scripts(data)
-		self.import_functions(data)
+		self.import_named_script(data)
 
 
 	def import_scripts(self, json_string):
-		num_seq = self.num_seq_start
+		num_seq = self.num_script_start
 
 		for i, json_seq in enumerate(self.data["EffectHeaders"]):
 			seq_name = json_seq["EffectName"]
@@ -141,14 +141,14 @@ class LogicImporters:
 			self.import_effects(seq, json_seq["Effects"])
 			num_seq += 1
 
-	def import_functions(self, json_string):
-		# num_func = self.num_func_start
+	def import_named_script(self, json_string):
+		# num_func = self.num_named_script_start
 
 		for i, json_func in enumerate(self.data["Functions"]):
 			func_name = json_func["FunctionName"]
 			print("\n func:", i, "name:", func_name)
 
-			seq = self.functions.add()
+			seq = self.named_script.add()
 			seq.name = func_name
 
 			self.import_effects(seq, json_func["Effects"])
@@ -645,16 +645,16 @@ class LogicImporters:
 		fx_ref.index = fx_index
 		fx_ref.kind = 'trick_boost'
 
-	def import_function_run(self, seq, json_fx):
-		fx_index = len(self.effects.function_run)
+	def import_run_named_script(self, seq, json_fx):
+		fx_index = len(self.effects.run_named_script)
 
-		self.effects.function_run.add()
+		self.effects.run_named_script.add()
 
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
-		fx_ref.kind = 'function_run'
+		fx_ref.kind = 'run_named_script'
 
-		self.defer_refs_function_run.append((fx_index, json_fx["FunctionRunIndex"]))
+		self.defer_refs_run_named_script.append((fx_index, json_fx["FunctionRunIndex"]))
 
 	def import_teleport(self, seq, json_fx):
 		fx_index = len(self.effects.teleport)
@@ -1059,10 +1059,10 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Trick Boost")
 		layout.prop(effect, "amount", text="Amount")
 
-	def draw_function_run(self, layout, index):
-		effect = self.effects.function_run[index]
+	def draw_run_named_script(self, layout, index):
+		effect = self.effects.run_named_script[index]
 		layout.label(text="", icon='CONSOLE')
-		layout.prop(effect, "checked", text="Function Run")
+		layout.prop(effect, "checked", text="Run Named Script")
 		layout.prop(effect, "name", text="")
 
 	def draw_teleport(self, layout, index):
@@ -1108,7 +1108,7 @@ LogicDraw.effect_drawers = {
 	"multiplier": LogicDraw.draw_multiplier,
 	"speed_boost": LogicDraw.draw_speed_boost,
 	"trick_boost": LogicDraw.draw_trick_boost,
-	"function_run": LogicDraw.draw_function_run,
+	"run_named_script": LogicDraw.draw_run_named_script,
 	"teleport": LogicDraw.draw_teleport,
 	"spline_manager": LogicDraw.draw_spline_manager,
 }
@@ -1143,7 +1143,7 @@ enum_ssx2_effect_types = (
 	('multiplier', "Multiplier", ""),
 	('speed_boost', "Speed Boost", ""),
 	('trick_boost', "Trick Boost", ""),
-	('function_run', "Function Run", ""),
+	('run_named_script', "Run Named Script", ""),
 	('teleport', "Teleport", ""),
 	('spline_manager', "Spline Manager", ""),
 )
@@ -1163,8 +1163,8 @@ class SSX2_PG_WorldLogicScript(PropertyGroup):
 	expanded: BoolProperty()
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 	
-class SSX2_PG_WorldLogicFunction(PropertyGroup):
-	name: StringProperty(update=update_function_name)
+class SSX2_PG_WorldLogicNamedScript(PropertyGroup):
+	name: StringProperty(update=update_named_script_name)
 	disable_name_update_func: BoolProperty()
 	expanded: BoolProperty()
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
@@ -1437,7 +1437,7 @@ class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	amount: FloatProperty()
 
-class SSX2_PG_WorldEffectFunctionRun(PropertyGroup):
+class SSX2_PG_WorldEffectRunNamedScript(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	# using built-in "name" for the function name
 
@@ -1507,7 +1507,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# type 18
 	trick_boost: CollectionProperty(type=SSX2_PG_WorldEffectTrickBoost)
 	# type 21
-	function_run: CollectionProperty(type=SSX2_PG_WorldEffectFunctionRun)
+	run_named_script: CollectionProperty(type=SSX2_PG_WorldEffectRunNamedScript)
 	# type 24
 	teleport: CollectionProperty(type=SSX2_PG_WorldEffectTeleport)
 	# type 25
@@ -1573,7 +1573,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 16 (TimeBonus) <<<<<<<<<<<<<<<< {float} | unused, working. best in showoffs.
 	├── Type 17 (SpeedBoost)
 	├── Type 18 (TrickBoost)
-	├── Type 21 (Function Run) <<<<<<<<<<<<<<<<
+	├── Type 21 (RunNamedScript) <<<<<<<<<<<<<<<<
 	├── Type 23 (?) <<<<<<<<<<<<<<<< {float, float} | camera related
 	├── Type 24 (Teleport)
 	├── Type 25 (SplineManager)
@@ -1723,7 +1723,7 @@ class SSX2_OP_LogicTest(Operator):
 
 
 
-### Functions
+### NamedScripts
 
 def update_script_choice_constant(self, context):
 	choice_name = self.ssx2_LogicScriptChoiceConstant
@@ -1798,14 +1798,14 @@ def update_script_choice_slot7(self, context):
 def search_script(self, context, edit_text):
 	return (seq.name for seq in self.ssx2_LogicScripts)
 
-def search_function(self, context, edit_text):
-	return (seq.name for seq in self.ssx2_LogicFunctions)
+def search_named_script(self, context, edit_text):
+	return (seq.name for seq in self.ssx2_LogicNamedScripts)
 
 
 classes = (
 	SSX2_PG_WorldEffectRef,
 	SSX2_PG_WorldLogicScript,
-	SSX2_PG_WorldLogicFunction,
+	SSX2_PG_WorldLogicNamedScript,
 	SSX2_PG_WorldLogicSlotsSet,
 
 	SSX2_PG_WorldEffectUndefined,
@@ -1837,7 +1837,7 @@ classes = (
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
 	SSX2_PG_WorldEffectTrickBoost,
-	SSX2_PG_WorldEffectFunctionRun,
+	SSX2_PG_WorldEffectRunNamedScript,
 	SSX2_PG_WorldEffectTeleport,
 	SSX2_PG_WorldEffectSplineManager,
 
@@ -1855,11 +1855,11 @@ def ssx2_world_logic_register():
 
 	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_PG_WorldEffects)
 	bpy.types.Scene.ssx2_LogicScripts = CollectionProperty(type=SSX2_PG_WorldLogicScript)
-	bpy.types.Scene.ssx2_LogicFunctions = CollectionProperty(type=SSX2_PG_WorldLogicFunction)
+	bpy.types.Scene.ssx2_LogicNamedScripts = CollectionProperty(type=SSX2_PG_WorldLogicNamedScript)
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
 	bpy.types.Scene.ssx2_LogicScriptSearch = StringProperty(search=search_script, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
-	bpy.types.Scene.ssx2_LogicFunctionSearch = StringProperty(search=search_function, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
+	bpy.types.Scene.ssx2_LogicNamedScriptSearch = StringProperty(search=search_named_script, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
 	bpy.types.Scene.ssx2_LogicSlotsExpand = IntProperty()
 
 	bpy.types.Scene.ssx2_LogicScriptChoiceConstant = StringProperty(name="Choice Constant", update=update_script_choice_constant)
@@ -1880,11 +1880,11 @@ def ssx2_world_logic_unregister():
 	del bpy.types.Scene.ssx2_LogicScriptChoiceSlot7
 
 	del bpy.types.Scene.ssx2_LogicSlotsExpand
-	del bpy.types.Scene.ssx2_LogicFunctionSearch
+	del bpy.types.Scene.ssx2_LogicNamedScriptSearch
 	del bpy.types.Scene.ssx2_LogicScriptSearch
 
 	del bpy.types.Object.ssx2_LogicSlotsSet
-	del bpy.types.Scene.ssx2_LogicFunctions
+	del bpy.types.Scene.ssx2_LogicNamedScripts
 	del bpy.types.Scene.ssx2_LogicScripts
 	del bpy.types.Scene.ssx2_Effects
 

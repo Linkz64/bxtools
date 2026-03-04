@@ -381,9 +381,9 @@ class SSX2_WorldLogicScriptsSubPanel(SSX2_Panel):
 					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
 
 
-class SSX2_WorldLogicFunctionsSubPanel(SSX2_Panel):
-	bl_idname = 'BXT_PT_world_effect_functions_panel'
-	bl_label = 'Functions'
+class SSX2_WorldLogicNamedScriptsSubPanel(SSX2_Panel):
+	bl_idname = 'BXT_PT_world_effect_named_scripts_panel'
+	bl_label = 'Named Scripts'
 	bl_parent_id = 'BXT_PT_world_logic_panel'
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -393,16 +393,16 @@ class SSX2_WorldLogicFunctionsSubPanel(SSX2_Panel):
 		scene = context.scene
 		logic_draw = LogicDraw(scene)
 
-		search = scene.ssx2_LogicFunctionSearch
-		col.prop(scene, "ssx2_LogicFunctionSearch", icon='VIEWZOOM', text="")
+		search = scene.ssx2_LogicNamedScriptSearch
+		col.prop(scene, "ssx2_LogicNamedScriptSearch", icon='VIEWZOOM', text="")
 
-		for i, seq in enumerate(scene.ssx2_LogicFunctions):
+		for i, seq in enumerate(scene.ssx2_LogicNamedScripts):
 			if search.lower() not in seq.name.lower():
 				continue
 
 			seq_box = col.box()
 			box_row = seq_box.row(align=True)
-			box_row.operator(SSX2_OP_WorldLogicExpandFunction.bl_idname,\
+			box_row.operator(SSX2_OP_WorldLogicExpandNamedScript.bl_idname,\
 				icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
 				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").index = i
 			
@@ -831,15 +831,15 @@ class SSX2_OP_WorldLogicExpandScript(bpy.types.Operator):
 
 		return {'FINISHED'}
 
-class SSX2_OP_WorldLogicExpandFunction(bpy.types.Operator):
-	bl_idname = "wm.ssx2_expand_logic_function"
+class SSX2_OP_WorldLogicExpandNamedScript(bpy.types.Operator):
+	bl_idname = "wm.ssx2_expand_logic_named_script"
 	bl_label = ""
 	bl_description = "Expand box"
 
 	index: bpy.props.IntProperty()
 
 	def execute(self, context):
-		seq = context.scene.ssx2_LogicFunctions[self.index]
+		seq = context.scene.ssx2_LogicNamedScripts[self.index]
 		seq.expanded = not seq.expanded 
 
 		return {'FINISHED'}
@@ -934,7 +934,7 @@ classes = (
 	SSX2_WorldPathsSubPanel,
 	SSX2_WorldLogicSubPanel,
 	SSX2_WorldLogicScriptsSubPanel,
-	SSX2_WorldLogicFunctionsSubPanel,
+	SSX2_WorldLogicNamedScriptsSubPanel,
 
 
 	SSX2_WorldImportPanel,
@@ -950,7 +950,7 @@ classes = (
 
 	SSX2_OP_WorldExpandUIBoxes,
 	SSX2_OP_WorldLogicExpandScript,
-	SSX2_OP_WorldLogicExpandFunction,
+	SSX2_OP_WorldLogicExpandNamedScript,
 	SSX2_OP_WorldLogicExpandSlot,
 	SSX2_OP_WorldLogicSlotClear,
 	SSX2_OP_WorldShowPathEvent,
