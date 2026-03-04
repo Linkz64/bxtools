@@ -326,9 +326,9 @@ class SSX2_WorldLogicSubPanel(SSX2_Panel):
 		# row.operator(SSX2_OP_AddSplineBezier.bl_idname, icon='ADD', text="Blah Blah Blah")
 
 
-class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
-	bl_idname = 'BXT_PT_world_effect_sequences_panel'
-	bl_label = 'Sequences'
+class SSX2_WorldLogicScriptsSubPanel(SSX2_Panel):
+	bl_idname = 'BXT_PT_world_effect_scripts_panel'
+	bl_label = 'Scripts'
 	bl_parent_id = 'BXT_PT_world_logic_panel'
 	bl_options = {'DEFAULT_CLOSED'}
 
@@ -343,16 +343,16 @@ class SSX2_WorldLogicSequencesSubPanel(SSX2_Panel):
 
 		logic_draw = LogicDraw(scene)
 
-		search = scene.ssx2_LogicSequenceSearch
-		col.prop(scene, "ssx2_LogicSequenceSearch", icon='VIEWZOOM', text="")
+		search = scene.ssx2_LogicScriptSearch
+		col.prop(scene, "ssx2_LogicScriptSearch", icon='VIEWZOOM', text="")
 
-		for i, seq in enumerate(scene.ssx2_LogicSequences):
+		for i, seq in enumerate(scene.ssx2_LogicScripts):
 			if search.lower() not in seq.name.lower():
 				continue
 
 			seq_box = col.box()
 			box_row = seq_box.row(align=True)
-			box_row.operator(SSX2_OP_WorldLogicExpandSequence.bl_idname,\
+			box_row.operator(SSX2_OP_WorldLogicExpandScript.bl_idname,\
 				icon='DISCLOSURE_TRI_DOWN' if seq.expanded\
 				else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").index = i
 			
@@ -538,16 +538,16 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 		obj = context.object
 
 		slots = obj.ssx2_LogicSlotsSet
-		sequences = scene.ssx2_LogicSequences
+		scripts = scene.ssx2_LogicScripts
 		
 		indices = (
-			(0, "Constant", slots.constant, 'ssx2_LogicSequenceChoiceConstant'),
-			(1, "Collision", slots.collision, 'ssx2_LogicSequenceChoiceCollision'),
-			(2, "Slot 3", slots.slot3, 'ssx2_LogicSequenceChoiceSlot3'),
-			(3, "Slot 4", slots.slot4, 'ssx2_LogicSequenceChoiceSlot4'),
-			(4, "Logic Trigger", slots.logic_trigger, 'ssx2_LogicSequenceChoiceLogicTrigger'),
-			(5, "Slot 6", slots.slot6, 'ssx2_LogicSequenceChoiceSlot6'),
-			(6, "Slot 7", slots.slot7, 'ssx2_LogicSequenceChoiceSlot7'),
+			(0, "Constant", slots.constant, 'ssx2_LogicScriptChoiceConstant'),
+			(1, "Collision", slots.collision, 'ssx2_LogicScriptChoiceCollision'),
+			(2, "Slot 3", slots.slot3, 'ssx2_LogicScriptChoiceSlot3'),
+			(3, "Slot 4", slots.slot4, 'ssx2_LogicScriptChoiceSlot4'),
+			(4, "Logic Trigger", slots.logic_trigger, 'ssx2_LogicScriptChoiceLogicTrigger'),
+			(5, "Slot 6", slots.slot6, 'ssx2_LogicScriptChoiceSlot6'),
+			(6, "Slot 7", slots.slot7, 'ssx2_LogicScriptChoiceSlot7'),
 		)
 
 		for slot_i, slot_name, seq_idx, seq_choice in indices:
@@ -570,7 +570,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 					scene,
 					seq_choice,
 					scene,
-					"ssx2_LogicSequences",
+					"ssx2_LogicScripts",
 					icon='VIEWZOOM',
 					text="",
 				)
@@ -581,7 +581,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 			else:
 				slot_expand = (scene.ssx2_LogicSlotsExpand >> slot_i) & 1
-				seq = sequences[seq_idx]
+				seq = scripts[seq_idx]
 
 				seq_box = col.box()
 				seq_header = seq_box.row()
@@ -596,7 +596,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 
 				seq_header.operator(
 					SSX2_OP_WorldLogicSlotClear.bl_idname,
-					text=str(sequences[seq_idx].name),
+					text=str(scripts[seq_idx].name),
 					icon='X'
 				).slot_i = slot_i
 
@@ -818,15 +818,15 @@ class SSX2_OP_WorldExpandUIBoxes(bpy.types.Operator):
 		setattr(props, props_split[1], not getattr(props, props_split[1]))
 		return {'FINISHED'}
 
-class SSX2_OP_WorldLogicExpandSequence(bpy.types.Operator):
-	bl_idname = "wm.ssx2_expand_logic_sequence"
+class SSX2_OP_WorldLogicExpandScript(bpy.types.Operator):
+	bl_idname = "wm.ssx2_expand_logic_script"
 	bl_label = ""
 	bl_description = "Expand box"
 
 	index: bpy.props.IntProperty()
 
 	def execute(self, context):
-		seq = context.scene.ssx2_LogicSequences[self.index]
+		seq = context.scene.ssx2_LogicScripts[self.index]
 		seq.expanded = not seq.expanded 
 
 		return {'FINISHED'}
@@ -933,7 +933,7 @@ classes = (
 	SSX2_WorldSplinesSubPanel,
 	SSX2_WorldPathsSubPanel,
 	SSX2_WorldLogicSubPanel,
-	SSX2_WorldLogicSequencesSubPanel,
+	SSX2_WorldLogicScriptsSubPanel,
 	SSX2_WorldLogicFunctionsSubPanel,
 
 
@@ -949,7 +949,7 @@ classes = (
 	SSX2_WorldAddMenu,
 
 	SSX2_OP_WorldExpandUIBoxes,
-	SSX2_OP_WorldLogicExpandSequence,
+	SSX2_OP_WorldLogicExpandScript,
 	SSX2_OP_WorldLogicExpandFunction,
 	SSX2_OP_WorldLogicExpandSlot,
 	SSX2_OP_WorldLogicSlotClear,

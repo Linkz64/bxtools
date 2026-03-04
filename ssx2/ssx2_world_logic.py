@@ -20,13 +20,13 @@ from mathutils import Vector
 import struct
 
 
-def update_sequence_name(self, context):
+def update_script_name(self, context):
 	if self.disable_name_update_func:
 		self.disable_name_update_func = False
 		return
 
 	name = self.name
-	name_list = [seq.name for seq in context.scene.ssx2_LogicSequences]
+	name_list = [seq.name for seq in context.scene.ssx2_LogicScripts]
 
 	if name_list.count(name) > 1:
 		count = 1
@@ -64,11 +64,11 @@ class LogicImporters:
 	def __init__(self, data, scene):
 		self.data = data
 
-		self.sequences = scene.ssx2_LogicSequences
+		self.scripts = scene.ssx2_LogicScripts
 		self.functions = scene.ssx2_LogicFunctions
 		self.effects = scene.ssx2_Effects
 
-		self.num_seq_start = len(self.sequences)
+		self.num_seq_start = len(self.scripts)
 		self.num_func_start = len(self.functions)
 		self.defer_refs_spline_path = []
 		self.defer_refs_run_on_target = []
@@ -119,22 +119,22 @@ class LogicImporters:
 
 		}
 
-		self.import_sequences(data)
+		self.import_scripts(data)
 		self.import_functions(data)
 
 
-	def import_sequences(self, json_string):
+	def import_scripts(self, json_string):
 		num_seq = self.num_seq_start
 
 		for i, json_seq in enumerate(self.data["EffectHeaders"]):
 			seq_name = json_seq["EffectName"]
 			print("\n seq:", i, "name:", seq_name)
 
-			seq = self.sequences.add()
+			seq = self.scripts.add()
 
 			# seq.disable_name_update_func = True
 
-			seq.name = "Sequence " + str(num_seq) \
+			seq.name = "Script " + str(num_seq) \
 				if seq_name == "Effect " + str(i) \
 				else seq_name
 
@@ -763,9 +763,9 @@ class LogicDraw:
 		col = lyt_split.column()
 		col.prop_search(
 			effect,
-			"target_sequence",
+			"target_script",
 			bpy.context.scene,
-			"ssx2_LogicSequences",
+			"ssx2_LogicScripts",
 			icon='VIEWZOOM',
 			text="",
 		)
@@ -1157,8 +1157,8 @@ class SSX2_PG_WorldEffectRef(PropertyGroup):
 	kind: EnumProperty(items=enum_ssx2_effect_types)
 
 
-class SSX2_PG_WorldLogicSequence(PropertyGroup):
-	name: StringProperty(update=update_sequence_name)
+class SSX2_PG_WorldLogicScript(PropertyGroup):
+	name: StringProperty(update=update_script_name)
 	disable_name_update_func: BoolProperty()
 	expanded: BoolProperty()
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
@@ -1415,7 +1415,7 @@ class SSX2_PG_WorldEffectWait(PropertyGroup):
 class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	target_instance: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
-	target_sequence: StringProperty()
+	target_script: StringProperty()
 
 class SSX2_PG_WorldEffectSound(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -1608,7 +1608,7 @@ class SSX2_OP_EffectMoveUpDown(Operator):
 		seq_idx = self.vals[1]
 		fx_idx = self.vals[2]
 
-		effect_refs = scene.ssx2_LogicSequences[seq_idx].effect_refs
+		effect_refs = scene.ssx2_LogicScripts[seq_idx].effect_refs
 
 		if self.vals[0] == 0: # UP
 			if fx_idx == 0:
@@ -1643,14 +1643,14 @@ class SSX2_OP_LogicTest(Operator):
 	def execute(self, context):
 		scene = context.scene
 
-		num_seq = len(scene.ssx2_LogicSequences)
+		num_seq = len(scene.ssx2_LogicScripts)
 
-		scene.ssx2_LogicSequences.add()
+		scene.ssx2_LogicScripts.add()
 
-		seq = scene.ssx2_LogicSequences[num_seq]
+		seq = scene.ssx2_LogicScripts[num_seq]
 		effect_refs = seq.effect_refs
 
-		seq.name = "Sequence " + str(num_seq)
+		seq.name = "Script " + str(num_seq)
 
 		num_fx = len(effect_refs)
 		num_dead_node = len(scene.ssx2_Effects.dead_node)
@@ -1701,11 +1701,11 @@ class SSX2_OP_LogicTest(Operator):
 		# slots_set.slot7 = 
 
 
-		logic_choice_test = scene.ssx2_LogicSequenceChoiceConstant
+		logic_choice_test = scene.ssx2_LogicScriptChoiceConstant
 		logic_choice_test = seq.name
 
 
-		# for seq in scene.ssx2_LogicSequences:
+		# for seq in scene.ssx2_LogicScripts:
 		# 	print("\n", seq.name)
 		# 	for fx_ref in seq.effect_refs:
 		# 		print(fx_ref.index, fx_ref.kind)
@@ -1725,78 +1725,78 @@ class SSX2_OP_LogicTest(Operator):
 
 ### Functions
 
-def update_sequence_choice_constant(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceConstant
+def update_script_choice_constant(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceConstant
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.constant = i
 				break
-		self.ssx2_LogicSequenceChoiceConstant = ""
+		self.ssx2_LogicScriptChoiceConstant = ""
 
-def update_sequence_choice_collision(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceCollision
+def update_script_choice_collision(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceCollision
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.collision = i
 				break
-		self.ssx2_LogicSequenceChoiceCollision = ""
+		self.ssx2_LogicScriptChoiceCollision = ""
 
-def update_sequence_choice_slot3(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceSlot3
+def update_script_choice_slot3(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceSlot3
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.slot3 = i
 				break
-		self.ssx2_LogicSequenceChoiceSlot3 = ""
+		self.ssx2_LogicScriptChoiceSlot3 = ""
 
-def update_sequence_choice_slot4(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceSlot4
+def update_script_choice_slot4(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceSlot4
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.slot4 = i
 				break
-		self.ssx2_LogicSequenceChoiceSlot4 = ""
+		self.ssx2_LogicScriptChoiceSlot4 = ""
 
-def update_sequence_choice_logic_trigger(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceLogicTrigger
+def update_script_choice_logic_trigger(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceLogicTrigger
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.logic_trigger = i
 				break
-		self.ssx2_LogicSequenceChoiceLogicTrigger = ""
+		self.ssx2_LogicScriptChoiceLogicTrigger = ""
 
-def update_sequence_choice_slot6(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceSlot6
+def update_script_choice_slot6(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceSlot6
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.slot6 = i
 				break
-		self.ssx2_LogicSequenceChoiceSlot6 = ""
+		self.ssx2_LogicScriptChoiceSlot6 = ""
 
-def update_sequence_choice_slot7(self, context):
-	choice_name = self.ssx2_LogicSequenceChoiceSlot7
+def update_script_choice_slot7(self, context):
+	choice_name = self.ssx2_LogicScriptChoiceSlot7
 
 	if choice_name != "":
-		for i, seq in enumerate(self.ssx2_LogicSequences):
+		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
 				bpy.context.active_object.ssx2_LogicSlotsSet.slot7 = i
 				break
-		self.ssx2_LogicSequenceChoiceSlot7 = ""
+		self.ssx2_LogicScriptChoiceSlot7 = ""
 
-def search_sequence(self, context, edit_text):
-	return (seq.name for seq in self.ssx2_LogicSequences)
+def search_script(self, context, edit_text):
+	return (seq.name for seq in self.ssx2_LogicScripts)
 
 def search_function(self, context, edit_text):
 	return (seq.name for seq in self.ssx2_LogicFunctions)
@@ -1804,7 +1804,7 @@ def search_function(self, context, edit_text):
 
 classes = (
 	SSX2_PG_WorldEffectRef,
-	SSX2_PG_WorldLogicSequence,
+	SSX2_PG_WorldLogicScript,
 	SSX2_PG_WorldLogicFunction,
 	SSX2_PG_WorldLogicSlotsSet,
 
@@ -1854,38 +1854,38 @@ def ssx2_world_logic_register():
 		register_class(c)
 
 	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_PG_WorldEffects)
-	bpy.types.Scene.ssx2_LogicSequences = CollectionProperty(type=SSX2_PG_WorldLogicSequence)
+	bpy.types.Scene.ssx2_LogicScripts = CollectionProperty(type=SSX2_PG_WorldLogicScript)
 	bpy.types.Scene.ssx2_LogicFunctions = CollectionProperty(type=SSX2_PG_WorldLogicFunction)
 	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
 
-	bpy.types.Scene.ssx2_LogicSequenceSearch = StringProperty(search=search_sequence, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
+	bpy.types.Scene.ssx2_LogicScriptSearch = StringProperty(search=search_script, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
 	bpy.types.Scene.ssx2_LogicFunctionSearch = StringProperty(search=search_function, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
 	bpy.types.Scene.ssx2_LogicSlotsExpand = IntProperty()
 
-	bpy.types.Scene.ssx2_LogicSequenceChoiceConstant = StringProperty(name="Choice Constant", update=update_sequence_choice_constant)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceCollision = StringProperty(name="Choice Collision", update=update_sequence_choice_collision)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot3 = StringProperty(name="Choice Slot3", update=update_sequence_choice_slot3)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot4 = StringProperty(name="Choice Slot4", update=update_sequence_choice_slot4)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceLogicTrigger = StringProperty(name="Choice LogicTrigger", update=update_sequence_choice_logic_trigger)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot6 = StringProperty(name="Choice Slot6", update=update_sequence_choice_slot6)
-	bpy.types.Scene.ssx2_LogicSequenceChoiceSlot7 = StringProperty(name="Choice Slot7", update=update_sequence_choice_slot7)
+	bpy.types.Scene.ssx2_LogicScriptChoiceConstant = StringProperty(name="Choice Constant", update=update_script_choice_constant)
+	bpy.types.Scene.ssx2_LogicScriptChoiceCollision = StringProperty(name="Choice Collision", update=update_script_choice_collision)
+	bpy.types.Scene.ssx2_LogicScriptChoiceSlot3 = StringProperty(name="Choice Slot3", update=update_script_choice_slot3)
+	bpy.types.Scene.ssx2_LogicScriptChoiceSlot4 = StringProperty(name="Choice Slot4", update=update_script_choice_slot4)
+	bpy.types.Scene.ssx2_LogicScriptChoiceLogicTrigger = StringProperty(name="Choice LogicTrigger", update=update_script_choice_logic_trigger)
+	bpy.types.Scene.ssx2_LogicScriptChoiceSlot6 = StringProperty(name="Choice Slot6", update=update_script_choice_slot6)
+	bpy.types.Scene.ssx2_LogicScriptChoiceSlot7 = StringProperty(name="Choice Slot7", update=update_script_choice_slot7)
 
 def ssx2_world_logic_unregister():
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceConstant
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceCollision
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot3
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot4
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceLogicTrigger
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot6
-	del bpy.types.Scene.ssx2_LogicSequenceChoiceSlot7
+	del bpy.types.Scene.ssx2_LogicScriptChoiceConstant
+	del bpy.types.Scene.ssx2_LogicScriptChoiceCollision
+	del bpy.types.Scene.ssx2_LogicScriptChoiceSlot3
+	del bpy.types.Scene.ssx2_LogicScriptChoiceSlot4
+	del bpy.types.Scene.ssx2_LogicScriptChoiceLogicTrigger
+	del bpy.types.Scene.ssx2_LogicScriptChoiceSlot6
+	del bpy.types.Scene.ssx2_LogicScriptChoiceSlot7
 
 	del bpy.types.Scene.ssx2_LogicSlotsExpand
 	del bpy.types.Scene.ssx2_LogicFunctionSearch
-	del bpy.types.Scene.ssx2_LogicSequenceSearch
+	del bpy.types.Scene.ssx2_LogicScriptSearch
 
 	del bpy.types.Object.ssx2_LogicSlotsSet
 	del bpy.types.Scene.ssx2_LogicFunctions
-	del bpy.types.Scene.ssx2_LogicSequences
+	del bpy.types.Scene.ssx2_LogicScripts
 	del bpy.types.Scene.ssx2_Effects
 
 	for c in classes:

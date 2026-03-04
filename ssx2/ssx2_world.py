@@ -1580,10 +1580,10 @@ class SSX2_OP_WorldImport(Operator):
 
 		effects = scene.ssx2_Effects
 
-		for fx_index, target_instance, target_sequence in logic_importer.defer_refs_run_on_target:
+		for fx_index, target_instance, target_script in logic_importer.defer_refs_run_on_target:
 			effects.run_on_target[fx_index].target_instance = instance_refs[target_instance]
-			effects.run_on_target[fx_index].target_sequence = \
-				scene.ssx2_LogicSequences[num_seq_start + target_sequence].name
+			effects.run_on_target[fx_index].target_script = \
+				scene.ssx2_LogicScripts[num_seq_start + target_script].name
 
 		
 		for fx_index, function_index in logic_importer.defer_refs_function_run:
