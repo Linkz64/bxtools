@@ -134,6 +134,10 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 			icon='DISCLOSURE_TRI_DOWN' if io.expandImportModel\
 			else 'DISCLOSURE_TRI_RIGHT',emboss=False,text="").prop = 'ssx2_WorldImportExportProps.expandImportModel'
 		box_row.prop(io, "importModels", text="Models (Experimental)")
+		if io.importModels and not io.importSplines:
+			warn_box = the_box.box()
+			warn_box.label(text="Some worlds need Splines to be imported", icon='ERROR')
+			warn_box.label(text='for the "Spline Path" effect to work.')
 		if io.expandImportModel:
 			label_row = the_box.row()
 			label_row.scale_y = 0.2
