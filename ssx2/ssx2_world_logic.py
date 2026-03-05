@@ -1721,7 +1721,41 @@ class SSX2_OP_LogicTest(Operator):
 
 		return {'FINISHED'}
 
+class SSX2_OP_LogicDeleteScript(Operator):
+	bl_idname = 'scene.ssx2_logic_delete_script'
+	bl_label = "Delete Script"
+	# bl_description = ''
+	bl_options = {'REGISTER', 'UNDO'}
 
+	mode_and_index: IntProperty()
+
+	def execute(self, context):
+		scene = context.scene
+
+		print()
+		# print("\nmode_and_index:", self.mode_and_index, f"{self.mode_and_index:08b}")
+
+		mni = self.mode_and_index
+		is_named_script = mni & 1
+		script_index = mni >> 1
+
+		# print(bool(is_named_script), script_index)
+
+		if is_named_script:
+			print("TODO NS")
+		else:
+			scripts = scene.ssx2_LogicScripts
+			num_scr = len(scripts)
+
+			# print(dir(scripts))
+			# print(scripts[script_index])
+
+			for fx_ref in scripts[script_index].effect_refs:
+				print(fx_ref.index, fx_ref.kind)
+
+			# scripts.remove(script_index)
+
+		return {"FINISHED"}
 
 ### Functions
 
@@ -1845,6 +1879,7 @@ classes = (
 
 	SSX2_OP_EffectMoveUpDown,
 	SSX2_OP_LogicTest,
+	SSX2_OP_LogicDeleteScript,
 )
 
 
