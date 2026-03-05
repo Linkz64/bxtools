@@ -1723,7 +1723,7 @@ class SSX2_OP_LogicTest(Operator):
 
 
 
-### NamedScripts
+### Functions
 
 def update_script_choice_constant(self, context):
 	choice_name = self.ssx2_LogicScriptChoiceConstant
