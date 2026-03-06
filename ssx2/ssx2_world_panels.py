@@ -517,9 +517,9 @@ class SSX2_EmptyPropPanel(SSX2_Panel):
 
 
 
-class SSX2_PT_LogicSlotsSet(SSX2_Panel):
+class SSX2_PT_LogicScriptSlots(SSX2_Panel):
 	bl_label = ""
-	bl_idname = "SSX2_PT_logic_slots_set"
+	bl_idname = "SSX2_PT_logic_script_slots"
 	bl_parent_id = "OBJECT_PT_SSX2_Empty"
 	# bl_options = {"HIDE_HEADER"}
 
@@ -540,9 +540,9 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 	def draw_header(self, context):
 		row = self.layout.row()
 		split = row.split()
-		split.label(text="Logic Slots Set")
+		split.label(text="Script Slots")
 
-		split.operator(SSX2_OP_SelectModel.bl_idname, text="Copy All To") # TODO: make the op
+		# split.operator(SSX2_OP_SelectModel.bl_idname, text="Copy All To") # TODO: make the op
 
 	def draw(self, context):
 		col = self.layout.column()
@@ -550,7 +550,7 @@ class SSX2_PT_LogicSlotsSet(SSX2_Panel):
 		scene = context.scene
 		obj = context.object
 
-		slots = obj.ssx2_LogicSlotsSet
+		slots = obj.ssx2_LogicScriptSlots
 		scripts = scene.ssx2_LogicScripts
 		
 		indices = (
@@ -883,19 +883,19 @@ class SSX2_OP_WorldLogicSlotClear(bpy.types.Operator):
 		obj = bpy.context.active_object
 
 		if slot_i == 0:
-			obj.ssx2_LogicSlotsSet.constant = -1
+			obj.ssx2_LogicScriptSlots.constant = -1
 		if slot_i == 1:
-			obj.ssx2_LogicSlotsSet.collision = -1
+			obj.ssx2_LogicScriptSlots.collision = -1
 		if slot_i == 2:
-			obj.ssx2_LogicSlotsSet.slot3 = -1
+			obj.ssx2_LogicScriptSlots.slot3 = -1
 		if slot_i == 3:
-			obj.ssx2_LogicSlotsSet.slot4 = -1
+			obj.ssx2_LogicScriptSlots.slot4 = -1
 		if slot_i == 4:
-			obj.ssx2_LogicSlotsSet.logic_trigger = -1
+			obj.ssx2_LogicScriptSlots.logic_trigger = -1
 		if slot_i == 5:
-			obj.ssx2_LogicSlotsSet.slot6 = -1
+			obj.ssx2_LogicScriptSlots.slot6 = -1
 		if slot_i == 6:
-			obj.ssx2_LogicSlotsSet.slot7 = -1
+			obj.ssx2_LogicScriptSlots.slot7 = -1
 
 
 		return {'FINISHED'}
@@ -954,7 +954,7 @@ classes = (
 	SSX2_WorldExportPanel,
 	
 	SSX2_EmptyPropPanel,
-	SSX2_PT_LogicSlotsSet,
+	SSX2_PT_LogicScriptSlots,
 	SSX2_CurvePropPanel,
 	SSX2_MaterialPropPanel,
 	SSX2_PatchPropPanel,

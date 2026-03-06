@@ -1508,7 +1508,7 @@ class SSX2_OP_WorldImport(Operator):
 
 
 			# if json_inst["EffectSlotIndex"] != -1:
-			slots_set = empty.ssx2_LogicSlotsSet
+			slots_set = empty.ssx2_LogicScriptSlots
 
 			if json_inst["EffectSlotIndex"] != -1:
 				json_logic_slot_set = json_logic_slot_sets[json_inst["EffectSlotIndex"]]

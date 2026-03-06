@@ -1170,7 +1170,7 @@ class SSX2_PG_WorldLogicNamedScript(PropertyGroup):
 	effect_refs: CollectionProperty(type=SSX2_PG_WorldEffectRef)
 
 
-class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
+class SSX2_PG_WorldLogicScriptSlots(PropertyGroup):
 	constant: IntProperty(default=-1)
 	collision: IntProperty(default=-1)
 	slot3: IntProperty(default=-1)
@@ -1722,7 +1722,7 @@ class SSX2_OP_LogicTest(Operator):
 		context.collection.objects.link(obj)
 
 
-		slots_set = obj.ssx2_LogicSlotsSet
+		slots_set = obj.ssx2_LogicScriptSlots
 
 		slots_set.constant = num_seq
 		slots_set.collision = -1
@@ -1789,7 +1789,7 @@ def update_script_choice_constant(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.constant = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.constant = i
 				break
 		self.ssx2_LogicScriptChoiceConstant = ""
 
@@ -1799,7 +1799,7 @@ def update_script_choice_collision(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.collision = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.collision = i
 				break
 		self.ssx2_LogicScriptChoiceCollision = ""
 
@@ -1809,7 +1809,7 @@ def update_script_choice_slot3(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.slot3 = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.slot3 = i
 				break
 		self.ssx2_LogicScriptChoiceSlot3 = ""
 
@@ -1819,7 +1819,7 @@ def update_script_choice_slot4(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.slot4 = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.slot4 = i
 				break
 		self.ssx2_LogicScriptChoiceSlot4 = ""
 
@@ -1829,7 +1829,7 @@ def update_script_choice_logic_trigger(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.logic_trigger = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.logic_trigger = i
 				break
 		self.ssx2_LogicScriptChoiceLogicTrigger = ""
 
@@ -1839,7 +1839,7 @@ def update_script_choice_slot6(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.slot6 = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.slot6 = i
 				break
 		self.ssx2_LogicScriptChoiceSlot6 = ""
 
@@ -1849,7 +1849,7 @@ def update_script_choice_slot7(self, context):
 	if choice_name != "":
 		for i, seq in enumerate(self.ssx2_LogicScripts):
 			if seq.name == choice_name:
-				bpy.context.active_object.ssx2_LogicSlotsSet.slot7 = i
+				bpy.context.active_object.ssx2_LogicScriptSlots.slot7 = i
 				break
 		self.ssx2_LogicScriptChoiceSlot7 = ""
 
@@ -1864,7 +1864,7 @@ classes = (
 	SSX2_PG_WorldEffectRef,
 	SSX2_PG_WorldLogicScript,
 	SSX2_PG_WorldLogicNamedScript,
-	SSX2_PG_WorldLogicSlotsSet,
+	SSX2_PG_WorldLogicScriptSlots,
 
 	SSX2_PG_WorldEffectUndefined,
 	SSX2_PG_WorldEffectRoller,
@@ -1915,7 +1915,7 @@ def ssx2_world_logic_register():
 	bpy.types.Scene.ssx2_Effects = PointerProperty(type=SSX2_PG_WorldEffects)
 	bpy.types.Scene.ssx2_LogicScripts = CollectionProperty(type=SSX2_PG_WorldLogicScript)
 	bpy.types.Scene.ssx2_LogicNamedScripts = CollectionProperty(type=SSX2_PG_WorldLogicNamedScript)
-	bpy.types.Object.ssx2_LogicSlotsSet = PointerProperty(type=SSX2_PG_WorldLogicSlotsSet)
+	bpy.types.Object.ssx2_LogicScriptSlots = PointerProperty(type=SSX2_PG_WorldLogicScriptSlots)
 
 	bpy.types.Scene.ssx2_LogicScriptSearch = StringProperty(search=search_script, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
 	bpy.types.Scene.ssx2_LogicNamedScriptSearch = StringProperty(search=search_named_script, search_options={'SUGGESTION'}, options={'SKIP_SAVE'})
@@ -1942,7 +1942,7 @@ def ssx2_world_logic_unregister():
 	del bpy.types.Scene.ssx2_LogicNamedScriptSearch
 	del bpy.types.Scene.ssx2_LogicScriptSearch
 
-	del bpy.types.Object.ssx2_LogicSlotsSet
+	del bpy.types.Object.ssx2_LogicScriptSlots
 	del bpy.types.Scene.ssx2_LogicNamedScripts
 	del bpy.types.Scene.ssx2_LogicScripts
 	del bpy.types.Scene.ssx2_Effects
