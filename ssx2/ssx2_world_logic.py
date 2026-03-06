@@ -1183,10 +1183,12 @@ class SSX2_PG_WorldLogicSlotsSet(PropertyGroup):
 
 class SSX2_PG_WorldEffectUndefined(PropertyGroup): # JSON
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	json_string: StringProperty()
 
 class SSX2_PG_WorldEffectRoller(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: FloatProperty()
 	u1: FloatProperty()
 	u2: FloatProperty()
@@ -1196,19 +1198,23 @@ class SSX2_PG_WorldEffectRoller(PropertyGroup):
 
 class SSX2_PG_WorldEffectDebounce(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	duration: FloatProperty()
 
 class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	mode: IntProperty()
 
 class SSX2_PG_WorldEffectCounter(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	count: IntProperty()
 	u1: IntProperty()
 
 class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	mode: IntProperty()
 	u1: FloatProperty()
 	amount1: FloatProperty() # multiplier?
@@ -1217,6 +1223,7 @@ class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 
 class SSX2_PG_WorldEffectUVScroll(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	mode: IntProperty()
 	u1: FloatProperty()
 	u2: FloatProperty()
@@ -1226,6 +1233,7 @@ class SSX2_PG_WorldEffectUVScroll(PropertyGroup):
 
 class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	direction: IntProperty()
 	speed: FloatProperty()
@@ -1234,11 +1242,13 @@ class SSX2_PG_WorldEffectTextureFlip(PropertyGroup):
 
 class SSX2_PG_WorldEffectFence(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	flex_amount: FloatProperty()
 
 class SSX2_PG_WorldEffectFlag(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: FloatProperty()
 	u2: FloatProperty()
@@ -1246,11 +1256,13 @@ class SSX2_PG_WorldEffectFlag(PropertyGroup):
 
 class SSX2_PG_WorldEffectCracked(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: FloatProperty()
 	u1: FloatProperty()
 
 class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: FloatProperty()
 	u1: FloatProperty()
 	u2: IntProperty()
@@ -1259,12 +1271,14 @@ class SSX2_PG_WorldEffectLapBoost(PropertyGroup):
 
 class SSX2_PG_WorldEffectCrowd(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: IntProperty()
 	u2: IntProperty()
 
 class SSX2_PG_WorldEffectZBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: FloatProperty()
 	u1: FloatProperty()
 	u2: IntProperty()
@@ -1275,6 +1289,7 @@ class SSX2_PG_WorldEffectZBoost(PropertyGroup):
 
 class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: FloatProperty()
 	u2: FloatProperty()
@@ -1288,9 +1303,11 @@ class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
 
 class SSX2_PG_WorldEffectMovie(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 
 class SSX2_PG_WorldEffectEndBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: IntProperty()
 	u2: FloatProperty()
@@ -1307,6 +1324,7 @@ class SSX2_PG_WorldEffectEndBoost(PropertyGroup):
 
 class SSX2_PG_WorldEffectAnimObject(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: FloatProperty()
 	u2: FloatProperty()
@@ -1318,6 +1336,7 @@ class SSX2_PG_WorldEffectAnimObject(PropertyGroup):
 
 class SSX2_PG_WorldEffectAnimDelta(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: FloatProperty() # TODO: Update JSON (s32 to f32)
 	u2: FloatProperty()
@@ -1329,6 +1348,7 @@ class SSX2_PG_WorldEffectAnimDelta(PropertyGroup):
 
 class SSX2_PG_WorldEffectAnimCombo(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: IntProperty() # TODO: Check if this should be f32
 	u2: FloatProperty()
@@ -1344,6 +1364,7 @@ class SSX2_PG_WorldEffectAnimCombo(PropertyGroup):
 
 class SSX2_PG_WorldEffectEmitter(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: IntProperty()
 	u1: IntProperty()
 	u2: FloatProperty()
@@ -1398,6 +1419,7 @@ class SSX2_PG_WorldEffectEmitter(PropertyGroup):
 
 class SSX2_PG_WorldEffectSplinePath(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	spline: PointerProperty(type=bpy.types.Object) # TODO: Poll splines only
 	u1: IntProperty()
 	u2: IntProperty()
@@ -1410,43 +1432,53 @@ class SSX2_PG_WorldEffectSplinePath(PropertyGroup):
 
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	time: FloatProperty() # TODO: Try TIME subtype
 
 class SSX2_PG_WorldEffectRunOnTarget(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	target_instance: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
 	target_script: StringProperty()
 
 class SSX2_PG_WorldEffectSound(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	sound_id: IntProperty()
 
 class SSX2_PG_WorldEffectReset(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	u0: FloatProperty()
 
 class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	factor: FloatProperty()
 
 class SSX2_PG_WorldEffectSpeedBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	duration: FloatProperty() # TODO: Try TIME subtype
 
 class SSX2_PG_WorldEffectTrickBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	amount: FloatProperty()
 
 class SSX2_PG_WorldEffectRunNamedScript(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	# using built-in "name" for the function name
 
 class SSX2_PG_WorldEffectTeleport(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	target: PointerProperty(type=bpy.types.Object) # TODO: Poll empties only
 
 class SSX2_PG_WorldEffectSplineManager(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
 	spline: PointerProperty(type=bpy.types.Object)
 	u0: IntProperty()
 
