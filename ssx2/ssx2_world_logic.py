@@ -1777,6 +1777,26 @@ class SSX2_OP_LogicDeleteScript(Operator):
 			effect = getattr(scene.ssx2_Effects, fx_ref.kind)[fx_ref.index]
 			effect.is_deleted = True
 
+		for obj in bpy.data.objects:
+			if script_index == obj.ssx2_LogicScriptSlots.constant:
+				obj.ssx2_LogicScriptSlots.constant = -1
+			if script_index == obj.ssx2_LogicScriptSlots.collision:
+				obj.ssx2_LogicScriptSlots.collision = -1
+			if script_index == obj.ssx2_LogicScriptSlots.slot3:
+				obj.ssx2_LogicScriptSlots.slot3 = -1
+			if script_index == obj.ssx2_LogicScriptSlots.slot4:
+				obj.ssx2_LogicScriptSlots.slot4 = -1
+			if script_index == obj.ssx2_LogicScriptSlots.logic_trigger:
+				obj.ssx2_LogicScriptSlots.logic_trigger = -1
+			if script_index == obj.ssx2_LogicScriptSlots.slot6:
+				obj.ssx2_LogicScriptSlots.slot6 = -1
+			if script_index == obj.ssx2_LogicScriptSlots.slot7:
+				obj.ssx2_LogicScriptSlots.slot7 = -1
+
+		for area in bpy.context.screen.areas:
+		    if area.type == 'PROPERTIES':
+		        area.tag_redraw()
+
 		scripts.remove(script_index)
 
 		return {"FINISHED"}
