@@ -1756,36 +1756,28 @@ class SSX2_OP_LogicTest(Operator):
 class SSX2_OP_LogicDeleteScript(Operator):
 	bl_idname = 'scene.ssx2_logic_delete_script'
 	bl_label = "Delete Script"
-	# bl_description = ''
-	bl_options = {'REGISTER', 'UNDO'}
+	bl_description = 'Delete this script'
+	bl_options = {'UNDO'}
 
 	mode_and_index: IntProperty()
 
 	def execute(self, context):
 		scene = context.scene
 
-		print()
-		# print("\nmode_and_index:", self.mode_and_index, f"{self.mode_and_index:08b}")
-
 		mni = self.mode_and_index
 		is_named_script = mni & 1
 		script_index = mni >> 1
 
-		# print(bool(is_named_script), script_index)
-
 		if is_named_script:
-			print("TODO NS")
+			scripts = scene.ssx2_LogicNamedScripts
 		else:
 			scripts = scene.ssx2_LogicScripts
-			num_scr = len(scripts)
 
-			# print(dir(scripts))
-			# print(scripts[script_index])
+		for fx_ref in scripts[script_index].effect_refs:
+			effect = getattr(scene.ssx2_Effects, fx_ref.kind)[fx_ref.index]
+			effect.is_deleted = True
 
-			for fx_ref in scripts[script_index].effect_refs:
-				print(fx_ref.index, fx_ref.kind)
-
-			# scripts.remove(script_index)
+		scripts.remove(script_index)
 
 		return {"FINISHED"}
 

@@ -417,6 +417,10 @@ class SSX2_WorldLogicNamedScriptsSubPanel(SSX2_Panel):
 			
 			box_row.prop(seq, "name", text="")
 
+			box_row.operator(SSX2_OP_LogicDeleteScript.bl_idname,
+				text="",
+				icon='TRASH').mode_and_index = (i << 1) | 1
+
 			if seq.expanded:
 				for j, fx_ref in enumerate(seq.effect_refs):
 					fx_box = seq_box.box()
