@@ -896,7 +896,7 @@ class LogicDraw:
 		layout.label(text="", icon="MOD_INSTANCE")
 
 		col = layout.column()
-		col.prop(effect, "checked", text="Z Boost")
+		col.prop(effect, "checked", text="End Boost")
 		col.prop(effect, "u0", text="Unknown 0")
 		col.prop(effect, "u1", text="Unknown 1")
 		col.prop(effect, "u2", text="Unknown 2")
