@@ -230,7 +230,7 @@ class LogicImporters:
 		fx_index = len(self.effects.dead_node)
 
 		fx = self.effects.dead_node.add()
-		fx.mode = json_fx["type0"]["DeadNodeMode"]
+		fx.mode = str(json_fx["type0"]["DeadNodeMode"])
 
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
@@ -1148,6 +1148,14 @@ enum_ssx2_effect_types = (
 	('spline_manager', "Spline Manager", ""),
 )
 
+enum_ssx2_effect_deadnode_mode = (
+	('0', "0", "Unknown"),
+	('1', "1", "Unknown"),
+	('2', "2", "Disable and hide the instance completely"),
+	('3', "3", "Unknown"),
+	('4', "4 Restore", "Unknown"), # from the name you'd think it brings the instance back but no
+)
+
 
 
 ### Properties
@@ -1204,7 +1212,7 @@ class SSX2_PG_WorldEffectDebounce(PropertyGroup):
 class SSX2_PG_WorldEffectDeadNode(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	is_deleted: BoolProperty(default=False)
-	mode: IntProperty()
+	mode: EnumProperty(items=enum_ssx2_effect_deadnode_mode)
 
 class SSX2_PG_WorldEffectCounter(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
@@ -1579,7 +1587,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 24 (EndBoost)
 	│   ├── Sub 256 (AnimObject)
 	│   ├── Sub 257 (AnimDelta)
-	│   └── Sub 258 (AnimCombo)
+	│   ├── Sub 258 (AnimCombo)
 	│   └── Sub 259 (AnimTexFlip) <<<<<<<<<<<<<<<< unused?
 	├── Type 1 (Camera) <<<<<<<<<<<<<<<< unused?
 	├── Type 2
