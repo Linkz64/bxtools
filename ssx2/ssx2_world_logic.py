@@ -419,7 +419,7 @@ class LogicImporters:
 		fx.u2 = json_fx["U2"]
 		fx.u3 = json_fx["U3"]
 		fx.u4 = json_fx["U4"]
-		fx.u5 = json_fx["U5"]
+		fx.u5 = struct.unpack('f', struct.pack('i', json_fx["U5"]))[0]
 		fx.u6 = json_fx["U6"]
 		fx.u7 = json_fx["U7"]
 		fx.u8 = json_fx["U8"]
@@ -1303,7 +1303,7 @@ class SSX2_PG_WorldEffectMeshAnim(PropertyGroup):
 	u2: FloatProperty()
 	u3: IntProperty()
 	u4: IntProperty()
-	u5: IntProperty()   # TODO: change to float here and on import
+	u5: FloatProperty()
 	u6: FloatProperty()
 	u7: FloatProperty()
 	u8: FloatProperty()
