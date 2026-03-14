@@ -759,7 +759,7 @@ class SSX2_PatchPropPanel(SSX2_Panel):
 		
 		if obj.type == 'SURFACE' or obj.ssx2_PatchProps.isControlGrid or obj.ssx2_CurveMode == 'CAGE':
 			props = obj.ssx2_PatchProps
-			prop_split(col, props, 'type', "Patch Type")
+			prop_split(col, props, 'type', "Surface Type")
 			col.prop(props, 'showoffOnly', text="Showoff Only")
 			box = col.box()
 			box.label(text="UV Mapping")
