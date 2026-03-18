@@ -835,6 +835,7 @@ class SSX2_OP_WorldLogicExpandScript(bpy.types.Operator):
 	bl_idname = "wm.ssx2_expand_logic_script"
 	bl_label = ""
 	bl_description = "Expand box"
+	bl_options = {'REGISTER'}
 
 	index: bpy.props.IntProperty()
 
