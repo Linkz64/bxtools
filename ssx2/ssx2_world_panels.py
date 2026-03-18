@@ -382,6 +382,9 @@ class SSX2_WorldLogicScriptsSubPanel(SSX2_Panel):
 					
 
 					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+					# new_layout = logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
+					# TODO ^ return the last layout to prevent buttons from touching the move buttons
+					# RunOnTarget is an example
 
 					row_a.separator(factor=0.5)
 

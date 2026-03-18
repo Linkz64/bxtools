@@ -758,9 +758,9 @@ class LogicDraw:
 		effect = self.effects.run_on_target[index]
 		layout.label(text="", icon='CON_OBJECTSOLVER')
 
-		lyt_split = layout.split(factor=0.385)
-		lyt_split.prop(effect, "checked", text="Run on Target")
-		col = lyt_split.column()
+		col = layout.column(align=True)
+		col.prop(effect, "checked", text="Run on Target")
+		
 		col.prop_search(
 			effect,
 			"target_script",
@@ -770,7 +770,6 @@ class LogicDraw:
 			text="",
 		)
 		col.prop(effect, "target_instance", text="")
-		
 
 	def draw_sound(self, layout, index):
 		effect = self.effects.sound[index]
@@ -810,9 +809,10 @@ class LogicDraw:
 	def draw_fence(self, layout, index):
 		effect = self.effects.fence[index]
 		layout.label(text="", icon='RIGID_BODY')
-		layout.prop(effect, "checked", text="Fence")
-		layout.prop(effect, "u0", text="U0")
-		layout.prop(effect, "flex_amount", text="Flex Amount")
+		row = layout.column()
+		row.prop(effect, "checked", text="Fence")
+		row.prop(effect, "u0", text="U0")
+		row.prop(effect, "flex_amount", text="Flex Amount")
 
 	def draw_flag(self, layout, index):
 		effect = self.effects.flag[index]
