@@ -383,11 +383,14 @@ class SSX2_WorldLogicScriptsSubPanel(SSX2_Panel):
 
 					logic_draw.draw_kind(row_a, fx_ref.kind, fx_ref.index)
 
+					row_a.separator(factor=0.5)
 
-					row_a.separator()
+					cole = row_a.column(align=True)
+					# cole.menu("PARTICLE_MT_context_menu", icon='DOWNARROW_HLT', text="")
+					cole.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
+					cole.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
+					# cole.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRASH', text="").vals = (0, i, j)
 
-					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_UP', text="").vals = (0, i, j)
-					row_a.operator(SSX2_OP_EffectMoveUpDown.bl_idname, icon='TRIA_DOWN', text="").vals = (1, i, j)
 
 
 class SSX2_WorldLogicNamedScriptsSubPanel(SSX2_Panel):

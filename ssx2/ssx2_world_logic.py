@@ -1701,7 +1701,7 @@ class SSX2_OP_LogicTest(Operator):
 		effect_refs[num_fx].kind = 'dead_node'
 
 		scene.ssx2_Effects.dead_node.add()
-		scene.ssx2_Effects.dead_node[num_dead_node].mode = 5
+		scene.ssx2_Effects.dead_node[num_dead_node].mode = '1'
 
 
 
@@ -1719,7 +1719,7 @@ class SSX2_OP_LogicTest(Operator):
 		effect_refs[num_fx + 2].kind = 'dead_node'
 
 		scene.ssx2_Effects.dead_node.add()
-		scene.ssx2_Effects.dead_node[num_dead_node + 1].mode = 77
+		scene.ssx2_Effects.dead_node[num_dead_node + 1].mode = '3'
 
 
 
