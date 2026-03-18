@@ -910,7 +910,7 @@ class SSX2_OP_WorldLogicSlotClear(bpy.types.Operator):
 class SSX2_OP_WorldShowPathEvent(bpy.types.Operator):
 	bl_idname = "wm.ssx2_show_path_event"
 	bl_label = ""
-	bl_description = "Test"
+	bl_description = "Show/Hide this event"
 	bl_options = {'REGISTER', 'UNDO'}
 
 	index: bpy.props.IntProperty()
