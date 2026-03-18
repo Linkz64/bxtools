@@ -609,7 +609,6 @@ class LogicImporters:
 		fx_index = len(self.effects.reset)
 
 		fx = self.effects.reset.add()
-		fx.u0 = json_fx["type13"]
 
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
@@ -1038,8 +1037,7 @@ class LogicDraw:
 	def draw_reset(self, layout, index):
 		effect = self.effects.reset[index]
 		layout.label(text="", icon='FILE_REFRESH')
-		layout.prop(effect, "checked", text="Reset Rider")
-		layout.prop(effect, "u0", text="U0")
+		layout.prop(effect, "checked", text="Reset")
 
 	def draw_multiplier(self, layout, index):
 		effect = self.effects.multiplier[index]
@@ -1457,7 +1455,6 @@ class SSX2_PG_WorldEffectSound(PropertyGroup):
 class SSX2_PG_WorldEffectReset(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	is_deleted: BoolProperty(default=False)
-	u0: FloatProperty()
 
 class SSX2_PG_WorldEffectMultiplier(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
