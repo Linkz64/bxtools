@@ -1581,17 +1581,28 @@ class SSX2_OP_WorldImport(Operator):
 		effects = scene.ssx2_Effects
 
 		for fx_index, target_instance, target_script in logic_importer.defer_refs_run_on_target:
-			effects.run_on_target[fx_index].target_instance = instance_refs[target_instance]
-			effects.run_on_target[fx_index].target_script = \
-				scene.ssx2_LogicScripts[num_script_start + target_script].name
+
+			if target_instance < 0 or target_instance > len(instance_refs):
+				self.report({'WARNING'}, f"Failed to find instance: fx:{fx_index} ins:{target_instance} scr:{target_script}")
+			else:
+				effects.run_on_target[fx_index].target_instance = instance_refs[target_instance]
+
+			if target_script < 0 or target_script > len(scene.ssx2_LogicScripts):
+				self.report({'WARNING'}, f"Failed to find script: fx:{fx_index} ins:{target_instance} scr:{target_script}")
+			else:
+				effects.run_on_target[fx_index].target_script = \
+					scene.ssx2_LogicScripts[num_script_start + target_script].name
 
 		
 		for fx_index, named_script_index in logic_importer.defer_refs_run_named_script:
 			effects.run_named_script[fx_index].name = \
 				scene.ssx2_LogicNamedScripts[num_named_script_start + named_script_index].name
 
-		for fx_index, teleport_target in logic_importer.defer_refs_teleport:
-			effects.teleport[fx_index].target = instance_refs[teleport_target]
+		for fx_index, target_instance in logic_importer.defer_refs_teleport:
+			if target_instance < 0 or target_instance > len(instance_refs):
+				self.report({'WARNING'}, f"Failed to find instance: fx:{fx_index} ins:{target_instance} scr:{target_script}")
+			else:
+				effects.teleport[fx_index].target = instance_refs[target_instance]
 
 		if self.io.importSplines:
 			for fx_index, spline_index, u0 in logic_importer.defer_refs_spline_manager:
