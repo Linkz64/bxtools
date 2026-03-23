@@ -106,6 +106,7 @@ class LogicImporters:
 				1: self.import_spline_path,
 			},
 
+			3: self.import_effect_tweak_3,
 			4: self.import_wait,
 			7: self.import_run_on_target,
 			8: self.import_sound,
@@ -262,6 +263,17 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'push_boost'
+
+	def import_effect_tweak_3(self, seq, json_fx):
+		fx_index = len(self.effects.effect_tweak_3)
+
+		fx = self.effects.effect_tweak_3.add()
+		fx.u0 = json_fx["type3"]["U0"]
+		fx.u1 = struct.unpack('f', struct.pack('i', json_fx["type3"]["U1"]))[0]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'effect_tweak_3'
 
 	def import_wait(self, seq, json_fx):
 		fx_index = len(self.effects.wait)
@@ -747,6 +759,14 @@ class LogicDraw:
 		col.prop(effect, "amount2", text="Amount2")
 		col.prop(effect, "direction", text="Direction")
 
+	def draw_effect_tweak_3(self, layout, index):
+		effect = self.effects.effect_tweak_3[index]
+		layout.label(text="", icon='OPTIONS')
+		col = layout.column()
+		col.prop(effect, "checked", text="Effect Tweak 3")
+		col.prop(effect, "u0", text="U0")
+		col.prop(effect, "u1", text="U1")
+	
 	def draw_wait(self, layout, index):
 		effect = self.effects.wait[index]
 		layout.label(text="", icon='TIME')
@@ -1083,6 +1103,7 @@ LogicDraw.effect_drawers = {
 	"dead_node": LogicDraw.draw_dead_node,
 	"counter": LogicDraw.draw_counter,
 	"push_boost": LogicDraw.draw_push_boost,
+	"effect_tweak_3": LogicDraw.draw_effect_tweak_3,
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"sound": LogicDraw.draw_sound,
@@ -1118,6 +1139,7 @@ enum_ssx2_effect_types = (
 	('dead_node', "Dead Node", ""),
 	('counter', "Counter", ""),
 	('push_boost', "Push Boost", ""),
+	('effect_tweak_3', "Effect Tweak 3", ""),
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
 	('sound', "Sound", ""),
@@ -1436,6 +1458,12 @@ class SSX2_PG_WorldEffectSplinePath(PropertyGroup):
 	u7: FloatProperty()
 	color: FloatVectorProperty(subtype='COLOR_GAMMA')
 
+class SSX2_PG_WorldEffectEffectTweak3(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
+	u0: IntProperty()
+	u1: FloatProperty()
+
 class SSX2_PG_WorldEffectWait(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	is_deleted: BoolProperty(default=False)
@@ -1523,7 +1551,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 
 
 	# type 3
-	# t3_s0: CollectionProperty(type=)
+	effect_tweak_3: CollectionProperty(type=SSX2_PG_WorldEffectEffectTweak3)
 	# type 4
 	wait: CollectionProperty(type=SSX2_PG_WorldEffectWait)
 	# type 5
@@ -1591,7 +1619,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	│   ├── Sub 0 (Emitter)
 	│   ├── Sub 1 (SplinePath)
 	│   └── Sub 2 (CollideEmitter) <<<<<<<<<<<<<<<< REQUIRES FURTHER RESEARCH
-	├── Type 3 <<<<<<<<<<<<<<<< similar to 9
+	├── Type 3 (EffectTweak3) similar to 9
 	├── Type 4 (Wait)
 	├── Type 5
 	│   ├── Sub 0 (?) <<<<<<<<<<<<<<<<
@@ -1913,6 +1941,7 @@ classes = (
 	SSX2_PG_WorldEffectAnimCombo,
 	SSX2_PG_WorldEffectEmitter,
 	SSX2_PG_WorldEffectSplinePath,
+	SSX2_PG_WorldEffectEffectTweak3,
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
