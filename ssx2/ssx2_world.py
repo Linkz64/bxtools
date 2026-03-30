@@ -1916,8 +1916,8 @@ class SSX2_OP_WorldImport(Operator):
 						bg0.inputs[0].default_value = color.to_4d()
 						bg0.inputs[1].default_value = brightness / 10
 
-			if i == 127:
-				break
+			# if i == 127:
+			# 	break
 
 			
 
