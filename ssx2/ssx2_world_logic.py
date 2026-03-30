@@ -110,6 +110,7 @@ class LogicImporters:
 			4: self.import_wait,
 			7: self.import_run_on_target,
 			8: self.import_sound,
+			9: self.import_effect_tweak_9,
 			13: self.import_reset,
 			14: self.import_multiplier,
 			17: self.import_speed_boost,
@@ -306,6 +307,17 @@ class LogicImporters:
 		fx_ref = seq.effect_refs.add()
 		fx_ref.index = fx_index
 		fx_ref.kind = 'sound'
+
+	def import_effect_tweak_9(self, seq, json_fx):
+		fx_index = len(self.effects.effect_tweak_9)
+
+		fx = self.effects.effect_tweak_9.add()
+		fx.u0 = json_fx["type9"]["U0"]
+		fx.u1 = json_fx["type9"]["U1"]
+
+		fx_ref = seq.effect_refs.add()
+		fx_ref.index = fx_index
+		fx_ref.kind = 'effect_tweak_9'
 
 	def import_uv_scroll(self, seq, json_fx):
 		json_fx = json_fx["type0"]["UVScroll"]
@@ -796,6 +808,14 @@ class LogicDraw:
 		layout.prop(effect, "checked", text="Sound")
 		layout.prop(effect, "sound_id", text="ID")
 
+	def draw_effect_tweak_9(self, layout, index):
+		effect = self.effects.effect_tweak_9[index]
+		layout.label(text="", icon='OPTIONS')
+		col = layout.column()
+		col.prop(effect, "checked", text="Effect Tweak 9")
+		col.prop(effect, "u0", text="U0")
+		col.prop(effect, "u1", text="U1")
+
 	def draw_uv_scroll(self, layout, index):
 		effect = self.effects.uv_scroll[index]
 
@@ -1107,6 +1127,7 @@ LogicDraw.effect_drawers = {
 	"wait": LogicDraw.draw_wait,
 	"run_on_target": LogicDraw.draw_run_on_target,
 	"sound": LogicDraw.draw_sound,
+	"effect_tweak_9": LogicDraw.draw_effect_tweak_9,
 	"uv_scroll": LogicDraw.draw_uv_scroll,
 	"texture_flip": LogicDraw.draw_texture_flip,
 	"fence": LogicDraw.draw_fence,
@@ -1143,6 +1164,7 @@ enum_ssx2_effect_types = (
 	('wait', "Wait", ""),
 	('run_on_target', "Run on Target", ""),
 	('sound', "Sound", ""),
+	('effect_tweak_9', "Effect Tweak 9", ""),
 	('uv_scroll', "UV Scroll", ""),
 	('texture_flip', "Texture Flip", ""),
 	('fence', "Fence", ""),
@@ -1480,6 +1502,12 @@ class SSX2_PG_WorldEffectSound(PropertyGroup):
 	is_deleted: BoolProperty(default=False)
 	sound_id: IntProperty()
 
+class SSX2_PG_WorldEffectEffectTweak9(PropertyGroup):
+	checked: BoolProperty(options={'SKIP_SAVE'})
+	is_deleted: BoolProperty(default=False)
+	u0: IntProperty()
+	u1: FloatProperty()
+
 class SSX2_PG_WorldEffectReset(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	is_deleted: BoolProperty(default=False)
@@ -1562,6 +1590,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	# type 8
 	sound: CollectionProperty(type=SSX2_PG_WorldEffectSound)
 	# type 9
+	effect_tweak_9: CollectionProperty(type=SSX2_PG_WorldEffectEffectTweak9)
 
 	# type 13
 	reset: CollectionProperty(type=SSX2_PG_WorldEffectReset)
@@ -1629,7 +1658,7 @@ class SSX2_PG_WorldEffects(PropertyGroup):
 	├── Type 6 (BoostMeterFill6) <<<<<<<<<<<<<<<< {int} | unused, working. showoffs only.
 	├── Type 7 (RunOnTarget)
 	├── Type 8 (Sound)
-	├── Type 9 (?) <<<<<<<<<<<<<<<< similar to 3
+	├── Type 9 (EffectTweak9) similar to 3
 	├── Type 10 (?) unused? jumps to stubbed function
 	├── Type 11 (?) unused? jumps to stubbed function
 	├── Type 13 (Reset)
@@ -1945,6 +1974,7 @@ classes = (
 	SSX2_PG_WorldEffectWait,
 	SSX2_PG_WorldEffectRunOnTarget,
 	SSX2_PG_WorldEffectSound,
+	SSX2_PG_WorldEffectEffectTweak9,
 	SSX2_PG_WorldEffectReset,
 	SSX2_PG_WorldEffectMultiplier,
 	SSX2_PG_WorldEffectSpeedBoost,
