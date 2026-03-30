@@ -232,7 +232,7 @@ class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 			if obj.type == 'SURFACE':
 				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Control Grid")
 			elif obj.ssx2_PatchProps.isControlGrid:
-				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Patch")
+				col.operator(SSX2_OP_ToggleControlGrid.bl_idname, text="To Surface Patch")
 			else:
 				col.operator(SSX2_OP_ToggleControlGrid.bl_idname)
 		else:
