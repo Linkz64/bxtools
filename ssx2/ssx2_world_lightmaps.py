@@ -155,9 +155,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             5) Bakes on the merged mesh
 
 
-            Note that this splits the uvs into new maps early for testing.
-            
-
             """
 
 
@@ -172,15 +169,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             graph = bpy.context.evaluated_depsgraph_get()
 
-            # I figured out a better way to get the count already but I'm too lazy to find it
             num_maps = 0
-
-            
             new_materials = []
 
 
             for i in range(num_patches):
-                if i % res * 2 == 0:
+                if i % (res * 2) == 0:
                     image = getset_image(f"0.bake.{num_maps}", res, res)
 
 
@@ -210,10 +204,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     print("STOPPED DUE TO CAP")
                     break
 
-                # if patch.visible_get() == True: # maybe I can exclude the entire collection instead
-                #     patch.hide_set(True)        # and do the new mesh in another collection
-
-                if i % res*2 == 0:
+                if i % (res * 2) == 0:
                     current_map_index += 1
 
                 mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
