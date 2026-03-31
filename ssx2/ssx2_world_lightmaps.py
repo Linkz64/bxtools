@@ -218,12 +218,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 new_obj.color = patch.color
 
                 new_obj.data.materials.clear()
-
-                print(i, current_map_index, num_maps)
                 new_obj.data.materials.append(new_materials[current_map_index - 1])
 
                 new_collection.objects.link(new_obj)
-
                 new_obj.select_set(True)
 
 

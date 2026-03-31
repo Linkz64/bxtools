@@ -1784,7 +1784,7 @@ class SSX2_OP_WorldImport(Operator):
 
 		blender_types = ['SUN', 'SPOT', 'POINT']
 
-		vec_1 = Vector((1.0, 1.0, 1.0))
+		VEC_ONE = Vector((1.0, 1.0, 1.0))
 
 		lights_file_path = self.folder_path + '/Lights.json'
 		if not os.path.isfile(lights_file_path):
@@ -1849,14 +1849,14 @@ class SSX2_OP_WorldImport(Operator):
 
 				brightness = light_color.length
 				if brightness == 0.0:
-					color = vec_1
+					color = VEC_ONE
 					brightness = 0.0
 
 				color = Vector((abs(light_color.x), abs(light_color.y), abs(light_color.z))) / brightness
 				sign = 1 if light_color.x + light_color.y + light_color.z >= 0 else -1
 
 				if sign < 0:
-					color = vec_1 - color
+					color = VEC_ONE - color
 
 				brightness *= sign
 
@@ -1869,12 +1869,13 @@ class SSX2_OP_WorldImport(Operator):
 				elif light_type == SPOT:
 
 					if sign < 0:
-						light_data.energy = (brightness * self.io.lightSpotMultiplier) * 10
+						light_data.energy = (brightness * self.io.lightSpotMultiplier)
 					else:
 						light_data.energy = brightness * self.io.lightSpotMultiplier
 
 					light_data.spot_size = self.io.lightSpotSize
 					light_data.spot_blend = self.io.lightSpotBlend
+
 				elif light_type == POINT:
 					light_data.energy = brightness * self.io.lightPointMultiplier
 
@@ -3317,8 +3318,8 @@ class SSX2_PG_WorldImportExport(PropertyGroup):
 	lightSpotBlend: FloatProperty(name="Spot Light Blend", default=1.0, min=0.0, max=1.0)
 
 	lightDirectionalMultiplier: FloatProperty(name="Spot Directional Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
-	lightSpotMultiplier: FloatProperty(name="Spot Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
-	lightPointMultiplier: FloatProperty(name="Point Light Multiplier", default=1000.0, soft_min=-100.0, soft_max=10000.0)
+	lightSpotMultiplier: FloatProperty(name="Spot Light Multiplier", default=10.0, soft_min=-100.0, soft_max=10000.0)
+	lightPointMultiplier: FloatProperty(name="Point Light Multiplier", default=100.0, soft_min=-100.0, soft_max=10000.0)
 	lightAmbientMultiplier: FloatProperty(name="Ambient Light Multiplier", default=1.0, soft_min=-100.0, soft_max=10000.0)
 
 
