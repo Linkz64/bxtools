@@ -23,10 +23,10 @@ def getset_image_udim(name, res_x, res_y):
         image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y, tiled=True)
     return image
 
-def setup_lightmap_uvs(uv_scale, length):
+def setup_lightmap_uvs(uv_scale, num_patches):
     """
     uv_scale = uv tile scale (0.0625 for 8x8 tile if texture is 128x128)
-    length = number of patches
+    num_patches = number of patches
 
     note: blender origin is bottom left, ssx origin is top left
           therefore y is set to start at 0.9375 (1.0 - uv_scale)
@@ -34,7 +34,7 @@ def setup_lightmap_uvs(uv_scale, length):
     x = 0.0
     y = 1.0 - uv_scale
     uvs = [(x, y)]
-    for i in range(length):
+    for i in range(num_patches):
         #print(f"{i:3} {x:6} {y:6}")
         if x + uv_scale < 1.0:
             x += uv_scale
@@ -120,15 +120,47 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        length = len(patches)
+        has_cap = False
         cap = 10 # temp patch count limit for testing
-        res = 128 # texture resolution
-        uv_scale = 0.0625#*4 # lightmap uv scale. for scaling down to fill 8x8 pixels
-        uvs = setup_lightmap_uvs(uv_scale, cap)
+        res = 128 # texture map resolution
+        uv_scale = 0.0625 #*4 # lightmap uv scale. for scaling down to fill 8x8 pixels
+
+
+        num_patches = len(patches)
+
+        if has_cap:
+            uvs = setup_lightmap_uvs(uv_scale, cap)
+        else:
+            uvs = setup_lightmap_uvs(uv_scale, num_patches)
 
 
 
-        if method == OAAT_EVAL_MERGE: # copy and eval one at a time, setup uvs, merge
+        # TODO
+        # Look into averaging the normals instead of merging vertices.
+        # At the moment merging causes some faces to collapse into triangles.
+        # Alternatively...
+        # Bake with all the patches separated then average the colors of touching vertices
+        # Alternatively...
+        # Make a new mesh via bmesh or bpy mesh
+
+
+
+        if method == OAAT_EVAL_MERGE:
+            """
+
+            1) Sets up materials
+            2) Evaluates patches to mesh copies
+            3) Excludes/Hides patch collection
+            4) Merges all meshes
+            5) Bakes on the merged mesh
+
+
+            Note that this splits the uvs into new maps early for testing.
+            
+
+            """
+
+
 
             new_collection = bpy.data.collections.get("meshes_for_lightmaps")
             if new_collection is None:
@@ -137,48 +169,82 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
                 bpy.context.scene.collection.children.link(new_collection)
 
-            current_map_index = 0 # texture index
 
             graph = bpy.context.evaluated_depsgraph_get()
+
+            # I figured out a better way to get the count already but I'm too lazy to find it
+            num_maps = 0
+
             
+            new_materials = []
+
+
+            for i in range(num_patches):
+                if i % res * 2 == 0:
+                    image = getset_image(f"0.bake.{num_maps}", res, res)
+
+
+                    print(f"Creating new baking material {num_maps}")
+
+                    new_mat = bpy.data.materials.new(name=f"0.BAKING_MAT.{num_maps}")
+                    new_mat.use_nodes = True
+                    nodes = new_mat.node_tree.nodes
+                    bake_node = nodes.new(type='ShaderNodeTexImage')
+                    bake_node.name = "Bake"
+                    bake_node.select = True
+                    nodes.active = bake_node
+                    bake_node.image = image
+
+
+                    # new_obj.data.materials.append(newer_mat)
+                    new_materials.append(new_mat)
+
+                    num_maps += 1
+
+
+            current_map_index = 0 # bake texture index
+
             for i, patch in enumerate(patches):
 
-                if i < cap:
-                    # if patch.visible_get() == True: # maybe I can exclude the entire collection instead
-                    #     patch.hide_set(True)        # and do the new mesh in another collection
-
-                    if i % res*2 == 0:
-                        image = getset_image(f"0.1.bake{current_map_index}", res, res)
-                        current_map_index += 1
-
-                    mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
-                    uv_layer = mesh.uv_layers.new(name="UVMap.Lightmap")
-                    uv_layer.active_render = True
-                    mesh.uv_layers.active = uv_layer
-
-
-                    new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
-                    new_obj.matrix_world = patch.matrix_world
-                    new_obj.color = patch.color
-                    new_collection.objects.link(new_obj)
-
-                    new_obj.select_set(True)
-
-                    # edit UVs
-                    for poly in mesh.polygons:
-                        for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
-                            uv_layer.data[loop_idx].uv *= uv_scale
-                            uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
-                            
-                
-                    #mesh.uv_layers[0].active_render = True # set back to first UV layer after baking, can be commented out
-                else:
-                    print("STOPPED")
+                if i >= cap and has_cap:
+                    print("STOPPED DUE TO CAP")
                     break
-                    # return {'CANCELLED'}
 
-            new_collection.objects[0].select_set(True)
-            bpy.context.view_layer.objects.active = new_collection.objects[0]
+                # if patch.visible_get() == True: # maybe I can exclude the entire collection instead
+                #     patch.hide_set(True)        # and do the new mesh in another collection
+
+                if i % res*2 == 0:
+                    current_map_index += 1
+
+                mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
+                uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
+                uv_layer.active_render = True
+                mesh.uv_layers.active = uv_layer
+
+
+                new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
+                new_obj.matrix_world = patch.matrix_world
+                new_obj.color = patch.color
+
+                new_obj.data.materials.clear()
+
+                print(i, current_map_index, num_maps)
+                new_obj.data.materials.append(new_materials[current_map_index - 1])
+
+                new_collection.objects.link(new_obj)
+
+                new_obj.select_set(True)
+
+
+                for poly in mesh.polygons:
+                    for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+                        uv_layer.data[loop_idx].uv *= uv_scale
+                        uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
+
+
+            new_obj = new_collection.objects[0]
+            new_obj.select_set(True)
+            bpy.context.view_layer.objects.active = new_obj
 
             outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
             outliner.exclude = True
@@ -190,8 +256,25 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.select_all(action='SELECT')
 
-            bpy.ops.mesh.remove_doubles() # calculate threshold=* according to world scale
+            # TODO? calculate threshold=* according to world scale
+            # bpy.ops.mesh.remove_doubles(threshold=0.0001)
 
+
+
+            bpy.context.scene.render.bake.margin_type = 'EXTEND'
+            bpy.context.scene.render.bake.margin = 0
+            print(f"Baking lightmaps. This may take a while.")
+
+            bpy.ops.object.bake(type='DIFFUSE')
+
+
+
+
+
+
+
+
+            # TODO set the UVs active_render back to default after
 
 
 
