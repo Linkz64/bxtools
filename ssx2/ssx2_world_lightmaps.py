@@ -134,25 +134,34 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             uvs = setup_lightmap_uvs(uv_scale, num_patches)
 
 
+        """
+        TODO
 
-        # TODO
-        # Look into averaging the normals instead of merging vertices.
-        # At the moment merging causes some faces to collapse into triangles.
-        # Alternatively...
-        # Bake with all the patches separated then average the colors of touching vertices
-        # Alternatively...
-        # Make a new mesh via bmesh or bpy mesh
+        unordered
+
+        - Look into averaging the normals instead of merging vertices.
+            At the moment merging causes some faces to collapse into triangles.
+            Alternatively...
+            Bake with all the patches separated then average the colors of touching vertices
+            Alternatively...
+            Make a new mesh via bmesh or bpy mesh
+
+        - Consider: Add an option to bake at a higher resolution first before scaling down
+
+        - Convert to the colors the ps2 version expects
+
+        """
 
 
 
         if method == OAAT_EVAL_MERGE:
             """
 
-            1) Sets up materials
-            2) Evaluates patches to mesh copies
-            3) Excludes/Hides patch collection
-            4) Merges all meshes
-            5) Bakes on the merged mesh
+            - Sets up materials
+            - Evaluates patches to mesh copies
+            - Excludes/Hides patch collection
+            - Merges all meshes
+            - Bakes on the merged mesh
 
 
             """
@@ -167,27 +176,36 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 bpy.context.scene.collection.children.link(new_collection)
 
 
+
+
+            diffuse_images = []
+            diffuse_image_indices = []
+
+
+
+
             graph = bpy.context.evaluated_depsgraph_get()
 
             num_maps = 0
             new_materials = []
+            bake_images = []
 
 
             for i in range(num_patches):
                 if i % (res * 2) == 0:
-                    image = getset_image(f"0.bake.{num_maps}", res, res)
-
+                    image = getset_image(f"0.BXT_BAKE_IMG.{num_maps}", res, res)
+                    bake_images.append(image)
 
                     print(f"Creating new baking material {num_maps}")
 
-                    new_mat = bpy.data.materials.new(name=f"0.BAKING_MAT.{num_maps}")
+                    new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{num_maps}")
                     new_mat.use_nodes = True
                     nodes = new_mat.node_tree.nodes
                     bake_node = nodes.new(type='ShaderNodeTexImage')
-                    bake_node.name = "Bake"
+                    bake_node.name = "BXT_BAKE_NODE"
                     bake_node.select = True
-                    nodes.active = bake_node
                     bake_node.image = image
+                    nodes.active = bake_node
 
 
                     # new_obj.data.materials.append(newer_mat)
@@ -207,16 +225,26 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if i % (res * 2) == 0:
                     current_map_index += 1
 
+
+                mat = patch.data.materials[0] # TODO: handle error
+                diffuse_node = mat.node_tree.nodes["Image Texture"]
+                image = diffuse_node.image
+
+                if image in diffuse_images:
+                    diffuse_image_indices.append(diffuse_images.index(image))
+                else:
+                    diffuse_images.append(image)
+                    diffuse_image_indices.append(len(diffuse_images) - 1)
+
+
                 mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
                 uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
                 uv_layer.active_render = True
                 mesh.uv_layers.active = uv_layer
 
-
                 new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
                 new_obj.matrix_world = patch.matrix_world
                 new_obj.color = patch.color
-
                 new_obj.data.materials.clear()
                 new_obj.data.materials.append(new_materials[current_map_index - 1])
 
@@ -237,9 +265,13 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
             outliner.exclude = True
 
+
+
             bpy.ops.object.join()
 
-            #new_merged = new_collection.objects[0]
+
+
+            #new_obj = new_collection.objects[0]
 
             bpy.ops.object.mode_set(mode='EDIT')
             bpy.ops.mesh.select_all(action='SELECT')
@@ -395,7 +427,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        
         """
         if method == OAAT: # one at a time
 
