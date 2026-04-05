@@ -16,6 +16,7 @@ def getset_image(name, res_x, res_y):
     image = bpy.data.images.get(name) # check if bake exists first
     if image is None:
         image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y)
+    image.alpha_mode = 'NONE'
     return image
 def getset_image_udim(name, res_x, res_y):
     image = bpy.data.images.get(name) # check if bake exists first
@@ -135,9 +136,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
         """
-        TODO
-
-        unordered
+        TODO (Unordered)
 
         - Look into averaging the normals instead of merging vertices.
             At the moment merging causes some faces to collapse into triangles.
@@ -146,11 +145,36 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             Alternatively...
             Make a new mesh via bmesh or bpy mesh
 
-        - Consider: Add an option to bake at a higher resolution first before scaling down
+        - Consider: Adding an option to bake at a higher resolution first before scaling down.
+        - Consider: Sampling the pixels from the diffuse image without rescaling by 
+            sampling surrounding pixels and doing bilinear math.
 
-        - Convert to the colors the ps2 version expects
+        - Convert to the colors the PS2 version expects
+
+        - Check if the bake UVs are flipped
 
         """
+
+
+
+        def sample_pixel(img, x, y, res):
+            x = max(0.0, min(1.0, x))
+            y = max(0.0, min(1.0, y))
+
+            px = int(x * (res - 1))
+            py = int(y * (res - 1))
+
+            pixels = img.pixels
+
+            i = (py * res + px) * 4
+
+            return (
+                pixels[i],
+                pixels[i + 1],
+                pixels[i + 2],
+                pixels[i + 3],
+            )
+
 
 
 
@@ -180,9 +204,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             diffuse_images = []
             diffuse_image_indices = []
-
-
-
 
             graph = bpy.context.evaluated_depsgraph_get()
 
@@ -225,15 +246,26 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if i % (res * 2) == 0:
                     current_map_index += 1
 
+                print(i, patch.name, current_map_index)
+
 
                 mat = patch.data.materials[0] # TODO: handle error
                 diffuse_node = mat.node_tree.nodes["Image Texture"]
-                image = diffuse_node.image
+                img = diffuse_node.image
 
-                if image in diffuse_images:
-                    diffuse_image_indices.append(diffuse_images.index(image))
+                new_name = "BXT_DIFF_" + img.name
+
+                if new_name in diffuse_images:
+                    diffuse_image_indices.append(diffuse_images.index(new_name))
                 else:
-                    diffuse_images.append(image)
+                    print("Rescaling image", new_name)
+
+                    new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
+                    new_img.alpha_mode = 'NONE'
+                    new_img.pixels = list(img.pixels)
+                    new_img.scale(8, 8)
+
+                    diffuse_images.append(new_name)
                     diffuse_image_indices.append(len(diffuse_images) - 1)
 
 
@@ -289,12 +321,64 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
+            print("\nConverting to PS2 colors")
+
+
+            """
+            diffC = diffuse color texture but scaled down to 8x8
+            lightC = baked lightmap color
+            newC  = new Ps2 lightmap color
+            alpha = new alpha channel. generated from the luminosity of lightC
+
+            
+            Generating:
+
+            # "alpha channel as the luminosity of the lightmap"
+            alpha = max(lightC.r, lightC.g, lightC.b)
+
+            newC = diffC - ((diffC * lightC) / alpha)
+
+
+            Rendering:
+
+            diffC * newC is not supported!
+            (diffC - newC) * A is supported
+
+            """
 
 
 
 
 
-            # TODO set the UVs active_render back to default after
+
+
+            for i in range(num_patches):
+                if i % (res * 2) == 0:
+                    # bake = f"0.BXT_BAKE_IMG.{num_maps}"
+                    bake_img = bake_images[i]
+                    diff_img = bpy.data.images.get(diffuse_images[i])
+
+
+                print(bake_img.name, diff_img.name)
+
+
+                for j in range(8):
+                    for k in range(8):
+                        bx = uvs[i][0] + (j / 7) * uv_scale
+                        by = uvs[i][1] + (k / 7) * uv_scale
+
+                        bake_pixel = sample_pixel(bake_img, bx, by, 128)
+
+                        dx, dy = (j / 7, k / 7)
+
+                        diff_pixel = sample_pixel(diff_img, dx, dy, diff_img.size[0]) # TODO support width and height?
+
+
+
+
+                
+                if i >= 0:
+                    break
 
 
 
