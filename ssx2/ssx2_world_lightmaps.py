@@ -116,8 +116,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         OAAT = 0
         OAAT_EVAL_MERGE = 1
         SELECT_ALL_MERGE = 2
+        EVAL_MERGE_INDIVIDUAL_MATS = 3
 
-        method = OAAT_EVAL_MERGE
+        method = EVAL_MERGE_INDIVIDUAL_MATS
 
 
 
@@ -153,8 +154,13 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         - Check if the bake UVs are flipped
 
-        """
 
+        - sample_pixel functions do not work as intended. try doing index math instead.
+
+
+        - OAAT_EVAL_MERGE: Start with everything upside down then flip at the end.
+
+        """
 
 
         def sample_pixel(img, x, y, res):
@@ -175,6 +181,18 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 pixels[i + 3],
             )
 
+        def sample_pixel_and_index(img, x, y, res):
+            x = max(0.0, min(1.0, x))
+            y = max(0.0, min(1.0, y))
+
+            px = int(x * (res - 1))
+            py = int(y * (res - 1))
+
+            pixels = img.pixels
+
+            i = (py * res + px) * 4
+
+            return (pixels[i], pixels[i + 1], pixels[i + 2], i)
 
 
 
@@ -359,6 +377,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     diff_img = bpy.data.images.get(diffuse_images[i])
 
 
+                bake_img_pixels_new = list(bake_img.pixels)
+
                 print(bake_img.name, diff_img.name)
 
 
@@ -367,7 +387,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                         bx = uvs[i][0] + (j / 7) * uv_scale
                         by = uvs[i][1] + (k / 7) * uv_scale
 
-                        bake_pixel = sample_pixel(bake_img, bx, by, 128)
+                        bake_pixel = sample_pixel_and_index(bake_img, bx, by, 128)
 
                         dx, dy = (j / 7, k / 7)
 
@@ -375,21 +395,220 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
+                        alpha = max(bake_pixel[0], bake_pixel[1], bake_pixel[2])
 
-                
+
+                        # px_idx = bake_pixel[3]
+                        # bake_img_pixels_new[px_idx] = 1
+                        # bake_img_pixels_new[px_idx + 1] = 0
+                        # bake_img_pixels_new[px_idx + 2] = 0
+
+                        # print(px_idx)
+
+                    if j > 0:
+                        break
+
+                pixels = bake_img.pixels
+                for p in range(0, len(pixels), 4):
+                    alpha = max(pixels[p], pixels[p + 1], pixels[p + 2])
+                    bake_img_pixels_new[p] = alpha
+                    bake_img_pixels_new[p + 1] = alpha
+                    bake_img_pixels_new[p + 2] = alpha
+
+                new_img = bpy.data.images.new("0.TESTING", width=128, height=128, alpha=False)
+                new_img.alpha_mode = 'NONE'
+                new_img.pixels = bake_img_pixels_new
+
+
                 if i >= 0:
                     break
 
 
 
+        if method == EVAL_MERGE_INDIVIDUAL_MATS:
+            """
 
 
 
-        # for i, obj in enumerate(patches):
-        #     obj.select_set(True)
+            """
 
-        # bpy.context.view_layer.objects.active = patches[0]
-        # bpy.ops.object.convert(target='MESH')
+
+
+            new_collection = bpy.data.collections.get("meshes_for_lightmaps")
+            if new_collection is None:
+                bpy.data.collections.new("meshes_for_lightmaps")
+                new_collection = bpy.data.collections.get("meshes_for_lightmaps")
+            if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
+                bpy.context.scene.collection.children.link(new_collection)
+
+
+
+
+            diffuse_images = []
+            diffuse_image_indices = []
+
+            graph = bpy.context.evaluated_depsgraph_get()
+
+            new_materials = []
+            bake_images = []
+
+
+            for i in range(num_patches):
+                # bake_img = getset_image(f"0.BXT_BAKE_IMG.{i}", res, res)
+                bake_img = bpy.data.images.new(f"0.BXT_BAKE_IMG.{i}", width=8, height=8, alpha=False)
+                bake_img.alpha_mode = 'NONE'
+
+
+                bake_images.append(bake_img)
+
+                print(f"Creating new baking material {i}")
+
+                new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
+                new_mat.use_nodes = True
+                nodes = new_mat.node_tree.nodes
+                bake_node = nodes.new(type='ShaderNodeTexImage')
+                bake_node.name = "BXT_BAKE_NODE"
+                bake_node.select = True
+                bake_node.image = bake_img
+                nodes.active = bake_node
+
+
+                # new_obj.data.materials.append(newer_mat)
+                new_materials.append(new_mat)
+
+
+            current_map_index = 0 # bake texture index
+
+            for i, patch in enumerate(patches):
+
+                if i >= cap and has_cap:
+                    print("STOPPED DUE TO CAP")
+                    break
+
+                # if i % (res * 2) == 0:
+                #     current_map_index += 1
+
+                print(i, patch.name)
+
+
+                mat = patch.data.materials[0] # TODO: handle error
+                diffuse_node = mat.node_tree.nodes["Image Texture"]
+                img = diffuse_node.image
+
+                new_name = "BXT_DIFF_" + img.name
+
+                if new_name in diffuse_images:
+                    diffuse_image_indices.append(diffuse_images.index(new_name))
+                else:
+                    print("Rescaling image", new_name)
+
+                    new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
+                    new_img.alpha_mode = 'NONE'
+                    new_img.pixels = list(img.pixels)
+                    new_img.scale(8, 8)
+
+                    diffuse_images.append(new_name)
+                    diffuse_image_indices.append(len(diffuse_images) - 1)
+
+
+                mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
+                uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
+                uv_layer.active_render = True
+                mesh.uv_layers.active = uv_layer
+
+                new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
+                new_obj.matrix_world = patch.matrix_world
+                new_obj.color = patch.color
+                new_obj.data.materials.clear()
+                new_obj.data.materials.append(new_materials[i])
+
+                new_collection.objects.link(new_obj)
+                new_obj.select_set(True)
+
+
+                # for poly in mesh.polygons:
+                    # for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+                        # uv_layer.data[loop_idx].uv *= uv_scale
+                        # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
+
+
+            new_obj = new_collection.objects[0]
+            new_obj.select_set(True)
+            bpy.context.view_layer.objects.active = new_obj
+
+            outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
+            outliner.exclude = True
+
+
+
+            bpy.ops.object.join()
+
+
+
+            #new_obj = new_collection.objects[0]
+
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+
+            # TODO? calculate threshold=* according to world scale
+            # bpy.ops.mesh.remove_doubles(threshold=0.0001)
+
+
+
+            bpy.context.scene.render.bake.margin_type = 'EXTEND'
+            bpy.context.scene.render.bake.margin = 0
+            print(f"Baking lightmaps. This may take a while.")
+
+            bpy.ops.object.bake(type='DIFFUSE')
+
+
+
+            print("\nConverting to PS2 colors")
+
+
+            """
+            diffC = diffuse color texture but scaled down to 8x8
+            lightC = baked lightmap color
+            newC  = new Ps2 lightmap color
+            alpha = new alpha channel. generated from the luminosity of lightC
+
+            
+            Generating:
+
+            # "alpha channel as the luminosity of the lightmap"
+            alpha = max(lightC.r, lightC.g, lightC.b)
+
+            newC = diffC - ((diffC * lightC) / alpha)
+            """
+
+
+            for i, bake_img, diff_idx in zip(range(num_patches), bake_images, diffuse_image_indices):
+
+                bxs = bake_img.pixels
+                dxs = bpy.data.images.get(diffuse_images[diff_idx]).pixels
+
+                new_pxs = []
+
+                for j in range(0, 256, 4):
+
+                    alpha = max(bxs[j + 0], bxs[j + 1], bxs[j + 2])
+
+                    if alpha != 0:
+                        new_pxs.append(dxs[j    ] - ((dxs[j    ] * bxs[j    ]) / alpha))
+                        new_pxs.append(dxs[j + 1] - ((dxs[j + 1] * bxs[j + 1]) / alpha))
+                        new_pxs.append(dxs[j + 2] - ((dxs[j + 2] * bxs[j + 2]) / alpha))
+                        new_pxs.append(alpha)
+                    else:
+                        new_pxs.append(0)
+                        new_pxs.append(0)
+                        new_pxs.append(0)
+                        new_pxs.append(0)
+
+                bake_img.pixels = new_pxs
+
+
+
+
 
 
         """
@@ -593,18 +812,18 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         bpy.context.scene.render.engine = prev_render_engine
 
 
-        time_taken = round(time.time() - time_start, 5)
-        print(f"Finished in {time_taken} seconds.")
+        time_taken = round(time.time() - time_start, 2)
+        print(f"FINISHED: {time_taken} seconds.")
 
 
         minutes = time_taken / 60
 
         #print(round(minutes, 4))
 
-        time_per_cap = minutes
-        time_per_object = time_per_cap / cap
-        total_time = time_per_object * 4000
+        # time_per_cap = minutes
+        # time_per_object = time_per_cap / cap
+        # total_time = time_per_object * 3000
+        # print('estimated = ', round(total_time, 4), 'minutes')
+        # print('estimated = ', round(total_time / 60, 4), 'hours')
 
-        print('estimated = ', round(total_time, 4), 'minutes')
-        print('estimated = ', round(total_time / 60, 4), 'hours')
         return {"FINISHED"}
