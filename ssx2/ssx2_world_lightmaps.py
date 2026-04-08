@@ -62,7 +62,19 @@ def getUVIslandsForActiveObject(): # from "raubana Dylan J. Raub" https://blende
     
     return islands
 
+def flip_image_y(img, width, height, channels=4):
+    pixels = list(img.pixels)
 
+    rows = [
+        pixels[i * width * channels:(i + 1) * width * channels]
+        for i in range(height)
+    ]
+    rows.reverse()
+
+    flipped_pixels = [channel for row in rows for channel in row]
+
+    img.pixels = flipped_pixels
+    # img.update()
 
 class SSX2_OP_BakeTest(bpy.types.Operator):
     bl_idname = 'object.ssx2_bake_test'
@@ -104,7 +116,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             self.report({'WARNING'}, "No 'Patches' Collection found!")
             return {'CANCELLED'}
         
-        patches = [obj for obj in pch_col.all_objects if obj.type == 'SURFACE']
+        patches = [obj for obj in pch_col.all_objects if obj.type == 'SURFACE' and not obj.hide_get()]
         # TODO: ignore hidden patches (maybe make it an option)
         # not .hide_viewport
         # not .exclude
@@ -495,7 +507,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 diffuse_node = mat.node_tree.nodes["Image Texture"]
                 img = diffuse_node.image
 
-                new_name = "BXT_DIFF_" + img.name
+                new_name = "0.BXT_DIFF_" + img.name
 
                 if new_name in diffuse_images:
                     diffuse_image_indices.append(diffuse_images.index(new_name))
@@ -506,6 +518,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                     new_img.alpha_mode = 'NONE'
                     new_img.pixels = list(img.pixels)
                     new_img.scale(8, 8)
+
+                    flip_image_y(new_img, 8, 8)
 
                     diffuse_images.append(new_name)
                     diffuse_image_indices.append(len(diffuse_images) - 1)
@@ -526,8 +540,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 new_obj.select_set(True)
 
 
-                # for poly in mesh.polygons:
-                    # for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+                for poly in mesh.polygons:
+                    for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+                        uv_layer.data[loop_idx].uv.y -= 1
+                        uv_layer.data[loop_idx].uv.y *= -1
                         # uv_layer.data[loop_idx].uv *= uv_scale
                         # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
 
