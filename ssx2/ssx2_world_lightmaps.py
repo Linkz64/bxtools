@@ -1,6 +1,9 @@
 import bpy
 from mathutils import Vector
 
+import os
+
+from ..general.bx_utils import natural_key
 
 def find_layer_collection(layer_collection, name):
     """Find collection in the outliner/layer"""
@@ -18,13 +21,14 @@ def getset_image(name, res_x, res_y):
         image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y)
     image.alpha_mode = 'NONE'
     return image
+
 def getset_image_udim(name, res_x, res_y):
     image = bpy.data.images.get(name) # check if bake exists first
     if image is None:
         image = bpy.data.images.new(name, alpha=False, width=res_x, height=res_y, tiled=True)
     return image
 
-def setup_lightmap_uvs(uv_scale, num_patches):
+def setup_lightmap_uvs_top_left(uv_scale, num_patches):
     """
     uv_scale = uv tile scale (0.0625 for 8x8 tile if texture is 128x128)
     num_patches = number of patches
@@ -47,20 +51,6 @@ def setup_lightmap_uvs(uv_scale, num_patches):
         uvs.append((x, y))
         #print(f"{i:3} {x:6} {y:6}")
     return uvs
-
-def getUVIslandsForActiveObject(): # from "raubana Dylan J. Raub" https://blenderartists.org/t/modifying-uvs-in-python-while-in-object-mode-affects-how-uv-islands-work/1378510/4
-    islands = []
-    obj = bpy.context.view_layer.objects.active
-    
-    poly_index_lists = bpy_extras.mesh_utils.mesh_linked_uv_islands( obj.data )
-    
-    for poly_index_list in poly_index_lists:
-        island = []
-        for poly_index in poly_index_list:
-            island.append( obj.data.polygons[poly_index] )
-        islands.append( island )
-    
-    return islands
 
 def flip_image_y(img, width, height, channels=4):
     pixels = list(img.pixels)
@@ -85,9 +75,53 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
     def execute(self, context):
         print("\nClicked: Bake Lightmaps")
 
+        """
+
+
+        Options for fixing the seams
+            - Average the normals.
+                Simply merging causes some faces to collapse into triangles.
+                Try finding neighbors and averaging normals or
+                create a new all-in-one island mesh with custom normals.
+                
+                This won't fix the seam issue. In-game each tile does bilinear filtering individually.
+                Which means the boundary edges need the same pixels as the ones on the neighbors.
+
+            - Scale each uv tile down (by 0.875?).
+                Not sure if this would help but I want to see what would happen.
+                Might work if I start with a high res bake.
+
+            - Neighbors use the same pixels on touching boundary edges.
+                Make a list of all neighbors (by finding touching corners. If 2 and 2 touch then its a direct neighbor).
+                Get the pixels on both sides of the touching edges and average them. Also add options for weighted and custom.  
+
+        
+
+        - Consider: Sampling the pixels from the original diffuse image without rescaling by 
+            sampling surrounding pixels and doing bilinear math. (For PS2 color math)
+
+        - Ignore patches with render disabled (outliner)
+
+        - Replace the name suffix adding code with short incremental names.
+
+        """
+
         import time
         time_start = time.time()
         print("Timer started")
+
+
+        # temp patch count limit for testing
+        has_cap = False
+        cap = 10
+
+        
+        atlas_res = 128
+        tile_res = 8
+        uv_scale = 0.0625
+
+
+
 
         prev_render_engine = bpy.context.scene.render.engine
 
@@ -95,15 +129,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         bpy.context.scene.cycles.device = 'GPU'
         bpy.context.scene.cycles.bake_type = 'DIFFUSE'
         bpy.context.scene.render.bake.use_pass_color = False
-        #bpy.context.scene.render.bake.use_clear = False      # may speed things up
-        #bpy.context.scene.render.bake.margin_type = 'EXTEND'
-        bpy.context.scene.render.bake.margin = 4
+        #bpy.context.scene.render.bake.use_clear = False
+        bpy.context.scene.render.bake.margin_type = 'EXTEND'
+        bpy.context.scene.render.bake.margin = 0
 
-        #bpy.context.scene.render.use_file_extension = True
-        #bpy.context.scene.render.image_settings.file_format = 'PNG'
-        #bpy.context.scene.render.image_settings.color_mode = 'RGBA'
-        #bpy.context.scene.render.image_settings.color_depth = '8'
-        #bpy.context.scene.render.image_settings.compression = 0
 
 
         if context.mode != "OBJECT":
@@ -117,470 +146,156 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             return {'CANCELLED'}
         
         patches = [obj for obj in pch_col.all_objects if obj.type == 'SURFACE' and not obj.hide_get()]
-        # TODO: ignore hidden patches (maybe make it an option)
-        # not .hide_viewport
-        # not .exclude
-        # not .hide_get()
+        patches.sort(key=lambda obj: natural_key(obj.name))
 
-
-        ## ==== TESTING METHOD ====
-
-        OAAT = 0
-        OAAT_EVAL_MERGE = 1
-        SELECT_ALL_MERGE = 2
-        EVAL_MERGE_INDIVIDUAL_MATS = 3
-
-        method = EVAL_MERGE_INDIVIDUAL_MATS
-
-
-
-        has_cap = False
-        cap = 10 # temp patch count limit for testing
-        res = 128 # texture map resolution
-        uv_scale = 0.0625 #*4 # lightmap uv scale. for scaling down to fill 8x8 pixels
 
 
         num_patches = len(patches)
 
         if has_cap:
-            uvs = setup_lightmap_uvs(uv_scale, cap)
+            uvs = setup_lightmap_uvs_top_left(uv_scale, cap)
         else:
-            uvs = setup_lightmap_uvs(uv_scale, num_patches)
-
-
-        """
-        TODO (Unordered)
-
-        - Look into averaging the normals instead of merging vertices.
-            At the moment merging causes some faces to collapse into triangles.
-            Alternatively...
-            Bake with all the patches separated then average the colors of touching vertices
-            Alternatively...
-            Make a new mesh via bmesh or bpy mesh
-
-        - Consider: Adding an option to bake at a higher resolution first before scaling down.
-        - Consider: Sampling the pixels from the diffuse image without rescaling by 
-            sampling surrounding pixels and doing bilinear math.
-
-        - Convert to the colors the PS2 version expects
-
-        - Check if the bake UVs are flipped
-
-
-        - sample_pixel functions do not work as intended. try doing index math instead.
-
-
-        - OAAT_EVAL_MERGE: Start with everything upside down then flip at the end.
-
-        """
-
-
-        def sample_pixel(img, x, y, res):
-            x = max(0.0, min(1.0, x))
-            y = max(0.0, min(1.0, y))
-
-            px = int(x * (res - 1))
-            py = int(y * (res - 1))
-
-            pixels = img.pixels
-
-            i = (py * res + px) * 4
-
-            return (
-                pixels[i],
-                pixels[i + 1],
-                pixels[i + 2],
-                pixels[i + 3],
-            )
-
-        def sample_pixel_and_index(img, x, y, res):
-            x = max(0.0, min(1.0, x))
-            y = max(0.0, min(1.0, y))
-
-            px = int(x * (res - 1))
-            py = int(y * (res - 1))
-
-            pixels = img.pixels
-
-            i = (py * res + px) * 4
-
-            return (pixels[i], pixels[i + 1], pixels[i + 2], i)
+            uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
 
 
 
-        if method == OAAT_EVAL_MERGE:
-            """
-
-            - Sets up materials
-            - Evaluates patches to mesh copies
-            - Excludes/Hides patch collection
-            - Merges all meshes
-            - Bakes on the merged mesh
-
-
-            """
-
-
-
+        new_collection = bpy.data.collections.get("meshes_for_lightmaps")
+        if new_collection is None:
+            bpy.data.collections.new("meshes_for_lightmaps")
             new_collection = bpy.data.collections.get("meshes_for_lightmaps")
-            if new_collection is None:
-                bpy.data.collections.new("meshes_for_lightmaps")
-                new_collection = bpy.data.collections.get("meshes_for_lightmaps")
-            if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
-                bpy.context.scene.collection.children.link(new_collection)
+        if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
+            bpy.context.scene.collection.children.link(new_collection)
 
 
 
+        diffuse_images = []
+        diffuse_image_indices = []
 
-            diffuse_images = []
-            diffuse_image_indices = []
+        graph = bpy.context.evaluated_depsgraph_get()
 
-            graph = bpy.context.evaluated_depsgraph_get()
+        new_materials = []
+        bake_images = []
 
-            num_maps = 0
-            new_materials = []
-            bake_images = []
+        print("\nCreating bake materials")
 
 
-            for i in range(num_patches):
-                if i % (res * 2) == 0:
-                    image = getset_image(f"0.BXT_BAKE_IMG.{num_maps}", res, res)
-                    bake_images.append(image)
+        for i in range(num_patches):
+            # bake_img = getset_image(f"0.BXT_BAKE_IMG.{i}", atlas_res, atlas_res)
+            bake_img = bpy.data.images.new(f"0.BXT_BAKE_IMG.{i}", width=tile_res, height=tile_res, alpha=False)
+            bake_img.alpha_mode = 'NONE'
 
-                    print(f"Creating new baking material {num_maps}")
 
-                    new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{num_maps}")
-                    new_mat.use_nodes = True
-                    nodes = new_mat.node_tree.nodes
-                    bake_node = nodes.new(type='ShaderNodeTexImage')
-                    bake_node.name = "BXT_BAKE_NODE"
-                    bake_node.select = True
-                    bake_node.image = image
-                    nodes.active = bake_node
+            bake_images.append(bake_img)
 
+            print(f"0.BXT_BAKE_MAT.{i}")
 
-                    # new_obj.data.materials.append(newer_mat)
-                    new_materials.append(new_mat)
+            new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
+            new_mat.use_nodes = True
+            nodes = new_mat.node_tree.nodes
+            bake_node = nodes.new(type='ShaderNodeTexImage')
+            bake_node.name = "BXT_BAKE_NODE"
+            bake_node.select = True
+            bake_node.image = bake_img
+            nodes.active = bake_node
 
-                    num_maps += 1
 
+            # new_obj.data.materials.append(newer_mat)
+            new_materials.append(new_mat)
 
-            current_map_index = 0 # bake texture index
 
-            for i, patch in enumerate(patches):
+        # current_atlas_index = 0
 
-                if i >= cap and has_cap:
-                    print("STOPPED DUE TO CAP")
-                    break
+        print("\nCreating bake meshes and scaled down diffuse textures")
 
-                if i % (res * 2) == 0:
-                    current_map_index += 1
+        for i, patch in enumerate(patches):
 
-                print(i, patch.name, current_map_index)
+            if i >= cap and has_cap:
+                print("STOPPED DUE TO CAP")
+                break
 
+            # if i % (atlas_res * 2) == 0:
+            #     current_atlas_index += 1
 
-                mat = patch.data.materials[0] # TODO: handle error
-                diffuse_node = mat.node_tree.nodes["Image Texture"]
-                img = diffuse_node.image
+            print(i, patch.name + '.lightmapper')
 
-                new_name = "BXT_DIFF_" + img.name
+            mat = patch.data.materials[0] # TODO: handle error
+            diffuse_node = mat.node_tree.nodes["Image Texture"]
+            img = diffuse_node.image
 
-                if new_name in diffuse_images:
-                    diffuse_image_indices.append(diffuse_images.index(new_name))
-                else:
-                    print("Rescaling image", new_name)
+            new_name = "0.BXT_DIFF_" + img.name
 
-                    new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
-                    new_img.alpha_mode = 'NONE'
-                    new_img.pixels = list(img.pixels)
-                    new_img.scale(8, 8)
+            if new_name in diffuse_images:
+                diffuse_image_indices.append(diffuse_images.index(new_name))
+            else:
+                print("\tRescaling image", new_name)
 
-                    diffuse_images.append(new_name)
-                    diffuse_image_indices.append(len(diffuse_images) - 1)
-
-
-                mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
-                uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
-                uv_layer.active_render = True
-                mesh.uv_layers.active = uv_layer
-
-                new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
-                new_obj.matrix_world = patch.matrix_world
-                new_obj.color = patch.color
-                new_obj.data.materials.clear()
-                new_obj.data.materials.append(new_materials[current_map_index - 1])
-
-                new_collection.objects.link(new_obj)
-                new_obj.select_set(True)
-
-
-                for poly in mesh.polygons:
-                    for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
-                        uv_layer.data[loop_idx].uv *= uv_scale
-                        uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
-
-
-            new_obj = new_collection.objects[0]
-            new_obj.select_set(True)
-            bpy.context.view_layer.objects.active = new_obj
-
-            outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
-            outliner.exclude = True
-
-
-
-            bpy.ops.object.join()
-
-
-
-            #new_obj = new_collection.objects[0]
-
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-
-            # TODO? calculate threshold=* according to world scale
-            # bpy.ops.mesh.remove_doubles(threshold=0.0001)
-
-
-
-            bpy.context.scene.render.bake.margin_type = 'EXTEND'
-            bpy.context.scene.render.bake.margin = 0
-            print(f"Baking lightmaps. This may take a while.")
-
-            bpy.ops.object.bake(type='DIFFUSE')
-
-
-
-            print("\nConverting to PS2 colors")
-
-
-            """
-            diffC = diffuse color texture but scaled down to 8x8
-            lightC = baked lightmap color
-            newC  = new Ps2 lightmap color
-            alpha = new alpha channel. generated from the luminosity of lightC
-
-            
-            Generating:
-
-            # "alpha channel as the luminosity of the lightmap"
-            alpha = max(lightC.r, lightC.g, lightC.b)
-
-            newC = diffC - ((diffC * lightC) / alpha)
-
-
-            Rendering:
-
-            diffC * newC is not supported!
-            (diffC - newC) * A is supported
-
-            """
-
-
-
-
-
-
-
-            for i in range(num_patches):
-                if i % (res * 2) == 0:
-                    # bake = f"0.BXT_BAKE_IMG.{num_maps}"
-                    bake_img = bake_images[i]
-                    diff_img = bpy.data.images.get(diffuse_images[i])
-
-
-                bake_img_pixels_new = list(bake_img.pixels)
-
-                print(bake_img.name, diff_img.name)
-
-
-                for j in range(8):
-                    for k in range(8):
-                        bx = uvs[i][0] + (j / 7) * uv_scale
-                        by = uvs[i][1] + (k / 7) * uv_scale
-
-                        bake_pixel = sample_pixel_and_index(bake_img, bx, by, 128)
-
-                        dx, dy = (j / 7, k / 7)
-
-                        diff_pixel = sample_pixel(diff_img, dx, dy, diff_img.size[0]) # TODO support width and height?
-
-
-
-                        alpha = max(bake_pixel[0], bake_pixel[1], bake_pixel[2])
-
-
-                        # px_idx = bake_pixel[3]
-                        # bake_img_pixels_new[px_idx] = 1
-                        # bake_img_pixels_new[px_idx + 1] = 0
-                        # bake_img_pixels_new[px_idx + 2] = 0
-
-                        # print(px_idx)
-
-                    if j > 0:
-                        break
-
-                pixels = bake_img.pixels
-                for p in range(0, len(pixels), 4):
-                    alpha = max(pixels[p], pixels[p + 1], pixels[p + 2])
-                    bake_img_pixels_new[p] = alpha
-                    bake_img_pixels_new[p + 1] = alpha
-                    bake_img_pixels_new[p + 2] = alpha
-
-                new_img = bpy.data.images.new("0.TESTING", width=128, height=128, alpha=False)
+                new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
                 new_img.alpha_mode = 'NONE'
-                new_img.pixels = bake_img_pixels_new
+                new_img.pixels = list(img.pixels)
+                new_img.scale(tile_res, tile_res)
+
+                # flip_image_y(new_img, tile_res, tile_res)
+
+                diffuse_images.append(new_name)
+                diffuse_image_indices.append(len(diffuse_images) - 1)
 
 
-                if i >= 0:
-                    break
+            mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
+            uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
+            uv_layer.active_render = True
+            mesh.uv_layers.active = uv_layer
 
+            new_obj = bpy.data.objects.new(patch.name + '.lightmapper', mesh)
+            new_obj.matrix_world = patch.matrix_world
+            new_obj.color = patch.color
+            new_obj.data.materials.clear()
+            new_obj.data.materials.append(new_materials[i])
 
-
-        if method == EVAL_MERGE_INDIVIDUAL_MATS:
-            """
-
-
-
-            """
-
-
-
-            new_collection = bpy.data.collections.get("meshes_for_lightmaps")
-            if new_collection is None:
-                bpy.data.collections.new("meshes_for_lightmaps")
-                new_collection = bpy.data.collections.get("meshes_for_lightmaps")
-            if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
-                bpy.context.scene.collection.children.link(new_collection)
-
-
-
-
-            diffuse_images = []
-            diffuse_image_indices = []
-
-            graph = bpy.context.evaluated_depsgraph_get()
-
-            new_materials = []
-            bake_images = []
-
-
-            for i in range(num_patches):
-                # bake_img = getset_image(f"0.BXT_BAKE_IMG.{i}", res, res)
-                bake_img = bpy.data.images.new(f"0.BXT_BAKE_IMG.{i}", width=8, height=8, alpha=False)
-                bake_img.alpha_mode = 'NONE'
-
-
-                bake_images.append(bake_img)
-
-                print(f"Creating new baking material {i}")
-
-                new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
-                new_mat.use_nodes = True
-                nodes = new_mat.node_tree.nodes
-                bake_node = nodes.new(type='ShaderNodeTexImage')
-                bake_node.name = "BXT_BAKE_NODE"
-                bake_node.select = True
-                bake_node.image = bake_img
-                nodes.active = bake_node
-
-
-                # new_obj.data.materials.append(newer_mat)
-                new_materials.append(new_mat)
-
-
-            current_map_index = 0 # bake texture index
-
-            for i, patch in enumerate(patches):
-
-                if i >= cap and has_cap:
-                    print("STOPPED DUE TO CAP")
-                    break
-
-                # if i % (res * 2) == 0:
-                #     current_map_index += 1
-
-                print(i, patch.name)
-
-
-                mat = patch.data.materials[0] # TODO: handle error
-                diffuse_node = mat.node_tree.nodes["Image Texture"]
-                img = diffuse_node.image
-
-                new_name = "0.BXT_DIFF_" + img.name
-
-                if new_name in diffuse_images:
-                    diffuse_image_indices.append(diffuse_images.index(new_name))
-                else:
-                    print("Rescaling image", new_name)
-
-                    new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
-                    new_img.alpha_mode = 'NONE'
-                    new_img.pixels = list(img.pixels)
-                    new_img.scale(8, 8)
-
-                    flip_image_y(new_img, 8, 8)
-
-                    diffuse_images.append(new_name)
-                    diffuse_image_indices.append(len(diffuse_images) - 1)
-
-
-                mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
-                uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
-                uv_layer.active_render = True
-                mesh.uv_layers.active = uv_layer
-
-                new_obj = bpy.data.objects.new(patch.name+'.lightmapper', mesh)
-                new_obj.matrix_world = patch.matrix_world
-                new_obj.color = patch.color
-                new_obj.data.materials.clear()
-                new_obj.data.materials.append(new_materials[i])
-
-                new_collection.objects.link(new_obj)
-                new_obj.select_set(True)
-
-
-                for poly in mesh.polygons:
-                    for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
-                        uv_layer.data[loop_idx].uv.y -= 1
-                        uv_layer.data[loop_idx].uv.y *= -1
-                        # uv_layer.data[loop_idx].uv *= uv_scale
-                        # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
-
-
-            new_obj = new_collection.objects[0]
+            new_collection.objects.link(new_obj)
             new_obj.select_set(True)
-            bpy.context.view_layer.objects.active = new_obj
-
-            outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
-            outliner.exclude = True
 
 
-
-            bpy.ops.object.join()
-
-
-
-            #new_obj = new_collection.objects[0]
-
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-
-            # TODO? calculate threshold=* according to world scale
-            # bpy.ops.mesh.remove_doubles(threshold=0.0001)
+            for poly in mesh.polygons:
+                for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+                    uv_layer.data[loop_idx].uv.y -= 1
+                    uv_layer.data[loop_idx].uv.y *= -1
+                #     # uv_layer.data[loop_idx].uv *= uv_scale
+                #     # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
 
 
 
-            bpy.context.scene.render.bake.margin_type = 'EXTEND'
-            bpy.context.scene.render.bake.margin = 0
-            print(f"Baking lightmaps. This may take a while.")
+        new_obj = new_collection.objects[0]
+        new_obj.select_set(True)
+        bpy.context.view_layer.objects.active = new_obj
 
-            bpy.ops.object.bake(type='DIFFUSE')
+        outliner = find_layer_collection(bpy.context.view_layer.layer_collection, pch_col.name)
+        outliner.exclude = True
+
+
+        bpy.ops.object.join()
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+
+        print("\nBaking lightmaps. This may take a while.")
+
+        bpy.ops.object.bake(type='DIFFUSE')
 
 
 
+
+        if True:
             print("\nConverting to PS2 colors")
 
+            from pathlib import Path
+
+            if bpy.data.filepath:
+                abs_path = bpy.path.abspath("//Lightmaps")
+                folder_path = Path(bpy.path.abspath("//Lightmaps"))
+                folder_path.mkdir(parents=True, exist_ok=True)
+            else:
+                folder_path = Path(f"{str(Path.home())}/Downloads/BXTools_Lightmap")
+                folder_path.mkdir(parents=True, exist_ok=True)
 
             """
             diffC = diffuse color texture but scaled down to 8x8
@@ -597,6 +312,108 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             newC = diffC - ((diffC * lightC) / alpha)
             """
 
+            n_t = tile_res - 1
+
+
+            def transform_xy(x, y, mode):
+
+                if mode == 1:   # Rotate Left
+                    return x, y
+                elif mode == 3: # Default
+                    return n_t - y, x
+                elif mode == 2: # Rotate Right
+                    return n_t - x, n_t - y
+                elif mode == 4: # Rotate 180
+                    return y, n_t - x
+                elif mode == 7: # Mirror X, Rotate Left
+                    return n_t - x, y
+                elif mode == 0: # Mirror X, Rotate Right
+                    return x, n_t - y
+                elif mode == 6: # Mirror Y
+                    return y, x
+                elif mode == 5: # Mirror X
+                    return n_t - y, n_t - x
+
+
+            # lut = [[None] * (tile_res * tile_res) for _ in range(8)]
+
+            # for y in range(tile_res):
+            #     row = y * tile_res
+            #     for x in range(tile_res):
+            #         i = row + x
+
+            #         lut[1][i] = (x, y)             # Rotate Left
+            #         lut[3][i] = (n_t - y, x)       # Default
+            #         lut[2][i] = (n_t - x, n_t - y) # Rotate Right
+            #         lut[4][i] = (y, n_t - x)       # Rotate 180
+            #         lut[7][i] = (n_t - x, y)       # Mirror X, Rotate Left
+            #         lut[0][i] = (x, n_t - y)       # Mirror X, Rotate Right
+            #         lut[6][i] = (y, x)             # Mirror Y
+            #         lut[5][i] = (n_t - y, n_t - x) # Mirror X
+
+            lut = [[[None] * tile_res for _ in range(tile_res)] for _ in range(8)]
+
+            for y in range(tile_res):
+                for x in range(tile_res):
+                    lut[1][y][x] = (x, y)             # Rotate Left
+                    lut[3][y][x] = (n_t - y, x)       # Default
+                    lut[2][y][x] = (n_t - x, n_t - y) # Rotate Right
+                    lut[4][y][x] = (y, n_t - x)       # Rotate 180
+                    lut[7][y][x] = (n_t - x, y)       # Mirror X, Rotate Left
+                    lut[0][y][x] = (x, n_t - y)       # Mirror X, Rotate Right
+                    lut[6][y][x] = (y, x)             # Mirror Y
+                    lut[5][y][x] = (n_t - y, n_t - x) # Mirror X
+
+
+            orientations = [int(patch.ssx2_PatchProps.texMapPreset) for patch in patches]
+
+            for i, (bake_img, diff_idx, orientation) in enumerate(zip(bake_images, diffuse_image_indices, orientations)):
+                bake = bake_img.pixels[:]
+                diff = bpy.data.images.get(diffuse_images[diff_idx]).pixels
+
+                new_pixels = [0] * (tile_res * tile_res * 4)
+
+                for y in range(tile_res):
+                    for x in range(tile_res):
+
+                        # lut_index = y * tile_res + x
+                        tx, ty = lut[orientation][y][x]
+                        # tx, ty = transform_xy(x, y, orientation)
+
+                        src_i = (ty * tile_res + tx) * 4
+                        dst_i = (y * tile_res + x) * 4
+
+                        alpha = max(bake[dst_i], bake[dst_i + 1], bake[dst_i + 2])
+                        diff_r = diff[src_i]
+                        diff_g = diff[src_i + 1]
+                        diff_b = diff[src_i + 2]
+
+                        if alpha != 0:
+                            new_pixels[dst_i]     = diff_r - (diff_r * bake[dst_i    ]) / alpha
+                            new_pixels[dst_i + 1] = diff_g - (diff_g * bake[dst_i + 1]) / alpha
+                            new_pixels[dst_i + 2] = diff_b - (diff_b * bake[dst_i + 2]) / alpha
+                            new_pixels[dst_i + 3] = alpha
+                        else:
+                            new_pixels[dst_i]     = 0.0
+                            new_pixels[dst_i + 1] = 0.0
+                            new_pixels[dst_i + 2] = 0.0
+                            new_pixels[dst_i + 3] = 0.0
+
+                bake_img.pixels = new_pixels
+
+
+
+
+                if True:
+                    print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
+
+                    bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
+
+
+
+        
+            """
+            
 
             for i, bake_img, diff_idx in zip(range(num_patches), bake_images, diffuse_image_indices):
 
@@ -605,7 +422,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                 new_pxs = []
 
-                for j in range(0, 256, 4):
+                for j in range(0, (tile_res ** 2) * 4, 4): # 256 for 8 | 1024 for 16
 
                     alpha = max(bxs[j + 0], bxs[j + 1], bxs[j + 2])
 
@@ -615,213 +432,19 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                         new_pxs.append(dxs[j + 2] - ((dxs[j + 2] * bxs[j + 2]) / alpha))
                         new_pxs.append(alpha)
                     else:
-                        new_pxs.append(0)
-                        new_pxs.append(0)
-                        new_pxs.append(0)
-                        new_pxs.append(0)
+                        new_pxs.extend((0, 0, 0, 0))
 
                 bake_img.pixels = new_pxs
 
+                print(bake_img.name)
+
+                bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
+
+                #bake_img.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
+                #bake_img.save()
 
 
-
-
-
-        """
-        if method == SELECT_ALL_MERGE: # select all, merge
-
-
-            # TODO:
-            # - duplicate the patches and eval to mesh
-            # - remove materials from duplicates
-            # - merge all duplicates
-            # - make a new material type that's only for the final bake mesh 
-
-            # - tessellate uvs
-
-
-            bpy.context.scene.render.bake.margin = 0
-
-            pch_col.hide_select = False
-
-            bpy.context.view_layer.objects.active = patches[0] # for bpy.ops.object.bake()
-
-            num_patches = len(patches)
-            mat_index_list = [] # per patch
-            mat_keys = bpy.data.materials.keys()
-
-            mat_slots = [mat_keys.index(patches[0].material_slots[0].material.name)]
-
-            for i, patch in enumerate(patches):
-                if i < cap:
-                    patch.select_set(True)
-                    try:
-                        mat_index_list.append(mat_keys.index(patch.material_slots[0].material.name))
-
-                        if mat_index_list[i] in mat_slots:
-                            pass
-                        else:
-                            mat_slots.append(mat_index_list[i])
-                    except:
-                        self.report({'ERROR'}, f"No surface patch material applied to {patch.name}")
-                        return {'CANCELLED'}
-
-                    # if i > 1:
-                    #     break
-                else:
-                    print("STOPPED")
-                    break
-                    return {'CANCELLED'}
-            print('mat slots', mat_slots)
-
-            bpy.ops.object.join()
-            bpy.ops.object.convert(target='MESH')
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.mesh.remove_doubles() # calculate threshold=* according to world scale
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-            obj = patches[0]
-            mesh = obj.data
-            uv_layer = mesh.uv_layers.new(name="UVMap.Lightmap")
-            #uv_layer.active_render = True
-            mesh.uv_layers.active = uv_layer
-
-
-            num_fittable = int(1 / uv_scale ** 2)
-            map_width = 0
-            num_maps = 0
-            for i in range(cap):
-                if i % num_fittable == 0:
-                    map_width += res
-                    num_maps += 1
-            image = getset_image(f"0.2.bake", int(map_width), res)
-            uv_rescale = 1.0 / num_maps
-            print(map_width, num_maps, uv_rescale, num_fittable)
-
-            obj.data.materials.clear()
-            for i, mat_slot in enumerate(mat_slots):
-                current_mat = bpy.data.materials[mat_slot]
-                obj.data.materials.append(current_mat)
-
-                nodes = current_mat.node_tree.nodes
-                bake_node = nodes["Bake"]
-                bake_node.select = True
-                nodes.active = bake_node
-                
-                bake_node.image = image
-
-
-            current_map_index = -1 # texture index
-            uv_index = -1 # uv or patch index
-
-            current_mat_index = 0
-            for i, poly in enumerate(mesh.polygons):
-                if i % 49 == 0:
-                    #print(i, "NEW UV")
-                    uv_index += 1
-
-                    if uv_index % num_fittable == 0:
-                        current_map_index += 1
-                        print('map', current_map_index)
-
-                    current_mat_index = mat_slots.index(mat_index_list[uv_index])
-
-                poly.material_index = current_mat_index
-
-                for loop_idx in poly.loop_indices:
-                    #uv_layer.data[loop_idx].uv.x *= uv_rescale
-                    uv_layer.data[loop_idx].uv *= uv_scale
-                    uv_layer.data[loop_idx].uv += Vector((uvs[uv_index][0]+current_map_index, uvs[uv_index][1])) # .translate the data[].uv instead?
-                    uv_layer.data[loop_idx].uv.x *= uv_rescale
-
-
-            # self.report({'INFO'}, f"Baking lightmaps. This may take a while.")
-            print(f"Baking lightmaps. This may take a while.")
-            bpy.ops.object.bake(type='DIFFUSE')
-
-            #return {'FINISHED'}
-        """
-
-
-
-        """
-        if method == OAAT: # one at a time
-
-            images_to_save = []
-
-            for i, obj in enumerate(patches):
-
-                
-                # obj.hide_viewport = False
-                # obj.hide_render = False
-                
-                # bpy.ops.object.select_all(action = "DESELECT")
-
-                print(i, 'of', cap, 'time elapsed:', round(time.time() - time_start, 2))
-
-                if i < cap:
-
-                    obj.hide_set(True)
-                    # if obj.visible_get() == True:
-                    #     obj.hide_set(True)
-
-                    #bpy.ops.object.convert(target='MESH')
-                    #a = obj.data.copy()
-                    #print(a)
-
-                    graph = bpy.context.evaluated_depsgraph_get()
-                    obj_eval = obj.evaluated_get(graph)
-                    mesh = bpy.data.meshes.new_from_object(obj_eval)
-
-                    new_obj = bpy.data.objects.new(obj.name+'.lightmapper', mesh)
-                    new_obj.matrix_world = obj.matrix_world
-                    # new_obj.color = obj.color
-                    pch_col.objects.link(new_obj)
-
-                    new_obj.select_set(True)
-                    bpy.context.view_layer.objects.active = new_obj # for bpy.ops.object.bake()
-
-                    try:
-                        mat = new_obj.material_slots[0].material
-                    except:
-                        self.report({'ERROR'}, f"No surface patch material applied to {obj.name}")
-                        return {'CANCELLED'}
-
-                    nodes = mat.node_tree.nodes
-                    bake_node = nodes["Bake"]
-
-                    #for node in nodes:
-                    #    node.select = False
-                    bake_node.select = True
-                    nodes.active = bake_node
-
-                    image = getset_image(f"0.0.bake{i}", 8, 8)
-                    bake_node.image = image
-
-                    # image = bake_node.image
-
-                    print(image.name)
-                    bpy.ops.object.bake(type='DIFFUSE')
-                    images_to_save.append(image)
-
-                    
-
-                else:
-                    print("STOPPED")
-                    break
-                    # return {'CANCELLED'}
-
-            from pathlib import Path
-
-            print("\nSaving to disk")
-            for i, image in enumerate(images_to_save):
-                print(image.name)
-                image.save_render(f"{str(Path.home())}/Downloads/BXTools_Lightmap/bake{i}.png")
-                #image.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
-                #image.save()
-        """
+            """
 
 
 
@@ -830,16 +453,5 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         time_taken = round(time.time() - time_start, 2)
         print(f"FINISHED: {time_taken} seconds.")
-
-
-        minutes = time_taken / 60
-
-        #print(round(minutes, 4))
-
-        # time_per_cap = minutes
-        # time_per_object = time_per_cap / cap
-        # total_time = time_per_object * 3000
-        # print('estimated = ', round(total_time, 4), 'minutes')
-        # print('estimated = ', round(total_time / 60, 4), 'hours')
 
         return {"FINISHED"}

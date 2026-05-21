@@ -118,9 +118,9 @@ enum_ssx2_patch_group = (
 	#('MATERIAL', "Material", "Group into collections by material")
 )
 
-enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices
+enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as patch_tex_maps. use provided indices
 	('3', "Default"               , "Default"            ),
-	('1', "Rotate Left"           , "Rotate Left"        ),
+	('1', "Rotate Left"           , "Rotate Left"        ), # the actual default in blender?
 	('2', "Rotate Right"          , "Rotate Right"       ),
 	('4', "Rotate 180"            , "Rotate 180"         ),
 	('0', "Mirror X, Rotate Right", "Mirror X, Rotate Right"),
@@ -128,17 +128,6 @@ enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_ma
 	('5', "Mirror Y"              , "Mirror Y"           ),
 	('6', "Mirror X"              , "Mirror X"           ),
 )
-
-# enum_ssx2_patch_uv_preset = ( # ! these are not in the same order as pach_tex_maps. use provided indices
-# 	('0', "Flip Y"           , "Flip Y"           ),
-# 	('7', "Flip X"           , "Flip X"           ),
-# 	('1', "Rot 180"          , "Rot 180"          ),
-# 	('2', "Default"          , "Default"          ), # Y+ ?
-# 	('3', "Rot Left"         , "Rot Left"         ), # ! might be actual default (most patches have 0, 1, 2, 3 going forward)
-# 	('4', "Rot Right"        , "Rot Right"        ),
-# 	('5', "Rot Right, Flip X", "Rot Right, Flip X"),
-# 	('6', "Rot Right, Flip Y", "Rot Right, Flip Y"),
-# )
 
 patch_known_uvs = ( # these use SSX's UV system. Starts top left. Y+ down.
 	[( 0.0,  0.0), ( 0.0, -1.0), (1.0,  0.0), ( 1.0, -1.0)], # 0  0
