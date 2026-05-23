@@ -104,6 +104,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         - Replace the name suffix adding code with short incremental names.
 
+
+        - Add this to the "Baking" UI category where baking of lightmaps and instance light matrices will be.
+
         """
 
         import time
@@ -148,15 +151,21 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         patches = [obj for obj in pch_col.all_objects if obj.type == 'SURFACE' and not obj.hide_get()]
         patches.sort(key=lambda obj: natural_key(obj.name))
 
-
-
         num_patches = len(patches)
 
-        if has_cap:
-            uvs = setup_lightmap_uvs_top_left(uv_scale, cap)
-        else:
-            uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
 
+
+
+
+
+
+
+
+
+        # if has_cap:
+            # uvs = setup_lightmap_uvs_top_left(uv_scale, cap)
+        # else:
+            # uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
 
 
         new_collection = bpy.data.collections.get("meshes_for_lightmaps")
@@ -184,18 +193,22 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             bake_img = bpy.data.images.new(f"0.BXT_BAKE_IMG.{i}", width=tile_res, height=tile_res, alpha=False)
             bake_img.alpha_mode = 'NONE'
 
-
             bake_images.append(bake_img)
 
             print(f"0.BXT_BAKE_MAT.{i}")
 
             new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
             new_mat.use_nodes = True
+
             nodes = new_mat.node_tree.nodes
             bake_node = nodes.new(type='ShaderNodeTexImage')
             bake_node.name = "BXT_BAKE_NODE"
             bake_node.select = True
             bake_node.image = bake_img
+            # bake_node.interpolation = 'Linear'
+            bake_node.interpolation = 'Closest' # TODO: does this affect baking?
+            bake_node.extension = 'EXTEND'
+
             nodes.active = bake_node
 
 
@@ -273,6 +286,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
         bpy.ops.object.join()
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
 
@@ -283,19 +297,36 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-
         if True:
+            print("\nLinking bake nodes to material outputs")
+            for bake_img, new_mat in zip(bake_images, new_materials):
+                print(bake_img.name, "-", new_mat.name)
+
+                nodes = new_mat.node_tree.nodes
+                bake_node = nodes.get("BXT_BAKE_NODE")
+
+
+                output_node = nodes.get("Material Output")
+                new_mat.node_tree.links.new(bake_node.outputs["Color"], output_node.inputs["Surface"])
+
+
+
+
+        from pathlib import Path
+
+        if bpy.data.filepath:
+            abs_path = bpy.path.abspath("//Lightmaps")
+            folder_path = Path(bpy.path.abspath("//Lightmaps"))
+            folder_path.mkdir(parents=True, exist_ok=True)
+        else:
+            folder_path = Path(f"{str(Path.home())}/Downloads/BXTools_Lightmap")
+            folder_path.mkdir(parents=True, exist_ok=True)
+
+
+
+        if False:
             print("\nConverting to PS2 colors")
 
-            from pathlib import Path
-
-            if bpy.data.filepath:
-                abs_path = bpy.path.abspath("//Lightmaps")
-                folder_path = Path(bpy.path.abspath("//Lightmaps"))
-                folder_path.mkdir(parents=True, exist_ok=True)
-            else:
-                folder_path = Path(f"{str(Path.home())}/Downloads/BXTools_Lightmap")
-                folder_path.mkdir(parents=True, exist_ok=True)
 
             """
             diffC = diffuse color texture but scaled down to 8x8
@@ -313,43 +344,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             """
 
             n_t = tile_res - 1
-
-
-            def transform_xy(x, y, mode):
-
-                if mode == 1:   # Rotate Left
-                    return x, y
-                elif mode == 3: # Default
-                    return n_t - y, x
-                elif mode == 2: # Rotate Right
-                    return n_t - x, n_t - y
-                elif mode == 4: # Rotate 180
-                    return y, n_t - x
-                elif mode == 7: # Mirror X, Rotate Left
-                    return n_t - x, y
-                elif mode == 0: # Mirror X, Rotate Right
-                    return x, n_t - y
-                elif mode == 6: # Mirror Y
-                    return y, x
-                elif mode == 5: # Mirror X
-                    return n_t - y, n_t - x
-
-
-            # lut = [[None] * (tile_res * tile_res) for _ in range(8)]
-
-            # for y in range(tile_res):
-            #     row = y * tile_res
-            #     for x in range(tile_res):
-            #         i = row + x
-
-            #         lut[1][i] = (x, y)             # Rotate Left
-            #         lut[3][i] = (n_t - y, x)       # Default
-            #         lut[2][i] = (n_t - x, n_t - y) # Rotate Right
-            #         lut[4][i] = (y, n_t - x)       # Rotate 180
-            #         lut[7][i] = (n_t - x, y)       # Mirror X, Rotate Left
-            #         lut[0][i] = (x, n_t - y)       # Mirror X, Rotate Right
-            #         lut[6][i] = (y, x)             # Mirror Y
-            #         lut[5][i] = (n_t - y, n_t - x) # Mirror X
 
             lut = [[[None] * tile_res for _ in range(tile_res)] for _ in range(8)]
 
@@ -376,9 +370,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 for y in range(tile_res):
                     for x in range(tile_res):
 
-                        # lut_index = y * tile_res + x
                         tx, ty = lut[orientation][y][x]
-                        # tx, ty = transform_xy(x, y, orientation)
 
                         src_i = (ty * tile_res + tx) * 4
                         dst_i = (y * tile_res + x) * 4
@@ -404,47 +396,221 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-                if True:
+                if False:
                     print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
 
                     bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
 
 
 
-        
-            """
+
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        print("\nMapping neighbors.")
+
+
+        # mapping all the corners and their patches.
+        # doing corner pixels only for now as a proof of concept.
+
+        # to check if a whole bounds edge is touching I 
+        # probably need to check if all 4 control points are touching.
+
+
+        # also try the point sample in 3D space idea.
+
+        # I need to store `pos: (color, count)` in a dict and accumulate
+        # the color then divide by count at the end.
+        # and the patch indices/pointers of course.
+
+        # would be interesting to see if this is faster than doing the neighbor stuff.
+
+
+        # if you do this after the ps2 bake you need to include the alpha channel
+        # for averaging.
+
+
+
+        corners = {}
+
+
+        for i, patch in enumerate(patches):
+            points = patch.data.splines[0].points
+
+            mtx = patch.matrix_world
+
+            _corner_points = [
+                mtx @ points[0].co,
+                mtx @ points[3].co,
+                mtx @ points[12].co,
+                mtx @ points[15].co,
+            ]
+
+            for p in _corner_points:
+                v = (round(p.x, 3), round(p.y, 3), round(p.z, 3))
+
+                if v not in corners:
+                    corners[v] = []
+
+                corners[v].append(i)
+                # corners[v].append(patch)
+
+
+
+
+        print()
+
+        for k, v in corners.items():
+            print(k, [patches[ii].name for ii in v])
+
+        # for k, v in corners.items():
+            # print(k, [patch.name for ii in v])
+
+
+
+
+        print()
+
+        # for i, patch in enumerate(patches):
+            # points = patch.data.splines[0].points
+
+        print("\nFixing corner seams")
+
+        color_samples = []
+
+        new_mesh = new_obj.data
+        uv_layer_data = new_mesh.uv_layers.active.data
+        # uv_layer = new_mesh.uv_layers.get("UVMap.Lightmap").data
+        polys = new_mesh.polygons
+
+        possible_corner_uvs = (
+            Vector((0.0, 0.0)), # bottom left
+            Vector((1.0, 0.0)), # bottom right
+            Vector((0.0, 1.0)), # top left
+            Vector((1.0, 1.0)), # top right
+        )
+        corner_pixels_indices = (0, 7, 56, 63)
+        corner_quads = (0, 6, 42, 48)
+
+
+        do_weighted = True
+
+        for key, value in corners.items():
+            num_current_patches = len(value)
+            if num_current_patches == 1:
+                continue
+
+
+            print(f"\n {key}")
+
+            # for patch in value:
+                # print(patch.name)
+                # break
+
+            current_color = Vector()
+            total_rgb = Vector()
+            total_weight = 0.0
+
+            images_to_update = []
+
+
+            for pch_index in value:
+                print(f"\n{patches[pch_index].name}")
+
+                poly_start = pch_index * 49 # double check
+
+                for quad_idx in corner_quads:
+                    poly = polys[poly_start + quad_idx]
+
+
+                    for k, vtx_idx in enumerate(poly.vertices):
+                        p = new_mesh.vertices[vtx_idx].co
+                        v = (round(p.x, 3), round(p.y, 3), round(p.z, 3))
+
+                        if v == key:
+                            print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, p)
+
+                            bpy.context.scene.cursor.location = p
+
+                            uv = uv_layer_data[poly.loop_indices[k]].uv
+
+                            try:
+                                corner_uv_idx = possible_corner_uvs.index(uv)
+                            except ValueError:
+                                corner_uv_idx = None
+
+                            print("Corner uv idx:", corner_uv_idx)
+
+                            pix_start = corner_pixels_indices[corner_uv_idx] * 4
+
+                            pixels = bake_images[pch_index].pixels
+
+                            images_to_update.append((pch_index, pix_start))
+
+                            print("Bake img:", bake_images[pch_index])
+
+                            # print(pixels[pix_start])
+                            # print(pixels[pix_start + 1])
+                            # print(pixels[pix_start + 2])
+                            # print(pixels[pix_start + 3])
+
+                            if do_weighted:
+                                rgb = Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
+
+                                weight = sum(rgb)
+                                current_color += rgb * weight
+
+                                total_weight += weight
+
+                            else:
+                                current_color += Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
+
+
+
+                # break
+
+            if do_weighted:
+                current_color = current_color / total_weight # [0.7487, 0.7075, 0.4901]
+            else:
+                current_color = current_color / num_current_patches # [0.6667, 0.6510, 0.5176]
             
+            print(current_color)
 
-            for i, bake_img, diff_idx in zip(range(num_patches), bake_images, diffuse_image_indices):
+            for (pch_index, pix_start) in images_to_update:
+                print(pch_index, pix_start)
 
-                bxs = bake_img.pixels
-                dxs = bpy.data.images.get(diffuse_images[diff_idx]).pixels
+                bake_images[pch_index].pixels[pix_start    ] = current_color.x
+                bake_images[pch_index].pixels[pix_start + 1] = current_color.y
+                bake_images[pch_index].pixels[pix_start + 2] = current_color.z
 
-                new_pxs = []
 
-                for j in range(0, (tile_res ** 2) * 4, 4): # 256 for 8 | 1024 for 16
 
-                    alpha = max(bxs[j + 0], bxs[j + 1], bxs[j + 2])
+            print("\nbbbbbbbb")
 
-                    if alpha != 0:
-                        new_pxs.append(dxs[j    ] - ((dxs[j    ] * bxs[j    ]) / alpha))
-                        new_pxs.append(dxs[j + 1] - ((dxs[j + 1] * bxs[j + 1]) / alpha))
-                        new_pxs.append(dxs[j + 2] - ((dxs[j + 2] * bxs[j + 2]) / alpha))
-                        new_pxs.append(alpha)
-                    else:
-                        new_pxs.extend((0, 0, 0, 0))
 
-                bake_img.pixels = new_pxs
+            # for j, uv in enumerate(uv_layer_data):
+            #     print(uv.uv.x, uv.uv.y)
 
-                print(bake_img.name)
+
+            # for poly in polys:
+            #     print(poly)
+            #     for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
+            #         uv = uv_layer_data[loop_idx].uv
+            #         print(uv)
+
+            #     break
+
+
+
+
+            # break
+
+
+        if True:
+            for i, bake_img in enumerate(bake_images):
+                print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
 
                 bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
-
-                #bake_img.filepath = f"X:/Downloads/bx_test/lightmaps/bake{i}.png"
-                #bake_img.save()
-
-
-            """
 
 
 
