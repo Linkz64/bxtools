@@ -452,19 +452,13 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if v not in corners:
                     corners[v] = []
 
+
+                print(patch.name)
+
                 corners[v].append(i)
+
                 # corners[v].append(patch)
 
-
-
-
-        print()
-
-        for k, v in corners.items():
-            print(k, [patches[ii].name for ii in v])
-
-        # for k, v in corners.items():
-            # print(k, [patch.name for ii in v])
 
 
 
@@ -483,29 +477,25 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         # uv_layer = new_mesh.uv_layers.get("UVMap.Lightmap").data
         polys = new_mesh.polygons
 
-        possible_corner_uvs = (
+        POSSIBLE_CORNER_UVS = (
             Vector((0.0, 0.0)), # bottom left
             Vector((1.0, 0.0)), # bottom right
             Vector((0.0, 1.0)), # top left
             Vector((1.0, 1.0)), # top right
         )
-        corner_pixels_indices = (0, 7, 56, 63)
-        corner_quads = (0, 6, 42, 48)
+        CORNER_PIXELS_INDICES = (0, 7, 56, 63)
+        CORNER_QUADS = (0, 6, 42, 48)
 
 
         do_weighted = True
 
-        for key, value in corners.items():
-            num_current_patches = len(value)
+        for key, patch_indices in corners.items():
+            num_current_patches = len(patch_indices)
             if num_current_patches == 1:
                 continue
 
 
             print(f"\n {key}")
-
-            # for patch in value:
-                # print(patch.name)
-                # break
 
             current_color = Vector()
             total_rgb = Vector()
@@ -514,12 +504,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             images_to_update = []
 
 
-            for pch_index in value:
+            for pch_index in patch_indices:
                 print(f"\n{patches[pch_index].name}")
 
                 poly_start = pch_index * 49 # double check
 
-                for quad_idx in corner_quads:
+                for quad_idx in CORNER_QUADS:
                     poly = polys[poly_start + quad_idx]
 
 
@@ -535,13 +525,13 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                             uv = uv_layer_data[poly.loop_indices[k]].uv
 
                             try:
-                                corner_uv_idx = possible_corner_uvs.index(uv)
+                                corner_uv_idx = POSSIBLE_CORNER_UVS.index(uv)
                             except ValueError:
                                 corner_uv_idx = None
 
                             print("Corner uv idx:", corner_uv_idx)
 
-                            pix_start = corner_pixels_indices[corner_uv_idx] * 4
+                            pix_start = CORNER_PIXELS_INDICES[corner_uv_idx] * 4
 
                             pixels = bake_images[pch_index].pixels
 
