@@ -407,32 +407,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
-        print("\nMapping neighbors.")
-
-
-        # mapping all the corners and their patches.
-        # doing corner pixels only for now as a proof of concept.
-
-        # to check if a whole bounds edge is touching I 
-        # probably need to check if all 4 control points are touching.
-
-
-        # also try the point sample in 3D space idea.
-
-        # I need to store `pos: (color, count)` in a dict and accumulate
-        # the color then divide by count at the end.
-        # and the patch indices/pointers of course.
-
-        # would be interesting to see if this is faster than doing the neighbor stuff.
-
-
-        # if you do this after the ps2 bake you need to include the alpha channel
-        # for averaging.
-
+        print("\nMapping corners")
 
 
         corners = {}
-
 
         for i, patch in enumerate(patches):
             points = patch.data.splines[0].points
@@ -457,18 +435,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                 corners[v].append(i)
 
-                # corners[v].append(patch)
 
 
 
 
 
-        print()
-
-        # for i, patch in enumerate(patches):
-            # points = patch.data.splines[0].points
-
-        print("\nFixing corner seams")
+        print("\nFixing seams")
 
         color_samples = []
 
@@ -476,6 +448,92 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         uv_layer_data = new_mesh.uv_layers.active.data
         # uv_layer = new_mesh.uv_layers.get("UVMap.Lightmap").data
         polys = new_mesh.polygons
+        verts = new_mesh.vertices
+
+        do_weighted = True
+
+        # BOUNDARY_VERTS_INDICES = (
+        #     ( 0,  1,  2,  3,  4,  5,  6,  7), # south
+        #     ( 0,  8, 16, 24, 32, 40, 48, 56), # west
+        #     ( 7, 15, 23, 31, 39, 47, 55, 63), # east
+        #     (56, 57, 58, 59, 60, 61, 62, 63), # north
+        # )
+
+        # cardinals based on default bxtools orientation (with top view)
+        BOUNDARY_VERTS_INDICES = (
+             1,  2,  3,  4,  5,  6, # south
+             8, 16, 24, 32, 40, 48, # west
+            15, 23, 31, 39, 47, 55, # east
+            57, 58, 59, 60, 61, 62, # north
+        )
+
+        # equivelant to BOUNDARY_VERTS_INDICES
+        # cardinals based on image view
+        EQUIV_PIXEL_INDICES = (
+            48, 40, 32, 24, 16,  8, # west
+            57, 58, 59, 60, 61, 62, # north
+             1,  2,  3,  4,  5,  6, # south
+            55, 47, 39, 31, 23, 15, # east
+        )
+
+
+        boundaries = {}
+
+        for i in range(num_patches):
+
+            vtx_start = i * 64
+
+            for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
+
+                print(i, j, vtx_idx)
+
+                pxl_idx = EQUIV_PIXEL_INDICES[j]
+                
+                rgb = Vector((
+                    bake_images[i].pixels[pxl_idx * 4],
+                    bake_images[i].pixels[pxl_idx * 4 + 1],
+                    bake_images[i].pixels[pxl_idx * 4 + 2],
+                ))
+
+
+                vtx = verts[vtx_start + vtx_idx].co.to_tuple(3)
+                key = boundaries.get(vtx)
+
+                # key: (rgb, [(img_idx/pch_idx, pxl_idx), ...])
+
+                if key is None:
+                    boundaries[vtx] = [rgb, [(i, pxl_idx)]]
+                else:
+                    key[0] += rgb
+                    key[1].append((i, pxl_idx))
+
+
+
+                # print(vtx, (rgb, [i, pxl_idx]))
+
+            # break
+
+        for _, b in boundaries.items():
+
+            num_images = len(b[1])
+            if num_images == 1:
+                continue
+
+            # print(_, b)
+
+            new_color = b[0] / num_images
+
+            for img_idx, pxl_idx in b[1]:
+                print(img_idx, pxl_idx)
+
+                bake_images[img_idx].pixels[pxl_idx * 4    ] = new_color.x
+                bake_images[img_idx].pixels[pxl_idx * 4 + 1] = new_color.y
+                bake_images[img_idx].pixels[pxl_idx * 4 + 2] = new_color.z
+
+        print("\tEdges done")
+
+
+
 
         POSSIBLE_CORNER_UVS = (
             Vector((0.0, 0.0)), # bottom left
@@ -487,13 +545,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         CORNER_QUADS = (0, 6, 42, 48)
 
 
-        do_weighted = True
 
         for key, patch_indices in corners.items():
+
             num_current_patches = len(patch_indices)
             if num_current_patches == 1:
                 continue
-
 
             print(f"\n {key}")
 
@@ -529,7 +586,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                             except ValueError:
                                 corner_uv_idx = None
 
+                                print("WARNING!!!!!!!!!!!!!!")
+
                             print("Corner uv idx:", corner_uv_idx)
+
+                            if corner_uv_idx is None:
+                                continue
 
                             pix_start = CORNER_PIXELS_INDICES[corner_uv_idx] * 4
 
@@ -539,10 +601,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                             print("Bake img:", bake_images[pch_index])
 
-                            # print(pixels[pix_start])
-                            # print(pixels[pix_start + 1])
-                            # print(pixels[pix_start + 2])
-                            # print(pixels[pix_start + 3])
 
                             if do_weighted:
                                 rgb = Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
@@ -573,27 +631,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 bake_images[pch_index].pixels[pix_start + 1] = current_color.y
                 bake_images[pch_index].pixels[pix_start + 2] = current_color.z
 
+        print("\tCorners done")
 
-
-            print("\nbbbbbbbb")
-
-
-            # for j, uv in enumerate(uv_layer_data):
-            #     print(uv.uv.x, uv.uv.y)
-
-
-            # for poly in polys:
-            #     print(poly)
-            #     for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
-            #         uv = uv_layer_data[loop_idx].uv
-            #         print(uv)
-
-            #     break
-
-
-
-
-            # break
 
 
         if True:
