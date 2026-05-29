@@ -76,35 +76,15 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         print("\nClicked: Bake Lightmaps")
 
         """
-
-
-        Options for fixing the seams
-            - Average the normals.
-                Simply merging causes some faces to collapse into triangles.
-                Try finding neighbors and averaging normals or
-                create a new all-in-one island mesh with custom normals.
-                
-                This won't fix the seam issue. In-game each tile does bilinear filtering individually.
-                Which means the boundary edges need the same pixels as the ones on the neighbors.
-
-            - Scale each uv tile down (by 0.875?).
-                Not sure if this would help but I want to see what would happen.
-                Might work if I start with a high res bake.
-
-            - Neighbors use the same pixels on touching boundary edges.
-                Make a list of all neighbors (by finding touching corners. If 2 and 2 touch then its a direct neighbor).
-                Get the pixels on both sides of the touching edges and average them. Also add options for weighted and custom.  
-
-        
+        TODO
 
         - Consider: Sampling the pixels from the original diffuse image without rescaling by 
             sampling surrounding pixels and doing bilinear math. (For PS2 color math)
-
-        - Ignore patches with render disabled (outliner)
-
-        - Replace the name suffix adding code with short incremental names.
-
-
+        - Ignore patches with render disabled (outliner). Could be a bad idea.
+        - Replace the name suffix adding code with unique incremental names.
+        - Create atlas textures
+        - Weighted for boundary pixels. Right now it only works on corners.
+        - Re-enable PS2 color convert
         - Add this to the "Baking" UI category where baking of lightmaps and instance light matrices will be.
 
         """
@@ -112,6 +92,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         import time
         time_start = time.time()
         print("Timer started")
+
 
 
         # temp patch count limit for testing
@@ -186,6 +167,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         bake_images = []
 
         print("\nCreating bake materials")
+        tmp_time_start = time.time()
 
 
         for i in range(num_patches):
@@ -216,9 +198,14 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             new_materials.append(new_mat)
 
 
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
+
+
         # current_atlas_index = 0
 
         print("\nCreating bake meshes and scaled down diffuse textures")
+        tmp_time_start = time.time()
 
         for i, patch in enumerate(patches):
 
@@ -276,6 +263,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 #     # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
 
 
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
+
+
+        print("\nFinalizing bake mesh object")
+        tmp_time_start = time.time()
 
         new_obj = new_collection.objects[0]
         new_obj.select_set(True)
@@ -290,15 +283,24 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
 
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
+
 
         print("\nBaking lightmaps. This may take a while.")
+        tmp_time_start = time.time()
 
         bpy.ops.object.bake(type='DIFFUSE')
+
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
 
 
 
         if True:
             print("\nLinking bake nodes to material outputs")
+            tmp_time_start = time.time()
+
             for bake_img, new_mat in zip(bake_images, new_materials):
                 print(bake_img.name, "-", new_mat.name)
 
@@ -309,6 +311,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 output_node = nodes.get("Material Output")
                 new_mat.node_tree.links.new(bake_node.outputs["Color"], output_node.inputs["Surface"])
 
+            time_taken = round(time.time() - tmp_time_start, 2)
+            print(f"Took: {time_taken} seconds.")
 
 
 
@@ -326,7 +330,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         if False:
             print("\nConverting to PS2 colors")
-
+            tmp_time_start = time.time()
 
             """
             diffC = diffuse color texture but scaled down to 8x8
@@ -401,18 +405,20 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                     bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
 
-
+            time_taken = round(time.time() - tmp_time_start, 2)
+            print(f"Took: {time_taken} seconds.")
 
 
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
         print("\nMapping corners")
-
+        tmp_time_start = time.time()
 
         corners = {}
 
         for i, patch in enumerate(patches):
+            print(i, patch)
             points = patch.data.splines[0].points
 
             mtx = patch.matrix_world
@@ -430,17 +436,16 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if v not in corners:
                     corners[v] = []
 
-
-                print(patch.name)
-
                 corners[v].append(i)
 
-
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
 
 
 
 
         print("\nFixing seams")
+        tmp_time_start = time.time()
 
         color_samples = []
 
@@ -524,7 +529,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             new_color = b[0] / num_images
 
             for img_idx, pxl_idx in b[1]:
-                print(img_idx, pxl_idx)
+                # print(img_idx, pxl_idx)
 
                 bake_images[img_idx].pixels[pxl_idx * 4    ] = new_color.x
                 bake_images[img_idx].pixels[pxl_idx * 4 + 1] = new_color.y
@@ -532,7 +537,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         print("\tEdges done")
 
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
 
+
+        tmp_time_start = time.time()
 
 
         POSSIBLE_CORNER_UVS = (
@@ -552,7 +561,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             if num_current_patches == 1:
                 continue
 
-            print(f"\n {key}")
+            print(f"{key}: {num_current_patches}")
 
             current_color = Vector()
             total_rgb = Vector()
@@ -562,7 +571,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
             for pch_index in patch_indices:
-                print(f"\n{patches[pch_index].name}")
+                # print(f"\n{patches[pch_index].name}")
 
                 poly_start = pch_index * 49 # double check
 
@@ -575,7 +584,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                         v = (round(p.x, 3), round(p.y, 3), round(p.z, 3))
 
                         if v == key:
-                            print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, p)
+                            # print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, p)
 
                             bpy.context.scene.cursor.location = p
 
@@ -586,9 +595,9 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                             except ValueError:
                                 corner_uv_idx = None
 
-                                print("WARNING!!!!!!!!!!!!!!")
+                                print("WARNING CUSTOM UVS")
 
-                            print("Corner uv idx:", corner_uv_idx)
+                            # print("Corner uv idx:", corner_uv_idx)
 
                             if corner_uv_idx is None:
                                 continue
@@ -599,7 +608,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                             images_to_update.append((pch_index, pix_start))
 
-                            print("Bake img:", bake_images[pch_index])
+                            # print("Bake img:", bake_images[pch_index])
 
 
                             if do_weighted:
@@ -614,34 +623,34 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                                 current_color += Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
 
 
-
-                # break
-
             if do_weighted:
                 current_color = current_color / total_weight # [0.7487, 0.7075, 0.4901]
             else:
                 current_color = current_color / num_current_patches # [0.6667, 0.6510, 0.5176]
             
-            print(current_color)
 
             for (pch_index, pix_start) in images_to_update:
-                print(pch_index, pix_start)
-
                 bake_images[pch_index].pixels[pix_start    ] = current_color.x
                 bake_images[pch_index].pixels[pix_start + 1] = current_color.y
                 bake_images[pch_index].pixels[pix_start + 2] = current_color.z
 
         print("\tCorners done")
 
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
 
 
         if True:
+            print("\nSaving to folder")
+            tmp_time_start = time.time()
+
             for i, bake_img in enumerate(bake_images):
                 print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
 
                 bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
 
-
+            time_taken = round(time.time() - tmp_time_start, 2)
+            print(f"Took: {time_taken} seconds.")
 
         bpy.context.scene.render.engine = prev_render_engine
 
