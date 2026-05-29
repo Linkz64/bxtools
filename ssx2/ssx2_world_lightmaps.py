@@ -582,13 +582,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
                     for k, vtx_idx in enumerate(poly.vertices):
-                        p = new_mesh.vertices[vtx_idx].co
-                        v = (round(p.x, 3), round(p.y, 3), round(p.z, 3))
+                        v = new_mesh.vertices[vtx_idx].co.to_tuple(3)
 
                         if v == key:
-                            # print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, p)
-
-                            bpy.context.scene.cursor.location = p
+                            # print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, v)
 
                             uv = uv_layer_data[poly.loop_indices[k]].uv
 
