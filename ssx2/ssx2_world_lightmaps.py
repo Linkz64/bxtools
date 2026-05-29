@@ -85,7 +85,13 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Create atlas textures
         - Weighted for boundary pixels. Right now it only works on corners.
         - Re-enable PS2 color convert
+        - Should it require patch exporting to be enabled?
+        - Convert other BXT patch types to mesh
         - Add this to the "Baking" UI category where baking of lightmaps and instance light matrices will be.
+        - Should the lightmap bake mesh remain after baking is done?
+            It could be useful for custom light painting and blending between old and new lightmaps.
+            Before or after PS2 color conversion?
+
 
         """
 
@@ -149,11 +155,14 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             # uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
 
 
-        new_collection = bpy.data.collections.get("meshes_for_lightmaps")
+        collection_name = "BXT_LIGHTMAP_MESHES"
+
+
+        new_collection = bpy.data.collections.get(collection_name)
         if new_collection is None:
-            bpy.data.collections.new("meshes_for_lightmaps")
-            new_collection = bpy.data.collections.get("meshes_for_lightmaps")
-        if "meshes_for_lightmaps" not in bpy.context.scene.collection.children:
+            bpy.data.collections.new(collection_name)
+            new_collection = bpy.data.collections.get(collection_name)
+        if collection_name not in bpy.context.scene.collection.children:
             bpy.context.scene.collection.children.link(new_collection)
 
 
@@ -216,7 +225,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             # if i % (atlas_res * 2) == 0:
             #     current_atlas_index += 1
 
-            print(i, patch.name + '.lightmapper')
+            new_mesh_name = f"BXT_LIGHTMAP_BAKE_MESH.{i}"
+            print(i, new_mesh_name, patch.name)
 
             mat = patch.data.materials[0] # TODO: handle error
             diffuse_node = mat.node_tree.nodes["Image Texture"]
@@ -241,11 +251,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
             mesh = bpy.data.meshes.new_from_object(patch.evaluated_get(graph))
-            uv_layer = mesh.uv_layers.new(name=f"UVMap.Lightmap")
+            uv_layer = mesh.uv_layers.new(name=f"BXT_LIGHTMAP_UVMAP")
             uv_layer.active_render = True
             mesh.uv_layers.active = uv_layer
 
-            new_obj = bpy.data.objects.new(patch.name + '.lightmapper', mesh)
+            new_obj = bpy.data.objects.new(new_mesh_name, mesh)
             new_obj.matrix_world = patch.matrix_world
             new_obj.color = patch.color
             new_obj.data.materials.clear()
@@ -401,9 +411,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
                 if False:
-                    print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
-
-                    bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
+                    print("Saved to", os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
+                    bake_img.save_render(os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
@@ -451,18 +460,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         new_mesh = new_obj.data
         uv_layer_data = new_mesh.uv_layers.active.data
-        # uv_layer = new_mesh.uv_layers.get("UVMap.Lightmap").data
+        # uv_layer = new_mesh.uv_layers.get("BXT_LIGHTMAP_UVMAP").data
         polys = new_mesh.polygons
         verts = new_mesh.vertices
 
         do_weighted = True
-
-        # BOUNDARY_VERTS_INDICES = (
-        #     ( 0,  1,  2,  3,  4,  5,  6,  7), # south
-        #     ( 0,  8, 16, 24, 32, 40, 48, 56), # west
-        #     ( 7, 15, 23, 31, 39, 47, 55, 63), # east
-        #     (56, 57, 58, 59, 60, 61, 62, 63), # north
-        # )
 
         # cardinals based on default bxtools orientation (with top view)
         BOUNDARY_VERTS_INDICES = (
@@ -645,9 +647,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             tmp_time_start = time.time()
 
             for i, bake_img in enumerate(bake_images):
-                print("Saved to", os.path.join(folder_path, f"bake{i}.png"))
-
-                bake_img.save_render(os.path.join(folder_path, f"bake{i}.png"))
+                print("Saved to", os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
+                bake_img.save_render(os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
