@@ -2,6 +2,7 @@ import bpy
 from mathutils import Vector
 
 import os
+from math import ceil
 
 from ..general.bx_utils import natural_key
 
@@ -66,6 +67,30 @@ def flip_image_y(img, width, height, channels=4):
     img.pixels = flipped_pixels
     # img.update()
 
+def get_tile_pixel_indices(res, tile_size=8):
+    tiles = []
+
+    tiles_xy = res // tile_size
+
+    for tile_y in range(tiles_xy):
+        for tile_x in range(tiles_xy):
+
+            indices = []
+
+            for y in range(tile_size):
+                for x in range(tile_size):
+
+                    px = tile_x * tile_size + x
+                    py = tile_y * tile_size + y
+
+                    pixel_index = py * res + px
+                    indices.append(pixel_index)
+
+            tiles.append(indices)
+
+    return tiles
+
+
 class SSX2_OP_BakeTest(bpy.types.Operator):
     bl_idname = 'object.ssx2_bake_test'
     bl_label = "Bake Test"
@@ -78,6 +103,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         """
         TODO
 
+        - Check if patches are missing materials
         - Consider: Sampling the pixels from the original diffuse image without rescaling by 
             sampling surrounding pixels and doing bilinear math. (For PS2 color math)
         - Ignore patches with render disabled (outliner). Could be a bad idea.
@@ -91,19 +117,18 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Should the lightmap bake mesh remain after baking is done?
             It could be useful for custom light painting and blending between old and new lightmaps.
             Before or after PS2 color conversion?
-
-
+        - For patches with custom UVs consider doing a distance test for all UV bounds.
+            Nearest corners and nearest boundary edges.
+        - Average the normals on touching vertices to get rid of sharp/inaccurate pixel transitions.
+            Include angle option to ignore sharp angles.
+            Include "merge distance" aka round vertex coords 
+            Advanced: Take face normal/winding into account to exclude flipped patches.
         """
 
         import time
         time_start = time.time()
         print("Timer started")
 
-
-
-        # temp patch count limit for testing
-        has_cap = False
-        cap = 10
 
         
         atlas_res = 128
@@ -140,19 +165,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         num_patches = len(patches)
 
-
-
-
-
-
-
-
-
-
-        # if has_cap:
-            # uvs = setup_lightmap_uvs_top_left(uv_scale, cap)
-        # else:
-            # uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
+        uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
+        num_atlases = ceil(num_patches / 256)
 
 
         collection_name = "BXT_LIGHTMAP_MESHES"
@@ -175,18 +189,17 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         new_materials = []
         bake_images = []
 
-        print("\nCreating bake materials")
+        print("\nCreating bake images and materials")
         tmp_time_start = time.time()
 
 
-        for i in range(num_patches):
-            # bake_img = getset_image(f"0.BXT_BAKE_IMG.{i}", atlas_res, atlas_res)
-            bake_img = bpy.data.images.new(f"0.BXT_BAKE_IMG.{i}", width=tile_res, height=tile_res, alpha=False)
+        for i in range(num_atlases):
+            bake_img = getset_image(f"0.BXT_BAKE_ATLAS_IMG.{i}", atlas_res, atlas_res)
             bake_img.alpha_mode = 'NONE'
 
             bake_images.append(bake_img)
 
-            print(f"0.BXT_BAKE_MAT.{i}")
+            print(f"0.BXT_BAKE_ATLAS_IMG.{i}")
 
             new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
             new_mat.use_nodes = True
@@ -211,19 +224,17 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         print(f"Took: {time_taken} seconds.")
 
 
-        # current_atlas_index = 0
+
+
+        current_atlas_index = -1
 
         print("\nCreating bake meshes and scaled down diffuse textures")
         tmp_time_start = time.time()
 
         for i, patch in enumerate(patches):
 
-            if i >= cap and has_cap:
-                print("STOPPED DUE TO CAP")
-                break
-
-            # if i % (atlas_res * 2) == 0:
-            #     current_atlas_index += 1
+            if i % (atlas_res * 2) == 0:
+                current_atlas_index += 1
 
             new_mesh_name = f"BXT_LIGHTMAP_BAKE_MESH.{i}"
             print(i, new_mesh_name, patch.name)
@@ -244,7 +255,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 new_img.pixels = list(img.pixels)
                 new_img.scale(tile_res, tile_res)
 
-                # flip_image_y(new_img, tile_res, tile_res)
 
                 diffuse_images.append(new_name)
                 diffuse_image_indices.append(len(diffuse_images) - 1)
@@ -259,7 +269,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             new_obj.matrix_world = patch.matrix_world
             new_obj.color = patch.color
             new_obj.data.materials.clear()
-            new_obj.data.materials.append(new_materials[i])
+            new_obj.data.materials.append(new_materials[current_atlas_index])
 
             new_collection.objects.link(new_obj)
             new_obj.select_set(True)
@@ -269,12 +279,16 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 for vtx_idx, loop_idx in zip(poly.vertices, poly.loop_indices):
                     uv_layer.data[loop_idx].uv.y -= 1
                     uv_layer.data[loop_idx].uv.y *= -1
-                #     # uv_layer.data[loop_idx].uv *= uv_scale
-                #     # uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
+                    uv_layer.data[loop_idx].uv *= uv_scale
+                    uv_layer.data[loop_idx].uv += Vector((uvs[i][0], uvs[i][1])) # .translate the data[].uv instead?
 
 
         time_taken = round(time.time() - tmp_time_start, 2)
         print(f"Took: {time_taken} seconds.")
+
+
+        
+
 
 
         print("\nFinalizing bake mesh object")
@@ -304,6 +318,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         time_taken = round(time.time() - tmp_time_start, 2)
         print(f"Took: {time_taken} seconds.")
+
 
 
 
@@ -337,8 +352,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             folder_path.mkdir(parents=True, exist_ok=True)
 
 
+        tile_pixel_indices = get_tile_pixel_indices(atlas_res)
+        tile_indices = [y * 16 + x for y in reversed(range(16)) for x in range(16)]
 
-        if False:
+
+
+        if True:
             print("\nConverting to PS2 colors")
             tmp_time_start = time.time()
 
@@ -375,8 +394,30 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             orientations = [int(patch.ssx2_PatchProps.texMapPreset) for patch in patches]
 
-            for i, (bake_img, diff_idx, orientation) in enumerate(zip(bake_images, diffuse_image_indices, orientations)):
-                bake = bake_img.pixels[:]
+
+            current_atlas_index = -1
+            tile_index = -1
+
+            for i in range(num_patches):
+
+                if i % (atlas_res * 2) == 0:
+                    current_atlas_index += 1
+                    tile_index = 0
+
+                bake_img = bake_images[current_atlas_index]
+                diff_idx = diffuse_image_indices[i]
+                orientation = orientations[i]
+                bake_pixel_indices = tile_pixel_indices[tile_indices[tile_index]]
+                tile_index += 1
+
+                # bake = []
+                # for idx in bake_pixel_indices:
+                #     bake.append(bake_img.pixels[idx * 4])
+                #     bake.append(bake_img.pixels[idx * 4 + 1])
+                #     bake.append(bake_img.pixels[idx * 4 + 2])
+                #     bake.append(bake_img.pixels[idx * 4 + 3])
+                
+
                 diff = bpy.data.images.get(diffuse_images[diff_idx]).pixels
 
                 new_pixels = [0] * (tile_res * tile_res * 4)
@@ -384,30 +425,55 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 for y in range(tile_res):
                     for x in range(tile_res):
 
+                        # tx, ty = lut[orientation][y][x]
+
+                        # src_i = (ty * tile_res + tx) * 4
+                        # dst_i = (y * tile_res + x) * 4
+
+                        # alpha = max(bake[dst_i], bake[dst_i + 1], bake[dst_i + 2])
+                        # diff_r = diff[src_i]
+                        # diff_g = diff[src_i + 1]
+                        # diff_b = diff[src_i + 2]
+
+                        # if alpha != 0:
+                        #     new_pixels[dst_i]     = diff_r - (diff_r * bake[dst_i    ]) / alpha
+                        #     new_pixels[dst_i + 1] = diff_g - (diff_g * bake[dst_i + 1]) / alpha
+                        #     new_pixels[dst_i + 2] = diff_b - (diff_b * bake[dst_i + 2]) / alpha
+                        #     new_pixels[dst_i + 3] = alpha
+                        # else:
+                        #     new_pixels[dst_i]     = 0.0
+                        #     new_pixels[dst_i + 1] = 0.0
+                        #     new_pixels[dst_i + 2] = 0.0
+                        #     new_pixels[dst_i + 3] = 0.0
+
+                        # print(f"{x:2} {y:2} {tx:2} {ty:2}")
+
                         tx, ty = lut[orientation][y][x]
 
                         src_i = (ty * tile_res + tx) * 4
-                        dst_i = (y * tile_res + x) * 4
 
-                        alpha = max(bake[dst_i], bake[dst_i + 1], bake[dst_i + 2])
-                        diff_r = diff[src_i]
+                        diff_r = diff[src_i    ]
                         diff_g = diff[src_i + 1]
                         diff_b = diff[src_i + 2]
 
+                        dst_i = bake_pixel_indices[y * tile_res + x] * 4
+
+                        bake_r = bake_img.pixels[dst_i    ]
+                        bake_g = bake_img.pixels[dst_i + 1]
+                        bake_b = bake_img.pixels[dst_i + 2]
+
+                        alpha = max(bake_r, bake_g, bake_b)
+
                         if alpha != 0:
-                            new_pixels[dst_i]     = diff_r - (diff_r * bake[dst_i    ]) / alpha
-                            new_pixels[dst_i + 1] = diff_g - (diff_g * bake[dst_i + 1]) / alpha
-                            new_pixels[dst_i + 2] = diff_b - (diff_b * bake[dst_i + 2]) / alpha
-                            new_pixels[dst_i + 3] = alpha
+                            bake_img.pixels[dst_i    ] = diff_r - (diff_r * bake_r) / alpha
+                            bake_img.pixels[dst_i + 1] = diff_g - (diff_g * bake_g) / alpha
+                            bake_img.pixels[dst_i + 2] = diff_b - (diff_b * bake_b) / alpha
+                            bake_img.pixels[dst_i + 3] = alpha
                         else:
-                            new_pixels[dst_i]     = 0.0
-                            new_pixels[dst_i + 1] = 0.0
-                            new_pixels[dst_i + 2] = 0.0
-                            new_pixels[dst_i + 3] = 0.0
-
-                bake_img.pixels = new_pixels
-
-
+                            bake_img.pixels[dst_i    ] = 0.0
+                            bake_img.pixels[dst_i + 1] = 0.0
+                            bake_img.pixels[dst_i + 2] = 0.0
+                            bake_img.pixels[dst_i + 3] = 0.0
 
 
                 if False:
@@ -417,6 +483,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
 
+
+
+
+
+        return {'CANCELLED'}
 
 
         bpy.ops.object.mode_set(mode='OBJECT')
