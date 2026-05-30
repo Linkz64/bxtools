@@ -123,6 +123,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             Include angle option to ignore sharp angles.
             Include "merge distance" aka round vertex coords 
             Advanced: Take face normal/winding into account to exclude flipped patches.
+        - Consider: Caching the atlas indices and tile indices. Basically an index per-patch.
         """
 
         import time
@@ -410,43 +411,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 bake_pixel_indices = tile_pixel_indices[tile_indices[tile_index]]
                 tile_index += 1
 
-                # bake = []
-                # for idx in bake_pixel_indices:
-                #     bake.append(bake_img.pixels[idx * 4])
-                #     bake.append(bake_img.pixels[idx * 4 + 1])
-                #     bake.append(bake_img.pixels[idx * 4 + 2])
-                #     bake.append(bake_img.pixels[idx * 4 + 3])
-                
-
                 diff = bpy.data.images.get(diffuse_images[diff_idx]).pixels
-
-                new_pixels = [0] * (tile_res * tile_res * 4)
 
                 for y in range(tile_res):
                     for x in range(tile_res):
-
-                        # tx, ty = lut[orientation][y][x]
-
-                        # src_i = (ty * tile_res + tx) * 4
-                        # dst_i = (y * tile_res + x) * 4
-
-                        # alpha = max(bake[dst_i], bake[dst_i + 1], bake[dst_i + 2])
-                        # diff_r = diff[src_i]
-                        # diff_g = diff[src_i + 1]
-                        # diff_b = diff[src_i + 2]
-
-                        # if alpha != 0:
-                        #     new_pixels[dst_i]     = diff_r - (diff_r * bake[dst_i    ]) / alpha
-                        #     new_pixels[dst_i + 1] = diff_g - (diff_g * bake[dst_i + 1]) / alpha
-                        #     new_pixels[dst_i + 2] = diff_b - (diff_b * bake[dst_i + 2]) / alpha
-                        #     new_pixels[dst_i + 3] = alpha
-                        # else:
-                        #     new_pixels[dst_i]     = 0.0
-                        #     new_pixels[dst_i + 1] = 0.0
-                        #     new_pixels[dst_i + 2] = 0.0
-                        #     new_pixels[dst_i + 3] = 0.0
-
-                        # print(f"{x:2} {y:2} {tx:2} {ty:2}")
 
                         tx, ty = lut[orientation][y][x]
 
@@ -487,9 +455,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        return {'CANCELLED'}
-
-
         bpy.ops.object.mode_set(mode='OBJECT')
 
         print("\nMapping corners")
@@ -499,6 +464,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         for i, patch in enumerate(patches):
             print(i, patch)
+
             points = patch.data.splines[0].points
 
             mtx = patch.matrix_world
@@ -557,20 +523,31 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         boundaries = {}
 
+        current_atlas_index = -1
+        tile_index = -1
+
         for i in range(num_patches):
 
             vtx_start = i * 64
+
+            if i % (atlas_res * 2) == 0:
+                current_atlas_index += 1
+                tile_index = 0
+
+            bake_img = bake_images[current_atlas_index]
+            bake_pixel_indices = tile_pixel_indices[tile_indices[tile_index]]
+            tile_index += 1
 
             for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
 
                 print(i, j, vtx_idx)
 
-                pxl_idx = EQUIV_PIXEL_INDICES[j]
+                pxl_idx = bake_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
                 
                 rgb = Vector((
-                    bake_images[i].pixels[pxl_idx * 4],
-                    bake_images[i].pixels[pxl_idx * 4 + 1],
-                    bake_images[i].pixels[pxl_idx * 4 + 2],
+                    bake_img.pixels[pxl_idx    ],
+                    bake_img.pixels[pxl_idx + 1],
+                    bake_img.pixels[pxl_idx + 2],
                 ))
 
 
@@ -580,10 +557,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 # key: (rgb, [(img_idx/pch_idx, pxl_idx), ...])
 
                 if key is None:
-                    boundaries[vtx] = [rgb, [(i, pxl_idx)]]
+                    boundaries[vtx] = [rgb, [(current_atlas_index, pxl_idx)]]
                 else:
                     key[0] += rgb
-                    key[1].append((i, pxl_idx))
+                    key[1].append((current_atlas_index, pxl_idx))
 
 
 
@@ -604,14 +581,17 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             for img_idx, pxl_idx in b[1]:
                 # print(img_idx, pxl_idx)
 
-                bake_images[img_idx].pixels[pxl_idx * 4    ] = new_color.x
-                bake_images[img_idx].pixels[pxl_idx * 4 + 1] = new_color.y
-                bake_images[img_idx].pixels[pxl_idx * 4 + 2] = new_color.z
+                bake_images[img_idx].pixels[pxl_idx    ] = new_color.x
+                bake_images[img_idx].pixels[pxl_idx + 1] = new_color.y
+                bake_images[img_idx].pixels[pxl_idx + 2] = new_color.z
 
         print("\tEdges done")
 
         time_taken = round(time.time() - tmp_time_start, 2)
         print(f"Took: {time_taken} seconds.")
+
+
+        return {'CANCELLED'}
 
 
         tmp_time_start = time.time()
