@@ -31,7 +31,7 @@ def getset_image_udim(name, res_x, res_y):
 
 def setup_lightmap_uvs_top_left(uv_scale, num_patches):
     """
-    uv_scale = uv tile scale (0.0625 for 8x8 tile if texture is 128x128)
+    uv_scale = uv tile scale (0.0625 for 8x8 tile if atlas texture is 128x128)
     num_patches = number of patches
 
     note: blender origin is bottom left, ssx origin is top left
@@ -460,15 +460,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
+        print("\nFixing seams")
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
-
-
-
-
-
-        print("\nFixing seams")
         tmp_time_start = time.time()
 
         color_samples = []
@@ -592,6 +587,30 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
+
+
+
+        print("\nUpdating patch properties")
+        tmp_time_start = time.time()
+
+        current_atlas_index = -1
+        for i, patch in enumerate(patches):
+            if x + uv_scale < 1.0:
+                x += uv_scale
+            else:
+                x = 0.0
+                y += uv_scale
+
+            if i % (atlas_res * 2) == 0:
+                current_atlas_index += 1
+                x = 0.0
+                y = 0.0
+
+            patch["lightmap_id"] = current_atlas_index
+            patch["lightmap_uvs"] = [x, y, uv_scale, uv_scale]
+
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
 
 
 
