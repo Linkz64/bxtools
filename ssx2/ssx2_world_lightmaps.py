@@ -117,6 +117,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Re-enable PS2 color convert
         - Should it require patch exporting to be enabled?
         - Convert other BXT patch types to mesh
+            Types with more than 1 segment won't have lightmap uvs saved to object properties
         - Add this to the "Baking" UI category where baking of lightmaps and instance light matrices will be.
         - Should the lightmap bake mesh remain after baking is done?
             It could be useful for custom light painting and blending between old and new lightmaps.
@@ -153,23 +154,25 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             return {'CANCELLED'}
 
 
+        print_in_loops = False
         
         atlas_res = 128
         tile_res = 8
         uv_scale = 0.0625
 
 
+        scene = bpy.context.scene
 
+        prev_render_engine = scene.render.engine
 
-        prev_render_engine = bpy.context.scene.render.engine
-
-        bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.device = 'GPU'
-        bpy.context.scene.cycles.bake_type = 'DIFFUSE'
-        bpy.context.scene.render.bake.use_pass_color = False
-        #bpy.context.scene.render.bake.use_clear = False
-        bpy.context.scene.render.bake.margin_type = 'EXTEND'
-        bpy.context.scene.render.bake.margin = 0
+        scene.render.engine = 'CYCLES'
+        scene.cycles.device = 'GPU'
+        scene.cycles.bake_type = 'DIFFUSE'
+        scene.render.bake.use_pass_color = False
+        # scene.render.bake.use_pass_indirect = False
+        #scene.render.bake.use_clear = False
+        scene.render.bake.margin_type = 'EXTEND'
+        scene.render.bake.margin = 0
 
 
 
@@ -222,7 +225,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             bake_images.append(bake_img)
 
-            print(f"0.BXT_BAKE_ATLAS_IMG.{i}")
+            if print_in_loops:
+                print(f"0.BXT_BAKE_ATLAS_IMG.{i}")
 
             new_mat = bpy.data.materials.new(name=f"0.BXT_BAKE_MAT.{i}")
             new_mat.use_nodes = True
@@ -260,7 +264,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 current_atlas_index += 1
 
             new_mesh_name = f"BXT_LIGHTMAP_BAKE_MESH.{i}"
-            print(i, new_mesh_name, patch.name)
+            if print_in_loops:
+                print(i, new_mesh_name, patch.name)
 
             mat = patch.data.materials[0] # TODO: handle error
             diffuse_node = mat.node_tree.nodes["Image Texture"]
@@ -271,7 +276,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             if new_name in diffuse_images:
                 diffuse_image_indices.append(diffuse_images.index(new_name))
             else:
-                print("\tRescaling image", new_name)
+                if print_in_loops:
+                    print("\tRescaling image", new_name)
 
                 new_img = bpy.data.images.new(new_name, width=img.size[0], height=img.size[1], alpha=False)
                 new_img.alpha_mode = 'NONE'
@@ -350,7 +356,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             tmp_time_start = time.time()
 
             for bake_img, new_mat in zip(bake_images, new_materials):
-                print(bake_img.name, "-", new_mat.name)
+                if print_in_loops:
+                    print(bake_img.name, "-", new_mat.name)
 
                 nodes = new_mat.node_tree.nodes
                 bake_node = nodes.get("BXT_BAKE_NODE")
@@ -433,9 +440,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 tile_pixel_indices = atlas_tiles_pixel_indices[tile_indices[tile_index]]
                 tile_index += 1
 
-                for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
+                if print_in_loops:
+                    print(patches[i])
 
-                    print(i, j, vtx_idx)
+                for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
 
                     pxl_idx = tile_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
                     
@@ -586,8 +594,11 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             tmp_time_start = time.time()
 
             for i, bake_img in enumerate(bake_images):
-                print("Saved to", os.path.join(lightmaps_folder_path, f"{i:04}.png"))
+                # if print_in_loops:
+                #     print("Saved to", os.path.join(lightmaps_folder_path, f"{i:04}.png"))
                 bake_img.save_render(os.path.join(lightmaps_folder_path, f"{i:04}.png"))
+
+            print("Saved to", lightmaps_folder_path)
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
