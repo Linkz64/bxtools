@@ -113,7 +113,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Ignore patches with render disabled (outliner). Could be a bad idea.
         - Replace the name suffix adding code with unique incremental names.
         - Create atlas textures
-        - Weighted for boundary pixels. Right now it only works on corners.
+        - Weighted option for seam fix.
         - Re-enable PS2 color convert
         - Should it require patch exporting to be enabled?
         - Convert other BXT patch types to mesh
@@ -215,8 +215,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             bake_node.name = "BXT_BAKE_NODE"
             bake_node.select = True
             bake_node.image = bake_img
-            bake_node.interpolation = 'Linear'
-            # bake_node.interpolation = 'Closest' # TODO: does this affect baking?
+            # bake_node.interpolation = 'Linear'
+            bake_node.interpolation = 'Closest'
             bake_node.extension = 'EXTEND'
 
             nodes.active = bake_node
@@ -463,35 +463,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
         bpy.ops.object.mode_set(mode='OBJECT')
 
-        print("\nMapping corners")
-        tmp_time_start = time.time()
 
-        corners = {}
-
-        for i, patch in enumerate(patches):
-            print(i, patch)
-
-            points = patch.data.splines[0].points
-
-            mtx = patch.matrix_world
-
-            _corner_points = [
-                mtx @ points[0].co,
-                mtx @ points[3].co,
-                mtx @ points[12].co,
-                mtx @ points[15].co,
-            ]
-
-            for p in _corner_points:
-                v = (round(p.x, 3), round(p.y, 3), round(p.z, 3))
-
-                if v not in corners:
-                    corners[v] = []
-
-                corners[v].append(i)
-
-        time_taken = round(time.time() - tmp_time_start, 2)
-        print(f"Took: {time_taken} seconds.")
 
 
 
@@ -507,23 +479,36 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         polys = new_mesh.polygons
         verts = new_mesh.vertices
 
-        do_weighted = True
+        do_weighted = False
 
-        # cardinals based on default bxtools orientation (with top view)
+        # cardinals and quadrants based on default bxtools orientation (with top view).
+        # important to know: on the UV mesh they start from the top left going down
         BOUNDARY_VERTS_INDICES = (
+            # non-corners
              1,  2,  3,  4,  5,  6, # south
              8, 16, 24, 32, 40, 48, # west
             15, 23, 31, 39, 47, 55, # east
             57, 58, 59, 60, 61, 62, # north
+            # corners
+             0, # south west
+             7, # south east
+            56, # north west
+            63, # north east
         )
 
         # equivelant to BOUNDARY_VERTS_INDICES
-        # cardinals based on image view
+        # cardinals and quadrants based on image view
         EQUIV_PIXEL_INDICES = (
+            # non-corners
             48, 40, 32, 24, 16,  8, # west
             57, 58, 59, 60, 61, 62, # north
              1,  2,  3,  4,  5,  6, # south
             55, 47, 39, 31, 23, 15, # east
+            # corners
+            56, # north west
+             0, # south west
+            63, # north east
+             7, # south east
         )
 
 
@@ -591,109 +576,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 bake_images[img_idx].pixels[pxl_idx + 1] = new_color.y
                 bake_images[img_idx].pixels[pxl_idx + 2] = new_color.z
 
-        print("\tEdges done")
-
-        time_taken = round(time.time() - tmp_time_start, 2)
-        print(f"\tTook: {time_taken} seconds.")
-
-
-        return {'CANCELLED'}
-
-
-        tmp_time_start = time.time()
-
-
-        POSSIBLE_CORNER_UVS = (
-            Vector((0.0, 0.0)), # bottom left
-            Vector((1.0, 0.0)), # bottom right
-            Vector((0.0, 1.0)), # top left
-            Vector((1.0, 1.0)), # top right
-        )
-        CORNER_PIXELS_INDICES = (0, 7, 56, 63)
-        CORNER_QUADS = (0, 6, 42, 48)
-
-
-
-        for key, patch_indices in corners.items():
-
-            num_current_patches = len(patch_indices)
-            if num_current_patches == 1:
-                continue
-
-            print(f"{key}: {num_current_patches}")
-
-            current_color = Vector()
-            total_rgb = Vector()
-            total_weight = 0.0
-
-            images_to_update = []
-
-
-            for pch_index in patch_indices:
-                # print(f"\n{patches[pch_index].name}")
-
-                poly_start = pch_index * 49 # double check
-
-                for quad_idx in CORNER_QUADS:
-                    poly = polys[poly_start + quad_idx]
-
-
-                    for k, vtx_idx in enumerate(poly.vertices):
-                        v = new_mesh.vertices[vtx_idx].co.to_tuple(3)
-
-                        if v == key:
-                            # print("Quad:", poly_start + quad_idx, "Vtx:", vtx_idx, v)
-
-                            uv = uv_layer_data[poly.loop_indices[k]].uv
-
-                            try:
-                                corner_uv_idx = POSSIBLE_CORNER_UVS.index(uv)
-                            except ValueError:
-                                corner_uv_idx = None
-
-                                print("WARNING CUSTOM UVS")
-
-                            # print("Corner uv idx:", corner_uv_idx)
-
-                            if corner_uv_idx is None:
-                                continue
-
-                            pix_start = CORNER_PIXELS_INDICES[corner_uv_idx] * 4
-
-                            pixels = bake_images[pch_index].pixels
-
-                            images_to_update.append((pch_index, pix_start))
-
-                            # print("Bake img:", bake_images[pch_index])
-
-
-                            if do_weighted:
-                                rgb = Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
-
-                                weight = sum(rgb)
-                                current_color += rgb * weight
-
-                                total_weight += weight
-
-                            else:
-                                current_color += Vector((pixels[pix_start], pixels[pix_start + 1], pixels[pix_start + 2]))
-
-
-            if do_weighted:
-                current_color = current_color / total_weight # [0.7487, 0.7075, 0.4901]
-            else:
-                current_color = current_color / num_current_patches # [0.6667, 0.6510, 0.5176]
-            
-
-            for (pch_index, pix_start) in images_to_update:
-                bake_images[pch_index].pixels[pix_start    ] = current_color.x
-                bake_images[pch_index].pixels[pix_start + 1] = current_color.y
-                bake_images[pch_index].pixels[pix_start + 2] = current_color.z
-
-        print("\tCorners done")
 
         time_taken = round(time.time() - tmp_time_start, 2)
         print(f"Took: {time_taken} seconds.")
+
 
 
         if True:
@@ -701,16 +587,19 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             tmp_time_start = time.time()
 
             for i, bake_img in enumerate(bake_images):
-                print("Saved to", os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
-                bake_img.save_render(os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
+                print("Saved to", os.path.join(folder_path, f"{i:04}.png"))
+                bake_img.save_render(os.path.join(folder_path, f"{i:04}.png"))
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
+
+
+
 
         bpy.context.scene.render.engine = prev_render_engine
 
 
         time_taken = round(time.time() - time_start, 2)
-        print(f"FINISHED: {time_taken} seconds.")
+        print(f"\nFINISHED: {time_taken} seconds.")
 
         return {"FINISHED"}
