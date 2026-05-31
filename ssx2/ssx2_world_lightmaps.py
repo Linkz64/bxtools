@@ -362,6 +362,122 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         # tile indicies starting from the top left of the atlas
         tile_indices = [y * 16 + x for y in reversed(range(16)) for x in range(16)]
 
+        if True:
+            print("\nFixing seams")
+
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            tmp_time_start = time.time()
+
+            color_samples = []
+
+            new_mesh = new_obj.data
+            uv_layer_data = new_mesh.uv_layers.active.data
+            # uv_layer = new_mesh.uv_layers.get("BXT_LIGHTMAP_UVMAP").data
+            polys = new_mesh.polygons
+            verts = new_mesh.vertices
+
+            do_weighted = False
+
+            # cardinals and quadrants based on default bxtools orientation (with top view).
+            # important to know: on the UV mesh they start from the top left going down
+            BOUNDARY_VERTS_INDICES = (
+                # non-corners
+                 1,  2,  3,  4,  5,  6, # south
+                 8, 16, 24, 32, 40, 48, # west
+                15, 23, 31, 39, 47, 55, # east
+                57, 58, 59, 60, 61, 62, # north
+                # corners
+                 0, # south west
+                 7, # south east
+                56, # north west
+                63, # north east
+            )
+
+            # equivelant to BOUNDARY_VERTS_INDICES
+            # cardinals and quadrants based on image view
+            EQUIV_PIXEL_INDICES = (
+                # non-corners
+                48, 40, 32, 24, 16,  8, # west
+                57, 58, 59, 60, 61, 62, # north
+                 1,  2,  3,  4,  5,  6, # south
+                55, 47, 39, 31, 23, 15, # east
+                # corners
+                56, # north west
+                 0, # south west
+                63, # north east
+                 7, # south east
+            )
+
+
+            boundaries = {}
+
+            current_atlas_index = -1
+            tile_index = -1
+
+            for i in range(num_patches):
+
+                vtx_start = i * 64
+
+                if i % (atlas_res * 2) == 0:
+                    current_atlas_index += 1
+                    tile_index = 0
+
+                bake_img = bake_images[current_atlas_index]
+                tile_pixel_indices = atlas_tiles_pixel_indices[tile_indices[tile_index]]
+                tile_index += 1
+
+                for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
+
+                    print(i, j, vtx_idx)
+
+                    pxl_idx = tile_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
+                    
+                    rgb = Vector((
+                        bake_img.pixels[pxl_idx    ],
+                        bake_img.pixels[pxl_idx + 1],
+                        bake_img.pixels[pxl_idx + 2],
+                    ))
+
+
+                    vtx = verts[vtx_start + vtx_idx].co.to_tuple(3)
+                    key = boundaries.get(vtx)
+
+                    # key: (rgb, [(img_idx/pch_idx, pxl_idx), ...])
+
+                    if key is None:
+                        boundaries[vtx] = [rgb, [(current_atlas_index, pxl_idx)]]
+                    else:
+                        key[0] += rgb
+                        key[1].append((current_atlas_index, pxl_idx))
+
+
+
+                    # print(vtx, (rgb, [i, pxl_idx]))
+
+                # break
+
+            for _, b in boundaries.items():
+
+                num_images = len(b[1])
+                if num_images == 1:
+                    continue
+
+                # print(_, b)
+
+                new_color = b[0] / num_images
+
+                for img_idx, pxl_idx in b[1]:
+                    # print(img_idx, pxl_idx)
+
+                    bake_images[img_idx].pixels[pxl_idx    ] = new_color.x
+                    bake_images[img_idx].pixels[pxl_idx + 1] = new_color.y
+                    bake_images[img_idx].pixels[pxl_idx + 2] = new_color.z
+
+
+            time_taken = round(time.time() - tmp_time_start, 2)
+            print(f"Took: {time_taken} seconds.")
+
 
 
         if True:
@@ -460,120 +576,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        print("\nFixing seams")
-
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        tmp_time_start = time.time()
-
-        color_samples = []
-
-        new_mesh = new_obj.data
-        uv_layer_data = new_mesh.uv_layers.active.data
-        # uv_layer = new_mesh.uv_layers.get("BXT_LIGHTMAP_UVMAP").data
-        polys = new_mesh.polygons
-        verts = new_mesh.vertices
-
-        do_weighted = False
-
-        # cardinals and quadrants based on default bxtools orientation (with top view).
-        # important to know: on the UV mesh they start from the top left going down
-        BOUNDARY_VERTS_INDICES = (
-            # non-corners
-             1,  2,  3,  4,  5,  6, # south
-             8, 16, 24, 32, 40, 48, # west
-            15, 23, 31, 39, 47, 55, # east
-            57, 58, 59, 60, 61, 62, # north
-            # corners
-             0, # south west
-             7, # south east
-            56, # north west
-            63, # north east
-        )
-
-        # equivelant to BOUNDARY_VERTS_INDICES
-        # cardinals and quadrants based on image view
-        EQUIV_PIXEL_INDICES = (
-            # non-corners
-            48, 40, 32, 24, 16,  8, # west
-            57, 58, 59, 60, 61, 62, # north
-             1,  2,  3,  4,  5,  6, # south
-            55, 47, 39, 31, 23, 15, # east
-            # corners
-            56, # north west
-             0, # south west
-            63, # north east
-             7, # south east
-        )
-
-
-        boundaries = {}
-
-        current_atlas_index = -1
-        tile_index = -1
-
-        for i in range(num_patches):
-
-            vtx_start = i * 64
-
-            if i % (atlas_res * 2) == 0:
-                current_atlas_index += 1
-                tile_index = 0
-
-            bake_img = bake_images[current_atlas_index]
-            tile_pixel_indices = atlas_tiles_pixel_indices[tile_indices[tile_index]]
-            tile_index += 1
-
-            for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
-
-                print(i, j, vtx_idx)
-
-                pxl_idx = tile_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
-                
-                rgb = Vector((
-                    bake_img.pixels[pxl_idx    ],
-                    bake_img.pixels[pxl_idx + 1],
-                    bake_img.pixels[pxl_idx + 2],
-                ))
-
-
-                vtx = verts[vtx_start + vtx_idx].co.to_tuple(3)
-                key = boundaries.get(vtx)
-
-                # key: (rgb, [(img_idx/pch_idx, pxl_idx), ...])
-
-                if key is None:
-                    boundaries[vtx] = [rgb, [(current_atlas_index, pxl_idx)]]
-                else:
-                    key[0] += rgb
-                    key[1].append((current_atlas_index, pxl_idx))
-
-
-
-                # print(vtx, (rgb, [i, pxl_idx]))
-
-            # break
-
-        for _, b in boundaries.items():
-
-            num_images = len(b[1])
-            if num_images == 1:
-                continue
-
-            # print(_, b)
-
-            new_color = b[0] / num_images
-
-            for img_idx, pxl_idx in b[1]:
-                # print(img_idx, pxl_idx)
-
-                bake_images[img_idx].pixels[pxl_idx    ] = new_color.x
-                bake_images[img_idx].pixels[pxl_idx + 1] = new_color.y
-                bake_images[img_idx].pixels[pxl_idx + 2] = new_color.z
-
-
-        time_taken = round(time.time() - tmp_time_start, 2)
-        print(f"Took: {time_taken} seconds.")
 
 
 
