@@ -136,6 +136,23 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         print("Timer started")
 
 
+        io = bpy.context.scene.ssx2_WorldImportExportProps
+        project_folder = bpy.path.abspath(io.exportFolderPath)
+
+        if len(project_folder) == 0:
+            self.report({'ERROR'}, "'Export Folder' property is empty")
+            return {"CANCELLED"}
+
+        if not os.path.isdir(project_folder):
+            self.report({'ERROR'}, "The chosen 'Export Folder' doesn't exist")
+            return {"CANCELLED"}
+
+        lightmaps_folder_path = os.path.join(project_folder, 'Lightmaps')
+        if not os.path.exists(lightmaps_folder_path):
+            self.report({'ERROR'}, f"Folder 'Lightmaps' does not exist in 'Export Folder'")
+            return {'CANCELLED'}
+
+
         
         atlas_res = 128
         tile_res = 8
@@ -347,17 +364,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        from pathlib import Path
-
-        if bpy.data.filepath:
-            abs_path = bpy.path.abspath("//Lightmaps")
-            folder_path = Path(bpy.path.abspath("//Lightmaps"))
-            folder_path.mkdir(parents=True, exist_ok=True)
-        else:
-            folder_path = Path(f"{str(Path.home())}/Downloads/BXTools_Lightmap")
-            folder_path.mkdir(parents=True, exist_ok=True)
-
-
         atlas_tiles_pixel_indices = generate_atlas_tiles_pixel_indices(atlas_res)
         # tile indicies starting from the top left of the atlas
         tile_indices = [y * 16 + x for y in reversed(range(16)) for x in range(16)]
@@ -566,10 +572,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                             bake_img.pixels[dst_i + 3] = 0.0
 
 
-                if False:
-                    print("Saved to", os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
-                    bake_img.save_render(os.path.join(folder_path, f"BXT_BAKE.{i}.png"))
-
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
 
@@ -584,8 +586,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             tmp_time_start = time.time()
 
             for i, bake_img in enumerate(bake_images):
-                print("Saved to", os.path.join(folder_path, f"{i:04}.png"))
-                bake_img.save_render(os.path.join(folder_path, f"{i:04}.png"))
+                print("Saved to", os.path.join(lightmaps_folder_path, f"{i:04}.png"))
+                bake_img.save_render(os.path.join(lightmaps_folder_path, f"{i:04}.png"))
 
             time_taken = round(time.time() - tmp_time_start, 2)
             print(f"Took: {time_taken} seconds.")
