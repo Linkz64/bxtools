@@ -67,7 +67,11 @@ def flip_image_y(img, width, height, channels=4):
     img.pixels = flipped_pixels
     # img.update()
 
-def get_tile_pixel_indices(res, tile_size=8):
+def generate_atlas_tiles_pixel_indices(res, tile_size=8):
+    """
+    returns a list of tuples.
+    each tuple contains pixel indices for its tile.
+    """
     tiles = []
 
     tiles_xy = res // tile_size
@@ -86,7 +90,7 @@ def get_tile_pixel_indices(res, tile_size=8):
                     pixel_index = py * res + px
                     indices.append(pixel_index)
 
-            tiles.append(indices)
+            tiles.append(tuple(indices))
 
     return tiles
 
@@ -119,6 +123,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             Before or after PS2 color conversion?
         - For patches with custom UVs consider doing a distance test for all UV bounds.
             Nearest corners and nearest boundary edges.
+            This is not a solution. Rather a temporary workaround.
         - Average the normals on touching vertices to get rid of sharp/inaccurate pixel transitions.
             Include angle option to ignore sharp angles.
             Include "merge distance" aka round vertex coords 
@@ -210,8 +215,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             bake_node.name = "BXT_BAKE_NODE"
             bake_node.select = True
             bake_node.image = bake_img
-            # bake_node.interpolation = 'Linear'
-            bake_node.interpolation = 'Closest' # TODO: does this affect baking?
+            bake_node.interpolation = 'Linear'
+            # bake_node.interpolation = 'Closest' # TODO: does this affect baking?
             bake_node.extension = 'EXTEND'
 
             nodes.active = bake_node
@@ -353,7 +358,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             folder_path.mkdir(parents=True, exist_ok=True)
 
 
-        tile_pixel_indices = get_tile_pixel_indices(atlas_res)
+        atlas_tiles_pixel_indices = generate_atlas_tiles_pixel_indices(atlas_res)
+        # tile indicies starting from the top left of the atlas
         tile_indices = [y * 16 + x for y in reversed(range(16)) for x in range(16)]
 
 
@@ -408,7 +414,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 bake_img = bake_images[current_atlas_index]
                 diff_idx = diffuse_image_indices[i]
                 orientation = orientations[i]
-                bake_pixel_indices = tile_pixel_indices[tile_indices[tile_index]]
+                tile_pixel_indices = atlas_tiles_pixel_indices[tile_indices[tile_index]]
                 tile_index += 1
 
                 diff = bpy.data.images.get(diffuse_images[diff_idx]).pixels
@@ -424,7 +430,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                         diff_g = diff[src_i + 1]
                         diff_b = diff[src_i + 2]
 
-                        dst_i = bake_pixel_indices[y * tile_res + x] * 4
+                        dst_i = tile_pixel_indices[y * tile_res + x] * 4
 
                         bake_r = bake_img.pixels[dst_i    ]
                         bake_g = bake_img.pixels[dst_i + 1]
@@ -535,14 +541,14 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 tile_index = 0
 
             bake_img = bake_images[current_atlas_index]
-            bake_pixel_indices = tile_pixel_indices[tile_indices[tile_index]]
+            tile_pixel_indices = atlas_tiles_pixel_indices[tile_indices[tile_index]]
             tile_index += 1
 
             for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
 
                 print(i, j, vtx_idx)
 
-                pxl_idx = bake_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
+                pxl_idx = tile_pixel_indices[EQUIV_PIXEL_INDICES[j]] * 4
                 
                 rgb = Vector((
                     bake_img.pixels[pxl_idx    ],
@@ -588,7 +594,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         print("\tEdges done")
 
         time_taken = round(time.time() - tmp_time_start, 2)
-        print(f"Took: {time_taken} seconds.")
+        print(f"\tTook: {time_taken} seconds.")
 
 
         return {'CANCELLED'}
