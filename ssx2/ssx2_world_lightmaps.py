@@ -430,7 +430,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             )
 
             snap_neighbor_points_distance = 0.01
-            
+
             if snap_neighbor_points_distance > 0.0:
                 print("\tSnapping neighbor points")
 
@@ -567,7 +567,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        if False:
+        if True:
             print("\nConverting to PS2 colors")
             tmp_time_start = time.time()
 
