@@ -130,6 +130,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             Include "merge distance" aka round vertex coords 
             Advanced: Take face normal/winding into account to exclude flipped patches.
         - Consider: Caching the atlas indices and tile indices. Basically an index per-patch.
+        - Revize the alpha threshold after migrating to the new multitool version.
+            Version 0.3 does some weird value adjustments.
         """
 
         import time
@@ -531,6 +533,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
             orientations = [int(patch.ssx2_PatchProps.texMapPreset) for patch in patches]
 
+            alpha_threshold = 4 / 255
 
             current_atlas_index = -1
             tile_index = -1
@@ -568,7 +571,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
                         alpha = max(bake_r, bake_g, bake_b)
 
-                        if alpha != 0:
+                        if alpha >= alpha_threshold:
                             bake_img.pixels[dst_i    ] = diff_r - (diff_r * bake_r) / alpha
                             bake_img.pixels[dst_i + 1] = diff_g - (diff_g * bake_g) / alpha
                             bake_img.pixels[dst_i + 2] = diff_b - (diff_b * bake_b) / alpha
@@ -577,7 +580,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                             bake_img.pixels[dst_i    ] = 0.0
                             bake_img.pixels[dst_i + 1] = 0.0
                             bake_img.pixels[dst_i + 2] = 0.0
-                            bake_img.pixels[dst_i + 3] = 0.0
+                            bake_img.pixels[dst_i + 3] = alpha_threshold # TODO re-check on new multitool
+                            
 
 
             time_taken = round(time.time() - tmp_time_start, 2)
