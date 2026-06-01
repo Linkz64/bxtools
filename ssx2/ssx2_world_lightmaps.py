@@ -1,5 +1,5 @@
 import bpy
-from mathutils import Vector
+from mathutils import Vector, kdtree
 
 import os
 from math import ceil
@@ -132,6 +132,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Consider: Caching the atlas indices and tile indices. Basically an index per-patch.
         - Revize the alpha threshold after migrating to the new multitool version.
             Version 0.3 does some weird value adjustments.
+        - Use run_without_update().
+        - Test the speed of building the final bake mesh from scratch vs the current join operator.
         """
 
         import time
@@ -157,7 +159,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
         print_in_loops = False
-        
+        do_weighted = False
+        # snap_neighbor_points_distance = 0.001
+        alpha_threshold = 4 / 255
+
         atlas_res = 128
         tile_res = 8
         uv_scale = 0.0625
@@ -380,6 +385,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         if True:
             print("\nFixing seams")
 
+
             bpy.ops.object.mode_set(mode='OBJECT')
 
             tmp_time_start = time.time()
@@ -392,7 +398,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             polys = new_mesh.polygons
             verts = new_mesh.vertices
 
-            do_weighted = False
 
             # cardinals and quadrants based on default bxtools orientation (with top view).
             # important to know: on the UV mesh they start from the top left going down
@@ -423,6 +428,72 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 63, # north east
                  7, # south east
             )
+
+            snap_neighbor_points_distance = 0.01
+            
+            if snap_neighbor_points_distance > 0.0:
+                print("\tSnapping neighbor points")
+
+                tmp_time_start_snap = time.time()
+
+                kd = kdtree.KDTree(len(BOUNDARY_VERTS_INDICES) * num_patches)
+
+                final_vtx_indices = []
+
+                for i in range(num_patches):
+
+                    vtx_start = i * 64
+
+                    for j, vtx_idx in enumerate(BOUNDARY_VERTS_INDICES):
+                        new_idx = vtx_start + vtx_idx
+                        kd.insert(verts[new_idx].co, new_idx)
+
+                        final_vtx_indices.append(new_idx)
+
+                kd.balance()
+
+
+                visited = set()
+
+                for start_idx in final_vtx_indices:
+                    if start_idx in visited:
+                            continue
+
+                    cluster = set()
+                    queued = {start_idx}
+                    stack = [start_idx]
+
+
+                    while stack:
+                        idx = stack.pop()
+                        cluster.add(idx)
+
+                        for _, nidx, _ in kd.find_range(verts[idx].co, snap_neighbor_points_distance):
+                            if nidx not in queued:
+                                queued.add(nidx)
+                                stack.append(nidx)
+
+                    visited.update(cluster)
+
+                    if len(cluster) < 2:
+                        continue
+
+
+                    center = Vector()
+
+                    for idx in cluster:
+                        center += verts[idx].co
+
+                    center /= len(cluster)
+
+                    for idx in cluster:
+                        verts[idx].co = center
+
+
+                print(f"\tSnapping took: {round(time.time() - tmp_time_start_snap, 2)} seconds.")
+
+
+
 
 
             boundaries = {}
@@ -496,7 +567,7 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
 
-        if True:
+        if False:
             print("\nConverting to PS2 colors")
             tmp_time_start = time.time()
 
@@ -532,8 +603,6 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
 
 
             orientations = [int(patch.ssx2_PatchProps.texMapPreset) for patch in patches]
-
-            alpha_threshold = 4 / 255
 
             current_atlas_index = -1
             tile_index = -1
@@ -613,6 +682,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         tmp_time_start = time.time()
 
         current_atlas_index = -1
+
+        x = 0.0
+        y = 0.0
+
         for i, patch in enumerate(patches):
             if x + uv_scale < 1.0:
                 x += uv_scale
