@@ -114,7 +114,8 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - Replace the name suffix adding code with unique incremental names.
         - Create atlas textures
         - Weighted option for seam fix.
-        - Re-enable PS2 color convert
+        - Fix dark spots on patch corners. Caused by seam fix.
+        - Some seams still appear due to PS2 color conversion. Figure out a way to fix seams after it.
         - Should it require patch exporting to be enabled?
         - Convert other BXT patch types to mesh
             Types with more than 1 segment won't have lightmap uvs saved to object properties
@@ -125,9 +126,10 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
         - For patches with custom UVs consider doing a distance test for all UV bounds.
             Nearest corners and nearest boundary edges.
             This is not a solution. Rather a temporary workaround.
-        - Average the normals on touching vertices to get rid of sharp/inaccurate pixel transitions.
+        - Consider: Average the normals on touching vertices to get rid of sharp/inaccurate light and shade transitions.
+            The seam fixing part already helps with this to some degree.
             Include angle option to ignore sharp angles.
-            Include "merge distance" aka round vertex coords 
+            Include "merge distance" aka round vertex coords.
             Advanced: Take face normal/winding into account to exclude flipped patches.
         - Consider: Caching the atlas indices and tile indices. Basically an index per-patch.
         - Revize the alpha threshold after migrating to the new multitool version.
