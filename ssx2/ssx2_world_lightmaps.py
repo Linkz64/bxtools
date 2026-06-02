@@ -213,15 +213,19 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
                 if len(patch_splines) < 1:
                     has_errors = True
                     self.report({'WARNING'}, f"{patch_name} has no points")
+                    obj.select_set(True)
                 elif len(patch_splines) > 1:
                     has_errors = True
                     self.report({'WARNING'}, f"{patch_name} has more than one island. The object must only have 16 points")
+                    obj.select_set(True)
+
 
                 spline = patch_splines[0]
 
                 if len(spline.points) != 16:
                     has_errors = True
                     self.report({'WARNING'}, f"{patch_name} must have 16 points")
+                    obj.select_set(True)
 
                 patches.append(obj)
 
@@ -229,10 +233,12 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             elif obj.ssx2_CurveMode == 'CAGE':
                 has_errors = True
                 self.report({'WARNING'}, f"Spline Cage type is not supported yet")
+                obj.select_set(True)
 
             elif obj.ssx2_PatchProps.isControlGrid:
                 has_errors = True
                 self.report({'WARNING'}, f"Control Grid type is not supported yet")
+                obj.select_set(True)
 
 
         if has_errors:
