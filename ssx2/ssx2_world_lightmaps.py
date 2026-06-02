@@ -193,10 +193,61 @@ class SSX2_OP_BakeTest(bpy.types.Operator):
             self.report({'WARNING'}, "No 'Patches' Collection found!")
             return {'CANCELLED'}
         
-        patches = [obj for obj in pch_col.all_objects if obj.type == 'SURFACE' and not obj.hide_get()]
-        patches.sort(key=lambda obj: natural_key(obj.name))
+        patches = []
+        
 
+
+        print("\nValidating")
+        tmp_time_start = time.time()
+
+        has_errors = False
+
+        for i, obj in enumerate(pch_col.all_objects):
+            print(obj.name)
+
+            patch_name = obj.name
+
+            if obj.type == 'SURFACE':
+                patch_splines = obj.data.splines
+
+                if len(patch_splines) < 1:
+                    has_errors = True
+                    self.report({'WARNING'}, f"{patch_name} has no points")
+                elif len(patch_splines) > 1:
+                    has_errors = True
+                    self.report({'WARNING'}, f"{patch_name} has more than one island. The object must only have 16 points")
+
+                spline = patch_splines[0]
+
+                if len(spline.points) != 16:
+                    has_errors = True
+                    self.report({'WARNING'}, f"{patch_name} must have 16 points")
+
+                patches.append(obj)
+
+
+            elif obj.ssx2_CurveMode == 'CAGE':
+                has_errors = True
+                self.report({'WARNING'}, f"Spline Cage type is not supported yet")
+
+            elif obj.ssx2_PatchProps.isControlGrid:
+                has_errors = True
+                self.report({'WARNING'}, f"Control Grid type is not supported yet")
+
+
+        if has_errors:
+            self.report({'WARNING'}, f"Failed during validation. Click here to see errors")
+            return {'CANCELLED'}
+
+        patches.sort(key=lambda obj: natural_key(obj.name))
         num_patches = len(patches)
+
+
+        time_taken = round(time.time() - tmp_time_start, 2)
+        print(f"Took: {time_taken} seconds.")
+
+
+
 
         uvs = setup_lightmap_uvs_top_left(uv_scale, num_patches)
         num_atlases = ceil(num_patches / 256)
