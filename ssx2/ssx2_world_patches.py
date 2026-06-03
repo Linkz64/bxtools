@@ -1698,7 +1698,8 @@ class SSX2_OP_AddSplineCage(bpy.types.Operator):
 
 		collection = bpy.context.collection
 		append_path = templates_append_path
-		
+		material_name = "PatchMaterialAppend"
+
 		if self.type == 'DUAL':
 			curve_data_name = "SplineCageDualAppend"
 		elif self.type == 'QUAD':
@@ -1709,9 +1710,11 @@ class SSX2_OP_AddSplineCage(bpy.types.Operator):
 		node_tree_name = "CageLoftAppend"
 		curve_data = bpy.data.curves.get(curve_data_name)
 		node_tree = bpy.data.node_groups.get(node_tree_name)
+		material = bpy.data.materials.get("pch")
 
 		print("Append Spline Cage:", curve_data is None)
 		print("Append Node Tree:", node_tree is None)
+		print("Existing Material:", material is None)
 
 		if not os.path.isfile(append_path):
 			self.report({'ERROR'}, f"Failed to append {append_path}")
@@ -1732,23 +1735,33 @@ class SSX2_OP_AddSplineCage(bpy.types.Operator):
 					self.report({'ERROR'}, f"Failed to append spline cage from {append_path}")
 					return {'CANCELLED'}
 
+			if material is None:
+				if material_name in data_from.materials:
+					data_to.materials = [material_name]
+				else:
+					self.report({'ERROR'}, f"Failed to append material from {append_path}")
+					return {'CANCELLED'}
+
 		curve_data = bpy.data.curves.get(curve_data_name)
-		# if curve_data.users == 0:
-		# 	curve_data.use_fake_user = True
 		curve_data = curve_data.copy()
 		curve_obj = bpy.data.objects.new("SplineCage", curve_data)
 		curve_data.name = curve_obj.name
 		curve_obj.location = bpy.context.scene.cursor.location
 
 		node_tree = bpy.data.node_groups.get(node_tree_name)
-		# if node_tree.users == 0:
-		# 	node_tree.use_fake_user = True
 		node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
 		node_modifier.node_group = node_tree
 
 		curve_obj.ssx2_CurveMode = 'CAGE'
 		curve_obj.ssx2_PatchProps.type = '1'
 		curve_obj.ssx2_PatchProps.texMapPreset = '3'
+
+		if material is None:
+			material = bpy.data.materials.get(material_name)
+			material = material.copy()
+			material.name = "pch"
+		curve_obj.data.materials.append(material)
+		node_modifier["Input_7"] = material
 
 		collection.objects.link(curve_obj)
 
@@ -1859,10 +1872,10 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 		append_path = templates_append_path
 		material_name = "PatchMaterialAppend"
 		node_tree_name = "GridTesselateAppend"
-		material = bpy.data.materials.get(material_name)
+		material = bpy.data.materials.get("pch")
 		node_tree = bpy.data.node_groups.get(node_tree_name)
 
-		print("Append Material:", material is None)
+		print("Existing Material:", material is None)
 		print("Append Node Tree:", node_tree is None)
 
 		if not os.path.isfile(append_path):
@@ -1883,7 +1896,6 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 					self.report({'ERROR'}, f"Failed to append material from {append_path}")
 					return {'CANCELLED'}
 
-		# I should just append grid from templates.blend
 
 		#scale = (100 / bpy.context.scene.bx_WorldScale) + 14
 		bpy.ops.mesh.primitive_grid_add(enter_editmode=False, size=10, #align='CURSOR', align='WORLD'
@@ -1893,8 +1905,6 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 			rotation=(0, 0, -1.57079632679)) # scale= doens't work. blender plz fix
 
 		bpy.ops.transform.resize(value=(-1, 1, 1), orient_type='LOCAL', constraint_axis=(False, True, False))
-		#orient_type='LOCAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='LOCAL'
-
 		bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) # sets origin to bottom left
 		bpy.ops.object.editmode_toggle()
 		bpy.ops.mesh.flip_normals()
@@ -1915,18 +1925,13 @@ class SSX2_OP_AddControlGrid(bpy.types.Operator):
 		props.manualUV2 = (1.0, 0.0)
 		props.manualUV3 = (1.0, 1.0)
 
-		material = bpy.data.materials.get("pch")
 		if material is None:
 			material = bpy.data.materials.get(material_name)
-			# if material.users == 0:
-			# 	material.use_fake_user = True
 			material = material.copy()
 			material.name = "pch"
 		grid.data.materials.append(material)
 
 		node_tree = bpy.data.node_groups.get(node_tree_name)
-		# if node_tree.users == 0:
-		# 	node_tree.use_fake_user = True
 		node_modifier = grid.modifiers.new(name="GeoNodes", type='NODES')
 		node_modifier.node_group = node_tree
 		node_modifier["Input_3"] = 1
@@ -1960,15 +1965,14 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 		if collection is None:
 			self.report({'WARNING'}, "'Patches' Collection not found!")
 			collection = bpy.context.collection
-			#return {'CANCELLED'}
 
 		append_path = templates_append_path
 		material_name = "PatchMaterialAppend"
 		surface_name = "SurfPatchAppend"
-		material = bpy.data.materials.get(material_name)
+		material = bpy.data.materials.get("pch")
 		surface = bpy.data.curves.get(surface_name)
 
-		print("Append Material:", material is None)
+		print("Existing Material:", material is None)
 		print("Append Surface:", surface is None)
 
 		if not os.path.isfile(append_path):
@@ -1990,13 +1994,9 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 					return {'CANCELLED'}
 
 		surface = bpy.data.curves.get(surface_name)
-		print(surface)
-		print(surface.users)
-		# if surface.users == 0:
-		# 	surface.use_fake_user = True
 		surface = surface.copy()
 		patch = bpy.data.objects.new("SurfPatch", surface)
-		surface.name = patch.name#"SurfPatch"
+		surface.name = patch.name
 
 		patch.location = bpy.context.scene.cursor.location
 		patch.ssx2_PatchProps.type = '1'
@@ -2006,14 +2006,12 @@ class SSX2_OP_AddPatch(bpy.types.Operator):
 		patch.ssx2_PatchProps.manualUV2 = (1.0, 0.0)
 		patch.ssx2_PatchProps.manualUV3 = (1.0, 1.0)
 
-		material = bpy.data.materials.get("pch")
 		if material is None:
 			material = bpy.data.materials.get(material_name)
-			# if material.users == 0:
-			# 	material.use_fake_user = True
 			material = material.copy()
 			material.name = "pch"
-		patch.data.materials.append(material)
+		patch.data.materials[0] = material
+
 		collection.objects.link(patch)
 
 		patch.select_set(True)
