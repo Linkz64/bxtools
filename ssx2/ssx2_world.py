@@ -757,6 +757,8 @@ class SSX2_OP_WorldImport(Operator):
 		self.scene_collection = self.scene.collection
 		self.io = self.scene.ssx2_WorldImportExportProps
 
+		self.errors = 0
+
 		if not self.io.importPatches and not self.io.importModels:
 			return
 
@@ -1000,8 +1002,18 @@ class SSX2_OP_WorldImport(Operator):
 
 		json_materials = []
 
-		with open(materials_file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(materials_file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'Materials.json' has invalid data or is empty")
+			self.errors += 1
+			return
+
+		if data.get("Materials") is None:
+			self.report({'WARNING'}, f"'Materials.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
 		for i, json_mat in enumerate(data["Materials"]):
 			mat_name = json_mat["MaterialName"]
@@ -1041,9 +1053,18 @@ class SSX2_OP_WorldImport(Operator):
 		print("\nImporting Logic")
 		import_logic_time_start = time.time()
 
-		with open(logic_file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(logic_file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'SSFLogic.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
+		if data.get("EffectSlots") is None:
+			self.report({'WARNING'}, f"'SSFLogic.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
 		json_logic_slot_sets = data["EffectSlots"]
 
@@ -1076,8 +1097,18 @@ class SSX2_OP_WorldImport(Operator):
 		all_surfaces_to_merge = []
 		# surface_names_for_mode_2 = []
 
-		with open(models_file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(models_file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'Prefabs.json' has invalid data or is empty")
+			self.errors += 1
+			return
+
+		if data.get("Prefabs") is None:
+			self.report({'WARNING'}, f"'Prefabs.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
 		model_collections = []
 
@@ -1476,8 +1507,19 @@ class SSX2_OP_WorldImport(Operator):
 		print("\nImporting Instances")
 		import_instances_time_start = time.time()
 
-		with open(instances_file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(instances_file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'Instances.json' has invalid data or is empty")
+			self.errors += 1
+			return
+
+		if data.get("Instances") is None:
+			self.report({'WARNING'}, f"'Instances.json' has invalid data or is empty")
+			self.errors += 1
+			return
+
 
 		instance_refs = []
 
@@ -1615,13 +1657,8 @@ class SSX2_OP_WorldImport(Operator):
 
 		print("importing instances took", time.time() - import_instances_time_start)
 
-
-
-		
-
-
 	def create_splines_json(self):
-		print("Importing Splines")
+		print("\nImporting Splines")
 
 		collection = bpy.data.collections.get('Splines')
 		if collection is None:
@@ -1632,7 +1669,9 @@ class SSX2_OP_WorldImport(Operator):
 		file_path = self.folder_path + '/Splines.json'
 		if not os.path.isfile(file_path):
 			self.report({'ERROR'}, f"File 'Splines.json' does not exist in 'Import Folder'")
-			return {'CANCELLED'}
+			self.errors += 1
+			return
+
 
 		PT_CO = 0
 		PT_LEFT_CO = 1
@@ -1640,134 +1679,144 @@ class SSX2_OP_WorldImport(Operator):
 		PT_LEFT_TYPE = 3
 		PT_RIGHT_TYPE = 4
 
-		with open(file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'Splines.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
-			for i, json_spline in enumerate(data["Splines"]):
+		if data.get("Splines") is None:
+			self.report({'WARNING'}, f"'Splines.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
-				print("\nSpline", i, json_spline["SplineName"])
-				
-				merged_points = []
-				for j, segment in enumerate(json_spline["Segments"]):
+		for i, json_spline in enumerate(data["Splines"]):
 
-					for k in range(3):
-						x,y,z = segment["Points"][k]
-						merged_points.append((x/100, y/100, z/100)) # world scale
-						# print((x/100, y/100, z/100))
+			print("\nSpline", i, json_spline["SplineName"])
+			
+			merged_points = []
+			for j, segment in enumerate(json_spline["Segments"]):
 
-					# 	x,y,z = segment["Points"][k]
-					# 	if self.io.splineImportAsNURBS:
-					# 		merged_points.append((x/100, y/100, z/100, 1.0))
-					# 	else:
-					# 		merged_points.append((x/100, y/100, z/100))
+				for k in range(3):
+					x,y,z = segment["Points"][k]
+					merged_points.append((x/100, y/100, z/100)) # world scale
+					# print((x/100, y/100, z/100))
 
-				last = json_spline["Segments"][-1]["Points"][3]
-				merged_points.append((last[0] / 100, last[1] / 100, last[2] / 100)) # world scale
+				# 	x,y,z = segment["Points"][k]
+				# 	if self.io.splineImportAsNURBS:
+				# 		merged_points.append((x/100, y/100, z/100, 1.0))
+				# 	else:
+				# 		merged_points.append((x/100, y/100, z/100))
 
-				len_merged_points = len(merged_points)
+			last = json_spline["Segments"][-1]["Points"][3]
+			merged_points.append((last[0] / 100, last[1] / 100, last[2] / 100)) # world scale
 
-				name = json_spline["SplineName"]
-				# curve = bpy.data.curves.get(name)
-				# if curve is None:
-				# 	curve = bpy.data.curves.new(name, 'CURVE')
+			len_merged_points = len(merged_points)
 
-				curve = bpy.data.curves.new(name, 'CURVE')
-				curve.dimensions = '3D'
+			name = json_spline["SplineName"]
+			# curve = bpy.data.curves.get(name)
+			# if curve is None:
+			# 	curve = bpy.data.curves.new(name, 'CURVE')
 
-				if self.io.splineImportAsNURBS: 			# NURBS Spline Curve
+			curve = bpy.data.curves.new(name, 'CURVE')
+			curve.dimensions = '3D'
 
-					spline = curve.splines.new(type='NURBS')
-					points_to_add = len_merged_points-1
+			if self.io.splineImportAsNURBS: 			# NURBS Spline Curve
 
-					if len(spline.points)-1 == points_to_add:
-						self.report({'WARN'}, "AHHHHHHHHHHHHHHHHH")
-						pass
-					else:
-						spline.points.add(points_to_add)
+				spline = curve.splines.new(type='NURBS')
+				points_to_add = len_merged_points-1
 
-					for j, point in enumerate(spline.points):
-						point.co = merged_points[j]
+				if len(spline.points)-1 == points_to_add:
+					self.report({'WARN'}, "AHHHHHHHHHHHHHHHHH")
+					pass
+				else:
+					spline.points.add(points_to_add)
 
-					spline.use_endpoint_u = True
-					spline.use_bezier_u = True
-					spline.order_u = 4
-					spline.resolution_u = 12
+				for j, point in enumerate(spline.points):
+					point.co = merged_points[j]
 
-					curve_obj = bpy.data.objects.new(name, curve)
-					curve_obj.ssx2_CurveMode = "SPLINE"
-					curve_obj.ssx2_SplineProps.type = json_spline["SplineStyle"]
-					collection.objects.link(curve_obj)
+				spline.use_endpoint_u = True
+				spline.use_bezier_u = True
+				spline.order_u = 4
+				spline.resolution_u = 12
 
-				else:										# Bézier Spline Curve
-					new_bezier_points = []
-					for j in range(0, len_merged_points, 3):
-						point_current = Vector(merged_points[j]) # Current Point
-						pt = [point_current, None, None, 'FREE', 'FREE']
+				curve_obj = bpy.data.objects.new(name, curve)
+				curve_obj.ssx2_CurveMode = "SPLINE"
+				curve_obj.ssx2_SplineProps.type = json_spline["SplineStyle"]
+				collection.objects.link(curve_obj)
 
-						# Previous Point
-						if j != 0:
-							point_prev = Vector(merged_points[j-1])
+			else:										# Bézier Spline Curve
+				new_bezier_points = []
+				for j in range(0, len_merged_points, 3):
+					point_current = Vector(merged_points[j]) # Current Point
+					pt = [point_current, None, None, 'FREE', 'FREE']
 
-						# Next Point
-						if j+1 != len_merged_points:
-							point_next = Vector(merged_points[j+1])
-							pt[PT_RIGHT_CO] = point_next
+					# Previous Point
+					if j != 0:
+						point_prev = Vector(merged_points[j-1])
 
-						# Final Point
-						if j+1 == len_merged_points:
-							pt[PT_RIGHT_CO] = calc_opposite_point_co(point_current, point_prev)
-							pt[PT_LEFT_CO] = point_prev
+					# Next Point
+					if j+1 != len_merged_points:
+						point_next = Vector(merged_points[j+1])
+						pt[PT_RIGHT_CO] = point_next
 
-							if point_prev == point_current:
-								pass # type = 'FREE'
-							else:
-								pt[PT_RIGHT_TYPE] = 'ALIGNED'
-								pt[PT_LEFT_TYPE] = 'ALIGNED'
+					# Final Point
+					if j+1 == len_merged_points:
+						pt[PT_RIGHT_CO] = calc_opposite_point_co(point_current, point_prev)
+						pt[PT_LEFT_CO] = point_prev
 
-						# First Point
-						if j == 0:
-							pt[PT_LEFT_CO] = calc_opposite_point_co(point_current, point_next)
+						if point_prev == point_current:
+							pass # type = 'FREE'
+						else:
 							pt[PT_RIGHT_TYPE] = 'ALIGNED'
 							pt[PT_LEFT_TYPE] = 'ALIGNED'
 
-						# Middle Points
-						if (j != 0) and (j+1 != len_merged_points): 
-							point_prev = Vector(merged_points[j-1])
-							point_next = Vector(merged_points[j+1])
+					# First Point
+					if j == 0:
+						pt[PT_LEFT_CO] = calc_opposite_point_co(point_current, point_next)
+						pt[PT_RIGHT_TYPE] = 'ALIGNED'
+						pt[PT_LEFT_TYPE] = 'ALIGNED'
 
-							# pt[PT_RIGHT_TYPE] = 'ALIGNED'
-							# pt[PT_LEFT_TYPE] = 'ALIGNED'
-							pt[PT_RIGHT_TYPE] = 'FREE'
-							pt[PT_LEFT_TYPE] = 'FREE'
-							
-							pt[PT_RIGHT_CO] = point_next
-							pt[PT_LEFT_CO] = point_prev
+					# Middle Points
+					if (j != 0) and (j+1 != len_merged_points): 
+						point_prev = Vector(merged_points[j-1])
+						point_next = Vector(merged_points[j+1])
 
-						# print("	left", pt[PT_LEFT_CO])
-						# print("	curr", pt[PT_CO])
-						# print("	right", pt[PT_RIGHT_CO])
-
-						new_bezier_points.append(pt)
+						# pt[PT_RIGHT_TYPE] = 'ALIGNED'
+						# pt[PT_LEFT_TYPE] = 'ALIGNED'
+						pt[PT_RIGHT_TYPE] = 'FREE'
+						pt[PT_LEFT_TYPE] = 'FREE'
 						
-					spline = curve.splines.new(type='BEZIER')
-					spline.bezier_points.add(len(new_bezier_points)-1)
+						pt[PT_RIGHT_CO] = point_next
+						pt[PT_LEFT_CO] = point_prev
+
+					# print("	left", pt[PT_LEFT_CO])
+					# print("	curr", pt[PT_CO])
+					# print("	right", pt[PT_RIGHT_CO])
+
+					new_bezier_points.append(pt)
 					
-					for j, bez_point in enumerate(new_bezier_points):
-						point = spline.bezier_points[j]
+				spline = curve.splines.new(type='BEZIER')
+				spline.bezier_points.add(len(new_bezier_points)-1)
+				
+				for j, bez_point in enumerate(new_bezier_points):
+					point = spline.bezier_points[j]
 
-						point.co = bez_point[PT_CO]
-						point.handle_left = bez_point[PT_LEFT_CO]
-						point.handle_right = bez_point[PT_RIGHT_CO]
-						point.handle_left_type  = bez_point[PT_LEFT_TYPE]	#'FREE'
-						point.handle_right_type = bez_point[PT_RIGHT_TYPE]	#'FREE'
+					point.co = bez_point[PT_CO]
+					point.handle_left = bez_point[PT_LEFT_CO]
+					point.handle_right = bez_point[PT_RIGHT_CO]
+					point.handle_left_type  = bez_point[PT_LEFT_TYPE]	#'FREE'
+					point.handle_right_type = bez_point[PT_RIGHT_TYPE]	#'FREE'
 
-					curve_obj = bpy.data.objects.new(name, curve)
-					curve_obj.ssx2_CurveMode = "SPLINE"
-					curve_obj.ssx2_SplineProps.type = str(json_spline["SplineStyle"])
+				curve_obj = bpy.data.objects.new(name, curve)
+				curve_obj.ssx2_CurveMode = "SPLINE"
+				curve_obj.ssx2_SplineProps.type = str(json_spline["SplineStyle"])
 
-					collection.objects.link(curve_obj)
+				collection.objects.link(curve_obj)
 
-					self.spline_objects.append(curve_obj)
+				self.spline_objects.append(curve_obj)
 
 		# SELECT ALL AT THE END AND SET ORIGIN
 		#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
@@ -1795,8 +1844,18 @@ class SSX2_OP_WorldImport(Operator):
 
 		print("\nParsing Lights.json")
 
-		with open(lights_file_path, 'r') as f:
-			data = json.load(f)
+		try:
+			with open(lights_file_path, 'r') as f:
+				data = json.load(f)
+		except:
+			self.report({'WARNING'}, f"'Lights.json' has invalid data or is empty")
+			self.errors += 1
+			return
+
+		if data.get("Lights") is None:
+			self.report({'WARNING'}, f"'Lights.json' has invalid data or is empty")
+			self.errors += 1
+			return
 
 		# ((maybe))
 		# have 2 ambient options for the user
@@ -1919,8 +1978,295 @@ class SSX2_OP_WorldImport(Operator):
 
 			# if i == 127:
 			# 	break
+			
+	def create_paths_json(self):
+		print("Importing Paths")
+
+		aip_file_path = self.folder_path + '/AIP.json'
+		sop_file_path = self.folder_path + '/SOP.json'
+		if not os.path.isfile(aip_file_path):
+			self.report({'WARNING'}, f"Paths file 'AIP.json' does not exist in 'Import Folder'")
+			self.errors += 1
+			return
+		if not os.path.isfile(aip_file_path):
+			self.report({'WARNING'}, f"Paths file 'SOP.json' does not exist in 'Import Folder'")
+			self.errors += 1
+			return
+
+		collection_paths = bpy.data.collections.get('Paths')
+		if collection_paths is None:
+			collection_paths = bpy.data.collections.new('Paths')
+			self.scene_collection.children.link(collection_paths)
+
+
+		# APPEND PATH GEOMETRY NODES
+
+		if not self.io.importPathsAsEmpties:
+			append_path = templates_append_path
+			node_tree_name = "PathLinesAppend"
+			node_tree = bpy.data.node_groups.get(node_tree_name)
+			print("BXT Append Node Tree:", node_tree is None)
+
+			if not os.path.isfile(append_path):
+				self.report({'ERROR'}, f"BXT Failed to append {append_path}")
+				return {'CANCELLED'}
+
+			with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
+				if node_tree is None:
+					if node_tree_name in data_from.node_groups:
+						data_to.node_groups = [node_tree_name]
+					else:
+						self.report({'ERROR'}, f"BXT Failed to append geonodes from {append_path}")
+						return {'CANCELLED'}
+
+			node_tree = bpy.data.node_groups.get(node_tree_name)
+
+
+		for i, file_path in enumerate((aip_file_path, sop_file_path)):
+
+			try:
+				with open(file_path, 'r') as f:
+					data = json.load(f)
+			except:
+				self.report({'WARNING'}, f"{file_path} has invalid data or is empty")
+				self.errors += 1
+				return
+
+			if data.get("StartPosList") is None:
+				self.report({'WARNING'}, f"{file_path} has invalid data or is empty")
+				self.errors += 1
+				return
+			if data.get("AIPaths") is None:
+				self.report({'WARNING'}, f"{file_path} has invalid data or is empty")
+				self.errors += 1
+				return
+			if data.get("RaceLines") is None:
+				self.report({'WARNING'}, f"{file_path} has invalid data or is empty")
+				self.errors += 1
+				return
 
 			
+			# col_main_name = "Paths General" if i == 0 else "Paths Showoff"
+			# col_main_name = "Paths AIP" if i == 0 else "Paths SOP"
+			if i == 0:
+				col_main_name = "Paths General"
+				obj_main_name = "AIP"
+			else:
+				col_main_name = "Paths Showoff"
+				obj_main_name = "SOP"
+
+			col_main = bpy.data.collections.get(col_main_name)
+			if col_main is None:
+				col_main = bpy.data.collections.new(col_main_name)
+				collection_paths.children.link(col_main)
+
+			col_sub_name = f"{col_main_name} Ai"
+			col_sub = bpy.data.collections.get(col_sub_name)
+			if col_sub is None:
+				col_sub = bpy.data.collections.new(col_sub_name)
+				col_main.children.link(col_sub)
+
+
+			start_paths = data["StartPosList"]
+			for j, path in enumerate(data["AIPaths"]): #                         <- AI PATH
+				#                            checked trick, snow, gari, alaska 
+				name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Ai.{j}"
+				# path_type = path["Type"] # multitool property. not needed
+				# path_unk1 = path["U1"]   # always 100?
+				# path_unk2 = path["U2"]   # always 4?
+				path_unk3 = path["U3"]     # 0, 20, 25, 50, 80, 100
+				# path_unk4 = path["U4"]   # always 101?
+				# path_unk5 = path["U5"]   # always 4?
+				path_respawn = path["Respawnable"]
+				path_pos = Vector(path["PathPos"]) / 100 # WorldScale
+				path_points = path["PathPoints"]
+				path_events = path["PathEvents"]
+
+				if not self.io.importPathsAsEmpties:
+					curve = bpy.data.curves.new(name, 'CURVE')
+					curve.dimensions = '3D'
+
+					spline = curve.splines.new(type='NURBS')
+					points_to_add = len(path_points)
+					spline_points = spline.points
+					spline_points.add(points_to_add)
+
+					spline_points[0].co = (path_pos[0], path_pos[1], path_pos[2], 1.0)
+
+					for k in range(1, len(spline_points)):
+						pp = Vector(path_points[k - 1]) / 100 # current path point
+						psp = Vector(spline_points[k - 1].co[:3])  # previous spline point
+						new_point = psp + pp
+						new_point = (new_point[0], new_point[1], new_point[2], 1.0)
+						spline_points[k].co = new_point
+
+					spline.type = 'POLY'
+
+					curve_obj = bpy.data.objects.new(name, curve)
+					col_sub.objects.link(curve_obj)
+
+					curve_obj.ssx2_CurveMode = 'PATH_AI'
+					curve_obj.ssx2_PathProps.reset = path_respawn
+					curve_obj.ssx2_PathProps.start = True if j in start_paths else False
+					curve_obj.ssx2_PathProps.aipaths_u3 = path_unk3
+
+					events = curve_obj.ssx2_PathProps.events
+					for k, event in enumerate(path_events):
+						new_event = events.add()
+						#new_event.name = f"Event {k + 1}"#{len(events):03}"
+						new_event.type_enum = event_type_to_enum(event["EventType"])
+						new_event.type_custom = event["EventType"]
+						new_event.value = event["EventValue"]
+						new_event.start = event["EventStart"] / 100
+						new_event.end = event["EventEnd"] / 100
+
+					# curve_obj.location = path_pos
+
+					node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
+					node_modifier.node_group = node_tree
+
+				else:
+					empty = bpy.data.objects.new(name, None)
+					#collec_main.objects.link(empty)
+					empty.empty_display_size = 100 / 100 # WorldScale
+					empty.empty_display_type = 'CUBE'
+					empty.location = path_pos
+
+					empty.ssx2_EmptyMode = 'PATH_AI'
+					# empty.ssx2_PathProps.mode = 'AI'
+					empty.ssx2_PathProps.reset = path_respawn
+					empty.ssx2_PathProps.start = True if j in start_paths else False
+					empty.ssx2_PathProps.aipaths_u3 = path_unk3
+
+					events = empty.ssx2_PathProps.events
+					for k, event in enumerate(path_events):
+						new_event = events.add()
+						#new_event.name = f"Event {k + 1}"#{len(events):03}"
+						new_event.type_enum = event_type_to_enum(event["EventType"])
+						new_event.type_custom = event["EventType"]
+						new_event.value = event["EventValue"]
+						new_event.start = event["EventStart"] / 100
+						new_event.end = event["EventEnd"] / 100
+								
+					col_sub.objects.link(empty)
+
+					parent_obj = empty
+
+					for k, point in enumerate(path_points):
+						name = f"{obj_main_name}_Ai{j}.{k}"
+						empty = bpy.data.objects.new(name, None)
+						#collec_main.objects.link(empty)
+						empty.empty_display_size = 100 / 100 # WorldScale
+						# empty.empty_display_type = 'CUBE'
+						empty.parent = parent_obj
+						empty.location = Vector(point) / 100
+
+						col_sub.objects.link(empty)
+
+						parent_obj = empty
+
+			col_sub_name = f"{col_main_name} Elements"
+			col_sub = bpy.data.collections.get(col_sub_name)
+			if col_sub is None:
+				col_sub = bpy.data.collections.new(col_sub_name)
+				col_main.children.link(col_sub)
+
+			for j, path in enumerate(data["RaceLines"]): #                         <- ELEMENTS PATH / RACE LINES
+				name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Elements.{j}"
+				
+				# path_type = path["Type"]
+				# path_unk0 = path["U0"] # always 0?
+				# path_unk1 = path["U1"] # always 4?
+				path_unk2 = path["U2"] / 100 # WorldScale
+				# path_respawn = path["Respawnable"] # doesn't have it?
+				path_pos = Vector(path["PathPos"]) / 100 # WorldScale
+				path_points = path["PathPoints"]
+				path_events = path["PathEvents"]
+
+
+				if not self.io.importPathsAsEmpties:
+					curve = bpy.data.curves.new(name, 'CURVE')
+					curve.dimensions = '3D'
+
+					spline = curve.splines.new(type='NURBS')
+					points_to_add = len(path_points)
+					spline_points = spline.points
+					spline_points.add(points_to_add)
+
+					spline_points[0].co = (path_pos[0], path_pos[1], path_pos[2], 1.0)
+
+					for k in range(1, len(spline_points)):
+						pp = Vector(path_points[k - 1]) / 100 # current path point
+						psp = Vector(spline_points[k - 1].co[:3])  # previous spline point
+						new_point = psp + pp
+						new_point = (new_point[0], new_point[1], new_point[2], 1.0)
+						spline_points[k].co = new_point
+
+					spline.type = 'POLY'
+
+					curve_obj = bpy.data.objects.new(name, curve)
+					col_sub.objects.link(curve_obj)
+
+					curve_obj.ssx2_CurveMode = 'PATH_ELEMENTS'
+					# curve_obj.ssx2_PathProps.reset = path_respawn
+					# curve_obj.ssx2_PathProps.start = True if j in start_paths else False
+					curve_obj.ssx2_PathProps.eventpaths_u2 = path_unk2
+
+					events = curve_obj.ssx2_PathProps.events
+					for k, event in enumerate(path_events):
+						new_event = events.add()
+						#new_event.name = f"Event {k + 1}"#{len(events):03}"
+						new_event.type_enum = event_type_to_enum(event["EventType"])
+						new_event.type_custom = event["EventType"]
+						new_event.value = event["EventValue"]
+						new_event.start = event["EventStart"] / 100
+						new_event.end = event["EventEnd"] / 100
+
+					node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
+					node_modifier.node_group = node_tree
+
+
+				else:
+					empty = bpy.data.objects.new(name, None) #collec_main.objects.link(empty)
+					empty.empty_display_size = 100 / 100 # WorldScale
+					empty.empty_display_type = 'CUBE'
+					empty.location = path_pos
+
+					empty.ssx2_EmptyMode = 'PATH_ELEMENTS'
+					# empty.ssx2_PathProps.mode = 'EVENT'
+					# empty.ssx2_PathProps.reset = path_respawn
+					# empty.ssx2_PathProps.start = True if j in start_paths else False
+					empty.ssx2_PathProps.eventpaths_u2 = path_unk2
+
+					events = empty.ssx2_PathProps.events
+					for k, event in enumerate(path_events):
+						new_event = events.add()
+						#new_event.name = f"Event {k + 1}"#{len(events):03}"
+						new_event.type_enum = event_type_to_enum(event["EventType"])
+						new_event.type_custom = event["EventType"]
+						new_event.value = event["EventValue"]
+						new_event.start = event["EventStart"] / 100
+						new_event.end = event["EventEnd"] / 100
+
+					col_sub.objects.link(empty)
+
+					parent_obj = empty
+
+					for k, point in enumerate(path_points):
+						name = f"{obj_main_name}_Elements.{j}.{k}"
+						empty = bpy.data.objects.new(name, None)
+						empty.empty_display_size = 100 / 100 # WorldScale
+						# empty.empty_display_type = 'CUBE'
+						empty.location = Vector(point) / 100 # WorldScale
+						empty.parent = parent_obj
+
+						col_sub.objects.link(empty)
+
+						parent_obj = empty
+
+			#break # only general
+
+
 
 
 	def import_json(self):
@@ -1961,276 +2307,13 @@ class SSX2_OP_WorldImport(Operator):
 
 
 		if self.io.importPaths: # <------------------------------- Import Paths
-			print("Importing Paths")
-
-			aip_file_path = self.folder_path + '/AIP.json'
-			sop_file_path = self.folder_path + '/SOP.json'
-			if not os.path.isfile(aip_file_path):
-				self.report({'ERROR'}, f"File 'AIP.json' does not exist in 'Import Folder'")
-				return {'CANCELLED'}
-			if not os.path.isfile(aip_file_path):
-				self.report({'ERROR'}, f"File 'SOP.json' does not exist in 'Import Folder'")
-				return {'CANCELLED'}
-
-			collection_paths = bpy.data.collections.get('Paths')
-			if collection_paths is None:
-				collection_paths = bpy.data.collections.new('Paths')
-				self.scene_collection.children.link(collection_paths)
-
-
-			# APPEND PATH GEOMETRY NODES
-
-			if not self.io.importPathsAsEmpties:
-				append_path = templates_append_path
-				node_tree_name = "PathLinesAppend"
-				node_tree = bpy.data.node_groups.get(node_tree_name)
-				print("BXT Append Node Tree:", node_tree is None)
-
-				if not os.path.isfile(append_path):
-					self.report({'ERROR'}, f"BXT Failed to append {append_path}")
-					return {'CANCELLED'}
-
-				with bpy.data.libraries.load(append_path, link=False) as (data_from, data_to):
-					if node_tree is None:
-						if node_tree_name in data_from.node_groups:
-							data_to.node_groups = [node_tree_name]
-						else:
-							self.report({'ERROR'}, f"BXT Failed to append geonodes from {append_path}")
-							return {'CANCELLED'}
-
-				node_tree = bpy.data.node_groups.get(node_tree_name)
-
-
-			for i, file_path in enumerate((aip_file_path, sop_file_path)):
-				with open(file_path, 'r') as f:
-					data = json.load(f)
-
-				# col_main_name = "Paths General" if i == 0 else "Paths Showoff"
-				# col_main_name = "Paths AIP" if i == 0 else "Paths SOP"
-				if i == 0:
-					col_main_name = "Paths General"
-					obj_main_name = "AIP"
-				else:
-					col_main_name = "Paths Showoff"
-					obj_main_name = "SOP"
-
-				col_main = bpy.data.collections.get(col_main_name)
-				if col_main is None:
-					col_main = bpy.data.collections.new(col_main_name)
-					collection_paths.children.link(col_main)
-
-				col_sub_name = f"{col_main_name} Ai"
-				col_sub = bpy.data.collections.get(col_sub_name)
-				if col_sub is None:
-					col_sub = bpy.data.collections.new(col_sub_name)
-					col_main.children.link(col_sub)
-
-
-				start_paths = data["StartPosList"]
-				for j, path in enumerate(data["AIPaths"]): #                         <- AI PATH
-					#                            checked trick, snow, gari, alaska 
-					name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Ai.{j}"
-					# path_type = path["Type"] # multitool property. not needed
-					# path_unk1 = path["U1"]   # always 100?
-					# path_unk2 = path["U2"]   # always 4?
-					path_unk3 = path["U3"]     # 0, 20, 25, 50, 80, 100
-					# path_unk4 = path["U4"]   # always 101?
-					# path_unk5 = path["U5"]   # always 4?
-					path_respawn = path["Respawnable"]
-					path_pos = Vector(path["PathPos"]) / 100 # WorldScale
-					path_points = path["PathPoints"]
-					path_events = path["PathEvents"]
-
-					if not self.io.importPathsAsEmpties:
-						curve = bpy.data.curves.new(name, 'CURVE')
-						curve.dimensions = '3D'
-
-						spline = curve.splines.new(type='NURBS')
-						points_to_add = len(path_points)
-						spline_points = spline.points
-						spline_points.add(points_to_add)
-
-						spline_points[0].co = (path_pos[0], path_pos[1], path_pos[2], 1.0)
-
-						for k in range(1, len(spline_points)):
-							pp = Vector(path_points[k - 1]) / 100 # current path point
-							psp = Vector(spline_points[k - 1].co[:3])  # previous spline point
-							new_point = psp + pp
-							new_point = (new_point[0], new_point[1], new_point[2], 1.0)
-							spline_points[k].co = new_point
-
-						spline.type = 'POLY'
-
-						curve_obj = bpy.data.objects.new(name, curve)
-						col_sub.objects.link(curve_obj)
-
-						curve_obj.ssx2_CurveMode = 'PATH_AI'
-						curve_obj.ssx2_PathProps.reset = path_respawn
-						curve_obj.ssx2_PathProps.start = True if j in start_paths else False
-						curve_obj.ssx2_PathProps.aipaths_u3 = path_unk3
-
-						events = curve_obj.ssx2_PathProps.events
-						for k, event in enumerate(path_events):
-							new_event = events.add()
-							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.type_enum = event_type_to_enum(event["EventType"])
-							new_event.type_custom = event["EventType"]
-							new_event.value = event["EventValue"]
-							new_event.start = event["EventStart"] / 100
-							new_event.end = event["EventEnd"] / 100
-
-						# curve_obj.location = path_pos
-
-						node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
-						node_modifier.node_group = node_tree
-
-					else:
-						empty = bpy.data.objects.new(name, None)
-						#collec_main.objects.link(empty)
-						empty.empty_display_size = 100 / 100 # WorldScale
-						empty.empty_display_type = 'CUBE'
-						empty.location = path_pos
-
-						empty.ssx2_EmptyMode = 'PATH_AI'
-						# empty.ssx2_PathProps.mode = 'AI'
-						empty.ssx2_PathProps.reset = path_respawn
-						empty.ssx2_PathProps.start = True if j in start_paths else False
-						empty.ssx2_PathProps.aipaths_u3 = path_unk3
-
-						events = empty.ssx2_PathProps.events
-						for k, event in enumerate(path_events):
-							new_event = events.add()
-							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.type_enum = event_type_to_enum(event["EventType"])
-							new_event.type_custom = event["EventType"]
-							new_event.value = event["EventValue"]
-							new_event.start = event["EventStart"] / 100
-							new_event.end = event["EventEnd"] / 100
-									
-						col_sub.objects.link(empty)
-
-						parent_obj = empty
-
-						for k, point in enumerate(path_points):
-							name = f"{obj_main_name}_Ai{j}.{k}"
-							empty = bpy.data.objects.new(name, None)
-							#collec_main.objects.link(empty)
-							empty.empty_display_size = 100 / 100 # WorldScale
-							# empty.empty_display_type = 'CUBE'
-							empty.parent = parent_obj
-							empty.location = Vector(point) / 100
-
-							col_sub.objects.link(empty)
-
-							parent_obj = empty
-
-				col_sub_name = f"{col_main_name} Elements"
-				col_sub = bpy.data.collections.get(col_sub_name)
-				if col_sub is None:
-					col_sub = bpy.data.collections.new(col_sub_name)
-					col_main.children.link(col_sub)
-
-				for j, path in enumerate(data["RaceLines"]): #                         <- ELEMENTS PATH / RACE LINES
-					name = path["Name"] if path.get("Name") is not None else f"{obj_main_name}_Elements.{j}"
-					
-					# path_type = path["Type"]
-					# path_unk0 = path["U0"] # always 0?
-					# path_unk1 = path["U1"] # always 4?
-					path_unk2 = path["U2"] / 100 # WorldScale
-					# path_respawn = path["Respawnable"] # doesn't have it?
-					path_pos = Vector(path["PathPos"]) / 100 # WorldScale
-					path_points = path["PathPoints"]
-					path_events = path["PathEvents"]
-
-
-					if not self.io.importPathsAsEmpties:
-						curve = bpy.data.curves.new(name, 'CURVE')
-						curve.dimensions = '3D'
-
-						spline = curve.splines.new(type='NURBS')
-						points_to_add = len(path_points)
-						spline_points = spline.points
-						spline_points.add(points_to_add)
-
-						spline_points[0].co = (path_pos[0], path_pos[1], path_pos[2], 1.0)
-
-						for k in range(1, len(spline_points)):
-							pp = Vector(path_points[k - 1]) / 100 # current path point
-							psp = Vector(spline_points[k - 1].co[:3])  # previous spline point
-							new_point = psp + pp
-							new_point = (new_point[0], new_point[1], new_point[2], 1.0)
-							spline_points[k].co = new_point
-
-						spline.type = 'POLY'
-
-						curve_obj = bpy.data.objects.new(name, curve)
-						col_sub.objects.link(curve_obj)
-
-						curve_obj.ssx2_CurveMode = 'PATH_ELEMENTS'
-						# curve_obj.ssx2_PathProps.reset = path_respawn
-						# curve_obj.ssx2_PathProps.start = True if j in start_paths else False
-						curve_obj.ssx2_PathProps.eventpaths_u2 = path_unk2
-
-						events = curve_obj.ssx2_PathProps.events
-						for k, event in enumerate(path_events):
-							new_event = events.add()
-							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.type_enum = event_type_to_enum(event["EventType"])
-							new_event.type_custom = event["EventType"]
-							new_event.value = event["EventValue"]
-							new_event.start = event["EventStart"] / 100
-							new_event.end = event["EventEnd"] / 100
-
-						node_modifier = curve_obj.modifiers.new(name="GeoNodes", type='NODES')
-						node_modifier.node_group = node_tree
-
-
-					else:
-						empty = bpy.data.objects.new(name, None) #collec_main.objects.link(empty)
-						empty.empty_display_size = 100 / 100 # WorldScale
-						empty.empty_display_type = 'CUBE'
-						empty.location = path_pos
-
-						empty.ssx2_EmptyMode = 'PATH_ELEMENTS'
-						# empty.ssx2_PathProps.mode = 'EVENT'
-						# empty.ssx2_PathProps.reset = path_respawn
-						# empty.ssx2_PathProps.start = True if j in start_paths else False
-						empty.ssx2_PathProps.eventpaths_u2 = path_unk2
-
-						events = empty.ssx2_PathProps.events
-						for k, event in enumerate(path_events):
-							new_event = events.add()
-							#new_event.name = f"Event {k + 1}"#{len(events):03}"
-							new_event.type_enum = event_type_to_enum(event["EventType"])
-							new_event.type_custom = event["EventType"]
-							new_event.value = event["EventValue"]
-							new_event.start = event["EventStart"] / 100
-							new_event.end = event["EventEnd"] / 100
-
-						col_sub.objects.link(empty)
-
-						parent_obj = empty
-
-						for k, point in enumerate(path_points):
-							name = f"{obj_main_name}_Elements.{j}.{k}"
-							empty = bpy.data.objects.new(name, None)
-							empty.empty_display_size = 100 / 100 # WorldScale
-							# empty.empty_display_type = 'CUBE'
-							empty.location = Vector(point) / 100 # WorldScale
-							empty.parent = parent_obj
-
-							col_sub.objects.link(empty)
-
-							parent_obj = empty
-
-				#break # only general
+			run_without_update(self.create_paths_json)
 
 
 
 
 		if self.io.importLights:
 			run_without_update(self.create_lights_json)
-
 
 
 	def execute(self, context):
@@ -2257,7 +2340,10 @@ class SSX2_OP_WorldImport(Operator):
 
 			print("seconds:", time.time() - import_time_start)
 
-			self.report({'INFO'}, "Imported")
+			if self.errors == 0:
+				self.report({'INFO'}, "Imported")
+			else:
+				self.report({'WARNING'}, "Errors have occured. Click here")
 
 		
 		# if self.io.importPatches or self.io.importModels:
