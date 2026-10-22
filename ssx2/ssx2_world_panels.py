@@ -249,12 +249,8 @@ class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 
 		#col.label(text="Spline Cage")
 		col.separator()
-		col.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
 
-		col_split = col.split(factor=0.8, align=True)
-		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Patch from Quads").split_all_quads = False
-		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="", icon='MOD_EDGESPLIT').split_all_quads = True
-
+		
 		col_b = col.column(align=True)
 		row = col_b.row(align=True)
 		row.operator("curve.switch_direction", text="Flip U Order")
@@ -267,6 +263,19 @@ class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 		col.operator(SSX2_OP_AddCageVGuide.bl_idname, text="Add V Guide", icon='ADD')
 		
 		col.operator(SSX2_OP_Patch_Slide_V.bl_idname, text="Slide V", icon='ARROW_LEFTRIGHT')
+
+		col.operator(SSX2_OP_CageToPatch.bl_idname, text="Patch from Cage")
+
+
+		box = col.box()
+		box.label(text="Quads to Patches")
+		box.prop(bpy.data.scenes["Scene"].ssx2_WorldImportExportProps, "importPatches", text="Keep Original")
+		col_split = box.split(factor=0.6, align=True)
+		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Apply").split_all_quads = False
+		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Creased", icon='MOD_EDGESPLIT').split_all_quads = True
+
+
+
 
 		col.separator()
 		box = col.box()
