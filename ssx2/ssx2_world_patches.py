@@ -1059,6 +1059,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		collection = bpy.context.collection
 		self.selected_objs = bpy.context.selected_objects
 		active_obj = bpy.context.active_object
+		scene = bpy.context.scene
 
 		self.patches_collection = getset_collection_to_target("Patches", bpy.context.scene.collection)
 
@@ -1102,8 +1103,14 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			if test == False:
 				return {'CANCELLED'}
 
-		bpy.context.view_layer.objects.active = active_obj
-		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+			if not scene.ssx2_QuadsToPatchesProps.keepOriginal:
+				data = obj.data
+				bpy.data.objects.remove(obj, do_unlink=True)
+				bpy.data.meshes.remove(data, do_unlink=True)
+
+		if scene.ssx2_QuadsToPatchesProps.keepOriginal:
+			bpy.context.view_layer.objects.active = active_obj
+			# bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 
 
 		print()
