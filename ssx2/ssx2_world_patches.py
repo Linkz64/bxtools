@@ -1093,6 +1093,10 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		for obj in self.selected_objs:
 			time_started = time.time()
 
+			if obj.type != 'MESH':
+				print(obj.name, "is not a mesh type.")
+				continue
+
 			bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 			if self.split_all_quads:
@@ -1142,10 +1146,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				return {'CANCELLED'}
 
 	def quads_to_patches_split(self, obj):
-
-		if obj.type != 'MESH':
-			return
-		
 		mesh = obj.data
 		vertices = mesh.vertices
 		bm = bmesh.from_edit_mesh(mesh)
@@ -1230,9 +1230,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 	def quads_to_patches(self, obj):
 
-		if obj.type != 'MESH':
-			return
-
 		# if len(bpy.context.selected_objects) != 0:
 		# 	bpy.ops.object.select_all(action='DESELECT')
 		# obj.select_set(True)
@@ -1240,6 +1237,8 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 		# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 		profile_timer = time.time()
+
+		scene = bpy.context.scene
 
 		mesh = obj.data
 		verts = mesh.vertices
@@ -1421,9 +1420,9 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			# C, N, W, S, E, NW, SW, SE, NE
 			# 0, 1, 2, 3, 4,  5,  6,  7,  8
 
-			new_obj_mode = 0
+			patchType = scene.ssx2_QuadsToPatchesProps.type
 
-			if new_obj_mode == 0:
+			if patchType == 'CONTROL_GRID':
 				points[ 0] = majors[1][0] # majors[2][0]
 				points[ 1] = majors[1][3] # majors[2][3]
 				points[ 2] = majors[0][1] # majors[3][1]
@@ -1473,7 +1472,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 				patches_to_fix[i] = new_patch.data
 
-			elif new_obj_mode == 1:
+			elif patchType == 'SURFACE_PATCH':
 				points[ 0] = majors[1][0]
 				points[ 1] = majors[1][3]
 				points[ 2] = majors[0][1]
@@ -1513,7 +1512,8 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			# 	break
 
 
-		if new_obj_mode == 1:
+
+		if patchType == 'SURFACE_PATCH':
 
 			corner_index_translate = (3, 0, 12, 15)
 
@@ -1553,7 +1553,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 					patches_to_fix[patch_index].vertices[idx].co = midpoint.to_3d()
 			
 
-		bm.free()
+		bm.free() # original mesh not new mesh
 
 
 
