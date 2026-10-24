@@ -1041,8 +1041,8 @@ class SSX2_OP_CageToPatch(bpy.types.Operator): # Curve/Spline Cage to Patch.
 		return {'FINISHED'}
 
 class SSX2_OP_QuadToPatch(bpy.types.Operator):
-	bl_idname = 'object.patch_from_quad'
-	bl_label = "Patch from Quad"
+	bl_idname = 'object.quads_to_patches'
+	bl_label = "Quads to Patches"
 	bl_description = "Generates a patch from each quad"
 	bl_options = {'REGISTER', 'UNDO'}
 
