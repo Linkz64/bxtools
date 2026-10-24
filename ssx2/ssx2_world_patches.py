@@ -16,6 +16,7 @@ from .ssx2_world_io_in import *
 from .ssx2_constants import (
 	#enum_ssx2_world_project_mode,
 	#enum_ssx2_world,
+	enum_ssx2_patch_type,
 	enum_ssx2_surface_type,
 	enum_ssx2_patch_group,
 	enum_ssx2_patch_uv_preset,
@@ -3184,6 +3185,11 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 
 	isControlGrid: bpy.props.BoolProperty(name="Is Control Grid", default=False)
 
+class SSX2_QuadsToPatchesPropGroup(bpy.types.PropertyGroup):
+	keepOriginal: bpy.props.BoolProperty(name="Keep Original", default=False)
+	type: bpy.props.EnumProperty(name='Type', items=enum_ssx2_patch_type)
+
+
 classes = (
 	SSX2_OP_AddPatch,
 	SSX2_OP_AddControlGrid,
@@ -3195,6 +3201,7 @@ classes = (
 
 
 	SSX2_PatchPropGroup,
+	SSX2_QuadsToPatchesPropGroup,
 
 	SSX2_OP_PatchUVEditor,
 	SSX2_OP_ToggleControlGrid,
@@ -3215,10 +3222,12 @@ def ssx2_world_patches_register():
 		register_class(c)
 	
 	bpy.types.Object.ssx2_PatchProps = bpy.props.PointerProperty(type=SSX2_PatchPropGroup)
+	bpy.types.Scene.ssx2_QuadsToPatchesProps = bpy.props.PointerProperty(type=SSX2_QuadsToPatchesPropGroup)
 
 def ssx2_world_patches_unregister():
 
 	del bpy.types.Object.ssx2_PatchProps
+	del bpy.types.Scene.ssx2_QuadsToPatchesProps
 
 	for c in classes:
 		unregister_class(c)

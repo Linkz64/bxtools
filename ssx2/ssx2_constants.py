@@ -24,6 +24,12 @@ enum_ssx2_world_project_mode = (
 	('JSON',   "JSON",   "IceSaw project files"),
 )
 
+enum_ssx2_patch_type = (
+	('SURFACE_PATCH', "Surface Patch", "Built-in NURBS/Bezier surface",        'SURFACE_NSURFACE', 0),
+	('CONTROL_GRID',  "Control Grid",  "Custom MESH type made with geonodes",  'MESH_GRID',        1),
+	('SPLINE_CAGE',   "Spline Cage",   "Custom CURVE type made with geonodes", 'SURFACE_DATA',     2),
+)
+
 enum_ssx2_world = ( # alphabetical order
 	('CUSTOM',  "Custom",                 ""),
 	('alaska',  "Alaska",                 ""),

@@ -223,6 +223,7 @@ class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 		col = self.layout.column()
 
 		obj = bpy.context.active_object
+		scene = bpy.context.scene
 
 		row = col.row(align=True)
 		row.operator(SSX2_OP_CopyPatchUVsToSelected.bl_idname, text="Copy UVs to")
@@ -269,7 +270,8 @@ class SSX2_WorldPatchesSubPanel(SSX2_Panel):
 
 		box = col.box()
 		box.label(text="Quads to Patches")
-		box.prop(bpy.data.scenes["Scene"].ssx2_WorldImportExportProps, "importPatches", text="Keep Original")
+		box.prop(scene.ssx2_QuadsToPatchesProps, "type", text="Type")
+		box.prop(scene.ssx2_QuadsToPatchesProps, "keepOriginal", text="Keep Original")
 		col_split = box.split(factor=0.6, align=True)
 		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Apply").split_all_quads = False
 		col_split.operator(SSX2_OP_QuadToPatch.bl_idname, text="Creased", icon='MOD_EDGESPLIT').split_all_quads = True
