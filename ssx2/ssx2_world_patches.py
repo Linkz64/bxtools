@@ -1119,9 +1119,10 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 		print()
-		print("get_data:", round(self.profile_get_data, 5))
-		print("setup_majors:", round(self.profile_setup_majors, 5))
-		print("generate_patches:", round(self.profile_generate_patches, 5))
+		if not self.split_all_quads:
+			print("get_data:", round(self.profile_get_data, 5))
+			print("setup_majors:", round(self.profile_setup_majors, 5))
+			print("generate_patches:", round(self.profile_generate_patches, 5))
 		print("total:", round(time.time() - profile_total_start, 5))
 
 
@@ -1212,13 +1213,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 	def quads_to_patches(self, obj):
-
-		# if len(bpy.context.selected_objects) != 0:
-		# 	bpy.ops.object.select_all(action='DESELECT')
-		# obj.select_set(True)
-		# bpy.context.view_layer.objects.active = obj
-		# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
-
 		profile_timer = time.time()
 
 		scene = bpy.context.scene
