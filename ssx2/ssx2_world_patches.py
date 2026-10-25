@@ -16,7 +16,7 @@ from .ssx2_world_io_in import *
 from .ssx2_constants import (
 	#enum_ssx2_world_project_mode,
 	#enum_ssx2_world,
-	enum_ssx2_patch_type,
+	enum_ssx2_quads_to_patches_type,
 	enum_ssx2_surface_type,
 	enum_ssx2_patch_group,
 	enum_ssx2_patch_uv_preset,
@@ -1090,14 +1090,15 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			self.report({'ERROR'}, "An active object is required")
 			return {'CANCELLED'}
 
+		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
+
 		for obj in self.selected_objs:
 			time_started = time.time()
 
 			if obj.type != 'MESH':
 				print(obj.name, "is not a mesh type.")
 				continue
-
-			bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 			if self.split_all_quads:
 				test = self.quads_to_patches_split(obj)
@@ -1146,9 +1147,11 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				return {'CANCELLED'}
 
 	def quads_to_patches_split(self, obj):
+		scene = bpy.context.scene
 		mesh = obj.data
 		vertices = mesh.vertices
 		bm = bmesh.from_edit_mesh(mesh)
+		node_tree = bpy.data.node_groups.get("GridTesselateAppend")
 
 		handle_scalar = 0.3333333333333333
 
@@ -1162,26 +1165,6 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				vertices[f.vertices[3]].co
 
 			points = [Vector((0,0,0))] * 16
-
-			# points[ 0] = v0
-			# points[ 1] = ((v0 - v1) * -handle_scalar) + v0
-			# points[ 2] = ((v1 - v0) * -handle_scalar) + v1
-			# points[ 3] = v1
-
-			# points[ 4] = ((v0 - v3) * -handle_scalar) + v0
-			# points[ 5] = (((v1 - v0) + (v3 - v0)) * handle_scalar) + v0
-			# points[ 6] = (((v0 - v1) + (v2 - v1)) * handle_scalar) + v1
-			# points[ 7] = ((v1 - v2) * -handle_scalar) + v1
-
-			# points[ 8] = ((v3 - v0) * -handle_scalar) + v3
-			# points[ 9] = (((v0 - v3) + (v2 - v3)) * handle_scalar) + v3
-			# points[10] = (((v1 - v2) + (v3 - v2)) * handle_scalar) + v2
-			# points[11] = ((v2 - v1) * -handle_scalar) + v2
-
-			# points[12] = v3
-			# points[13] = ((v3 - v2) * -handle_scalar) + v3
-			# points[14] = ((v2 - v3) * -handle_scalar) + v2
-			# points[15] = v2
 
 			points[ 0] = v1
 			points[ 1] = ((v1 - v0) * -handle_scalar) + v1
@@ -1203,25 +1186,25 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			points[14] = ((v3 - v2) * -handle_scalar) + v3
 			points[15] = v3
 
+			if scene.ssx2_QuadsToPatchesProps.type == 'CONTROL_GRID':
+				test_mesh = bpy.data.meshes.new("PatchFromQuad" + str(i))
+				
+				test_mesh.from_pydata(points, [], self.control_grid_faces)
+				test_mesh.update()
+				# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
-			test_mesh = bpy.data.meshes.new("PatchFromQuad" + str(i))
-			
-			test_mesh.from_pydata(points, [], self.control_grid_faces)
-			test_mesh.update()
-			# bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+				new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
 
-			new_patch = bpy.data.objects.new("PatchFromQuad" + str(i), test_mesh)
-
-
-			# bpy.context.collection.objects.link(new_patch)
-			bpy.data.collections['Patches'].objects.link(new_patch)
-
-
-			# TODO: check node tree existance before main loop
-			node_tree = bpy.data.node_groups.get("GridTesselateAppend")
-			if node_tree is not None:
 				node_modifier = new_patch.modifiers.new(name="GeoNodes", type='NODES')
 				node_modifier.node_group = node_tree
+
+				bpy.data.collections['Patches'].objects.link(new_patch)
+
+			else:
+				for j, point in enumerate(points):
+					points[j] = Vector((point.x, point.y, point.z, 1.0))
+
+				new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
 
 			new_patch.ssx2_PatchProps.type = '1'
 
@@ -3194,7 +3177,7 @@ class SSX2_PatchPropGroup(bpy.types.PropertyGroup):
 
 class SSX2_QuadsToPatchesPropGroup(bpy.types.PropertyGroup):
 	keepOriginal: bpy.props.BoolProperty(name="Keep Original", default=False)
-	type: bpy.props.EnumProperty(name='Type', items=enum_ssx2_patch_type)
+	type: bpy.props.EnumProperty(name='Type', items=enum_ssx2_quads_to_patches_type)
 
 
 classes = (
