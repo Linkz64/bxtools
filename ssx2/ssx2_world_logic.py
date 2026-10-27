@@ -1260,7 +1260,7 @@ class SSX2_PG_WorldEffectCounter(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
 	is_deleted: BoolProperty(default=False)
 	count: IntProperty()
-	u1: IntProperty()
+	u1: FloatProperty() # IntProperty # TODO: DOUBLE CHECK
 
 class SSX2_PG_WorldEffectPushBoost(PropertyGroup):
 	checked: BoolProperty(options={'SKIP_SAVE'})
