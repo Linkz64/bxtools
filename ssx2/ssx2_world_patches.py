@@ -1090,6 +1090,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 			self.report({'ERROR'}, "An active object is required")
 			return {'CANCELLED'}
 
+		bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
 		bpy.ops.object.mode_set(mode='EDIT', toggle=False)
 
 
