@@ -2408,6 +2408,7 @@ class SSX2_OP_WorldExport(Operator):
 		# if io.exportModels:
 		if io.exportInstances:
 			print("\nExporting Model Instances")
+
 			instances_collection = bpy.data.collections.get("Instances")
 
 			if instances_collection is None:
@@ -2419,9 +2420,15 @@ class SSX2_OP_WorldExport(Operator):
 			#instance_objects = instances_collection.all_objects
 			# instance_objects = []
 
-			json_data = {
-				"Instances": []
-			}
+
+			if not io.exportInstancesOverride:
+				json_data = {
+					"Instances": []
+				}
+			else:
+				with open(json_export_path, 'r') as f:
+					json_data = json.load(f)
+
 
 			# skip_keys = [
 			# 	"InstanceName",
@@ -2494,8 +2501,18 @@ class SSX2_OP_WorldExport(Operator):
 					'Index': i,
 				}
 
-				json_data["Instances"].append(json_entry)
+				if not io.exportInstancesOverride:
+					json_data["Instances"].append(json_entry)
 
+				else:
+					for j, inst in enumerate(json_data['Instances']):
+
+						le_name = inst['InstanceName']
+
+						if le_name == json_entry['InstanceName']:
+							json_data["Instances"][j] = json_entry
+							break
+				
 				obj.rotation_mode = prev_rotation_mode
 
 
@@ -3428,6 +3445,8 @@ class SSX2_PG_WorldImportExport(PropertyGroup):
 
 	exportModels: BoolProperty(name="Export Models", default=False)
 	exportInstances: BoolProperty(name="Export Instances", default=False)
+	exportInstancesOverride: BoolProperty(name="Override", default=False)
+
 
 class SSX2_PG_WorldModelCollection(PropertyGroup):
 	unknown3: IntProperty(name="Unknown3")

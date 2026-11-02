@@ -180,7 +180,7 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		splines_box = splines_box.row()
 		splines_box_split = splines_box.split(factor=0.3)
 		splines_box_split.label(text="Splines")
-		splines_box_split.prop(io, "exportSplines", text="Splines")
+		splines_box_split.prop(io, "exportSplines", text="")
 		splines_box_split.prop(io, "exportSplinesOverride", text="Override")
 
 		paths_box = col.box()
@@ -195,6 +195,7 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		paths_box_split = instances_box.split(factor=0.3)
 		paths_box_split.label(text="Instances")
 		paths_box_split.prop(io, "exportInstances", text="")
+		paths_box_split.prop(io, "exportInstancesOverride", text="Override")
 
 
 		row = col.row().split(factor=0.36)
