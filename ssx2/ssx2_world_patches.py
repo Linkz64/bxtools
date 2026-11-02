@@ -1209,7 +1209,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 				new_patch = set_patch_object(points, "PatchFromQuad" + str(i))
 
 			new_patch.ssx2_PatchProps.type = '1'
-
+			new_patch.ssx2_PatchProps.texMapPreset = '3'
 			new_patch.matrix_world = obj.matrix_world
 
 
@@ -1480,6 +1480,7 @@ class SSX2_OP_QuadToPatch(bpy.types.Operator):
 
 
 			new_patch.ssx2_PatchProps.type = '1'
+			new_patch.ssx2_PatchProps.texMapPreset = '3'
 			new_patch.matrix_world = obj.matrix_world
 
 
