@@ -2342,23 +2342,23 @@ class SSX2_OP_CopyPatchUVsToSelected(bpy.types.Operator):
 		selected_objects = context.selected_objects
 		patch_props = active_object.ssx2_PatchProps
 
+		texMapPreset = patch_props.texMapPreset
 		useManualUVs = patch_props.useManualUV
 		manualUV0 = patch_props.manualUV0
 		manualUV1 = patch_props.manualUV1
 		manualUV2 = patch_props.manualUV2
 		manualUV3 = patch_props.manualUV3
-		texMapPreset = patch_props.texMapPreset
 
 		for obj in selected_objects:
 			if ((obj.type == 'SURFACE' or 
 			obj.ssx2_PatchProps.isControlGrid or 
 			obj.ssx2_CurveMode == 'CAGE')):
+				obj.ssx2_PatchProps.texMapPreset = texMapPreset # <- order matters because texMapPreset has update()
 				obj.ssx2_PatchProps.useManualUV = useManualUVs
 				obj.ssx2_PatchProps.manualUV0 = manualUV0
 				obj.ssx2_PatchProps.manualUV1 = manualUV1
 				obj.ssx2_PatchProps.manualUV2 = manualUV2
 				obj.ssx2_PatchProps.manualUV3 = manualUV3
-				obj.ssx2_PatchProps.texMapPreset = texMapPreset
 
 		return {'FINISHED'}
 
