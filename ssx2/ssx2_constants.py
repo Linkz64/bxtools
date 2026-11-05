@@ -179,7 +179,7 @@ patch_tex_maps = ( # maybe return the values in the func instead of having this 
 	(pie, pie, 0.0), # 7 X not in patch_known_uvs
 )
 patch_uv_equiv_tex_maps = [0, 1, 2, 3, 0, 4, 5, 3, 6, 4, 7]
-patch_tex_map_equiv_uvs = [0, 1, 2, 3, 5, 6, 7, 10]
+patch_tex_map_equiv_uvs = [0, 1, 2, 3, 5, 6, 8, 10]
 
 indices_for_control_grid = [ # 4x4 grid (3x3 faces)
 	(0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3),

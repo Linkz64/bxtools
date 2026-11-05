@@ -591,6 +591,8 @@ class SSX2_OP_WorldReloadNodeTrees(Operator):
 			if obj.type != 'MESH' and obj.type != 'CURVE':
 				continue
 
+			obj.ssx2_PatchProps.texMapPreset = obj.ssx2_PatchProps.texMapPreset
+
 			for j, mod in enumerate(obj.modifiers):
 				if mod.type == 'NODES' and mod.node_group:
 					if mod.node_group.name.startswith("CageLoftAppend"):
