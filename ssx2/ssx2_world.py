@@ -809,7 +809,7 @@ class SSX2_OP_WorldImport(Operator):
 		self.appended_model_color_material = bpy.data.materials.get(model_color_material_name)
 
 
-	def create_patches_json(self):
+	def import_patches_json(self):
 		active_collection = bpy.context.collection
 		io = bpy.context.scene.ssx2_WorldImportExportProps
 		patch_grouping = io.patchImportGrouping
@@ -957,7 +957,7 @@ class SSX2_OP_WorldImport(Operator):
 		# 			new_col.objects.link(patch)
 		# 			patches_collection.objects.unlink(patch)
 
-	def create_models_json(self):
+	def import_models_json(self):
 		scene = bpy.context.scene
 		scene_collection = scene.collection
 		active_collection = bpy.context.collection
@@ -1659,7 +1659,7 @@ class SSX2_OP_WorldImport(Operator):
 
 		print("importing instances took", time.time() - import_instances_time_start)
 
-	def create_splines_json(self):
+	def import_splines_json(self):
 		print("\nImporting Splines")
 
 		collection = bpy.data.collections.get('Splines')
@@ -1823,7 +1823,7 @@ class SSX2_OP_WorldImport(Operator):
 		# SELECT ALL AT THE END AND SET ORIGIN
 		#bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
-	def create_lights_json(self):
+	def import_lights_json(self):
 		# self.active_collection = bpy.context.collection
 
 		light_energy_scale = 10
@@ -1981,7 +1981,7 @@ class SSX2_OP_WorldImport(Operator):
 			# if i == 127:
 			# 	break
 			
-	def create_paths_json(self):
+	def import_paths_json(self):
 		print("Importing Paths")
 
 		aip_file_path = self.folder_path + '/AIP.json'
@@ -2294,28 +2294,28 @@ class SSX2_OP_WorldImport(Operator):
 			self.json_patches = get_patches_json(self.folder_path+'/Patches.json')
 			
 
-			run_without_update(self.create_patches_json)
+			run_without_update(self.import_patches_json)
 
 			print("importing patches took:", time.time() - temp_time_start, "seconds")
 
 
 		if self.io.importSplines: # <------------------------------- Import Splines
 			self.spline_objects = []
-			run_without_update(self.create_splines_json)
+			run_without_update(self.import_splines_json)
 
 
 		if self.io.importModels: # <------------------------------- Import Models & Instances
-			run_without_update(self.create_models_json)
+			run_without_update(self.import_models_json)
 
 
 		if self.io.importPaths: # <------------------------------- Import Paths
-			run_without_update(self.create_paths_json)
+			run_without_update(self.import_paths_json)
 
 
 
 
 		if self.io.importLights:
-			run_without_update(self.create_lights_json)
+			run_without_update(self.import_lights_json)
 
 
 	def execute(self, context):
