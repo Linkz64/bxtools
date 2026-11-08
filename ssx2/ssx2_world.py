@@ -1524,6 +1524,7 @@ class SSX2_OP_WorldImport(Operator):
 
 
 		instance_refs = []
+		named_groups = {}
 
 		for i, json_inst in enumerate(data["Instances"]):
 			#print(json_inst["InstanceName"])
@@ -1565,15 +1566,13 @@ class SSX2_OP_WorldImport(Operator):
 				slot_slot6 = json_logic_slot_set["Slot6"]
 				slot_slot7 = json_logic_slot_set["Slot7"]
 
-				slots_set.constant = -1 if slot_constant == -1 else num_script_start + slot_constant
-				slots_set.collision = -1 if slot_collision == -1 else num_script_start + slot_collision
-				slots_set.slot3 = -1 if slot_slot3 == -1 else num_script_start + slot_slot3
-				slots_set.slot4 = -1 if slot_slot4 == -1 else num_script_start + slot_slot4
+				slots_set.constant      = -1 if slot_constant      == -1 else num_script_start + slot_constant
+				slots_set.collision     = -1 if slot_collision     == -1 else num_script_start + slot_collision
+				slots_set.slot3         = -1 if slot_slot3         == -1 else num_script_start + slot_slot3
+				slots_set.slot4         = -1 if slot_slot4         == -1 else num_script_start + slot_slot4
 				slots_set.logic_trigger = -1 if slot_logic_trigger == -1 else num_script_start + slot_logic_trigger
-				slots_set.slot6 = -1 if slot_slot6 == -1 else num_script_start + slot_slot6
-				slots_set.slot7 = -1 if slot_slot7 == -1 else num_script_start + slot_slot7
-
-
+				slots_set.slot6         = -1 if slot_slot6         == -1 else num_script_start + slot_slot6
+				slots_set.slot7         = -1 if slot_slot7         == -1 else num_script_start + slot_slot7
 
 
 			for key in json_inst:
@@ -1588,38 +1587,43 @@ class SSX2_OP_WorldImport(Operator):
 				# if isinstance(json_inst[key], list):
 				# 	print(type(json_inst[key][0])) # 'dict' 'str' makes it 'Python' type in blender
 
-			# instances_collection.objects.link(empty)
-			# new_instances_to_group.append(empty)
 
 			if io.instanceImportGrouping == 'BATCH':
 				new_group_col = collection_grouping(f"Inst_Group", instances_collection, inst_group_size, i)
 				new_group_col.objects.link(empty)
 			elif io.instanceImportGrouping == 'NAME':
-				### groups by model
-				# new_group_col = getset_collection("Inst " + model_collection_for_instance.name)
-				# new_group_col.objects.link(empty)
-				# if not bpy.context.scene.user_of_id(new_group_col): # if not in scene/layer bring it
-				# 	instances_collection.children.link(new_group_col)
 
-				### groups by name (excluding numbers)
-				# i could create a list of unique model_collections names and another list with
-				# indices to names in that list. then use json_inst["ModelID"] to get the corresponding name here
-
-				new_group_name = re.sub(r'_\d+$', '_', json_inst["InstanceName"]) # removes only the last number
-				# new_group_name = "Ins_" + remove_trailing_numbers(json_inst["InstanceName"]).removeprefix("Mdl_") # more accurate
-				#new_group_name = "Ins_" + ''.join([char for char in json_inst["InstanceName"] if not char.isdigit()]).removeprefix("Mdl_")
-				#new_group_name = new_group_name[:-1] if new_group_name.endswith('_') else new_group_name
-				new_group_col = getset_collection(new_group_name)
-				new_group_col.objects.link(empty)
-
-				if not scene.user_of_id(new_group_col): # if not in scene/layer bring it
-					instances_collection.children.link(new_group_col)
+				new_group_name = "Ins_" + re.sub(r'_\d+$', '', json_inst["InstanceName"]) # removes only the last number
+				group_entry = named_groups.get(new_group_name)
+				if group_entry is None:
+					named_groups[new_group_name] = [empty]
+				else:
+					named_groups[new_group_name].append(empty)
 
 			# elif io.instanceImportGrouping == 'MESH': # or 'MODEL'/'PREFAB'
 				#TODO: Implement!
 
 			else:
 				instances_collection.objects.link(empty)
+
+
+		if io.instanceImportGrouping == 'NAME':
+			named_groups = dict(sorted(named_groups.items(), key=lambda x: natural_key(x[0])))
+
+			misc_col = getset_collection("Ins__Misc")
+			instances_collection.children.link(misc_col)
+
+			for a, b in named_groups.items():
+
+				if len(b) == 1:
+					misc_col.objects.link(b[0])
+				else:
+					new_group_col = getset_collection(a)
+					instances_collection.children.link(new_group_col)
+
+					for empty in b:
+						new_group_col.objects.link(empty)
+
 
 
 		effects = scene.ssx2_Effects
