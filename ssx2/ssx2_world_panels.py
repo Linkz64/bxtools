@@ -345,7 +345,7 @@ class SSX2_WorldLogicSubPanel(SSX2_Panel):
 
 class SSX2_WorldLogicScriptsSubPanel(SSX2_Panel):
 	bl_idname = 'BXT_PT_world_effect_scripts_panel'
-	bl_label = 'Scripts'
+	bl_label = 'General Scripts'
 	bl_parent_id = 'BXT_PT_world_logic_panel'
 	bl_options = {'DEFAULT_CLOSED'}
 
