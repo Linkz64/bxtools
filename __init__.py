@@ -204,7 +204,20 @@ class BXT_OP_Update(bpy.types.Operator):
         self.report({"INFO"}, "Updated")
         return {"FINISHED"}
 
+class BXT_OP_ReloadTextures(bpy.types.Operator):
+    bl_idname = "bxt.reload_textures"
+    bl_label = "Reload Textures"
+    bl_description = "Reload textures"
 
+    def execute(self, context):
+        reloaded_count = 0
+        for image in bpy.data.images:
+            if image.source == 'FILE':
+                image.reload()
+                reloaded_count += 1
+
+        self.report({"INFO"}, f"Reloaded {reloaded_count} textures")
+        return {'FINISHED'}
 
 
 ### Panels
@@ -227,6 +240,7 @@ class BXT_Panel(bpy.types.Panel):
         prop_split(col, context.scene, 'bx_PlatformChoice', "Platform")
         col.operator(BXT_OP_Update.bl_idname, icon='IMPORT')
         col.operator(SSX2_OP_WorldReloadNodeTrees.bl_idname, icon='FILE_REFRESH', text="Reload Appends")
+        col.operator(BXT_OP_ReloadTextures.bl_idname, icon='TEXTURE', text="Reload Textures")
         extras_box = col.box()
         extras_box.label(text="Extras")
         extras_box.operator(SSX2_OP_BakeTest.bl_idname, text="Lightmap Bake Test")
@@ -272,6 +286,7 @@ def update_choice(self, context):
 classes = (
     BXT_Preferences,
     BXT_OP_Update,
+    BXT_OP_ReloadTextures,
 
     BXT_Panel,
     BXT_PanelInProperties
