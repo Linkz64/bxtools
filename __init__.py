@@ -40,11 +40,6 @@ else:
     from .ssx3 import ssx3_register, ssx3_unregister
     from .external.ex_utils import prop_split
     from .panels import *
-    #from .general.bx_utils import BXT
-
-    for name in module_names: # for reload
-        full_name = (f"{__name__}.{name}")
-        locals()[full_name] = importlib.import_module(full_name) # or globals()
 
     from .ssx2.ssx2_world_lightmaps import SSX2_OP_BakeTest
     from .ssx2.ssx2_world import SSX2_OP_WorldReloadNodeTrees
