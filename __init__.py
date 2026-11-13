@@ -1,10 +1,4 @@
-print("\n\nBXTools Plugin Initiating\n")
-
-"""
-Force reload other local modules when plugin is toggled or when "Reload Scripts" is pressed.
-This is done because Blender only reloads the main __init__.py (this one)
-Note: lines in *_register() functions do not get reloaded.
-"""
+print("\n\nBXTools Initiating\n")
 
 import os
 import sys
@@ -17,29 +11,26 @@ import shutil
 
 import addon_utils
 
-
-module_names = ( # for reloading
-    'general.blender_get_data',
-    'general.blender_set_data',
-    'general.bx_utils',
-
-    'ssx2.__init__',
-    'ssx2.ssx2_world',
-    'ssx2.ssx2_world_io_in',
-    'ssx2.ssx2_world_patches',
-    'ssx2.ssx2_world_panels',
-    'ssx2.ssx2_world_lightmaps',
-    'ssx2.ssx2_world_logic',
-    'ssx2.ssx2_constants',
-)
-
 if 'bpy' in locals():
-    print("BXTools Reloading:")
 
-    for name in module_names:
-        full_name = (f"{__name__}.{name}")
-        importlib.reload(sys.modules[full_name])
-        print(f"    {full_name}")
+    """
+    Reload modules when addon is toggled or when "Reload Scripts" is pressed.
+    Only this __init__.py is reloaded by default.
+    Note: lines in the register/unregister functions do not get reloaded.
+    """
+
+    print("BXTools Reloading Modules:")
+    modules_to_reload = []
+
+    for mod in sys.modules.items():
+        name = mod[0]
+        
+        if name.startswith("bxtools.ssx2") or name.startswith("bxtools.general"):
+            modules_to_reload.append(mod)
+
+    for mod in modules_to_reload:
+        print(mod[0])
+        importlib.reload(mod[1])
 
 else:
     import bpy
