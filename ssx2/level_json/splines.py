@@ -71,20 +71,24 @@ export or enable 'Override' to delete the JSON content")
 					set_active(obj)
 					return None
 
-				for j, p in enumerate(s.bezier_points):
 
-					if (j != 0) and (j != len(s.bezier_points) - 1): # mids
-						current_points.append( (m @ p.handle_left) * scale  )
-						current_points.append( (m @ p.co) * scale           )
-						current_points.append( (m @ p.handle_right) * scale )
+				# first bezier point
+				p = s.bezier_points[0]
+				current_points.append( (m @ p.co)           * scale )
+				current_points.append( (m @ p.handle_right) * scale )
 
-					elif j == 0: # first
-						current_points.append( (m @ p.co) * scale           )
-						current_points.append( (m @ p.handle_right) * scale )
+				# inbetween bezier points
+				for j in range(1, len(s.bezier_points) - 1):
+					p = s.bezier_points[j]
+					current_points.append( (m @ p.handle_left)  * scale )
+					current_points.append( (m @ p.co)           * scale )
+					current_points.append( (m @ p.handle_right) * scale )
 
-					else: # last
-						current_points.append( (m @ p.handle_left) * scale  )
-						current_points.append( (m @ p.co) * scale           )
+				# last bezier point
+				p = s.bezier_points[-1]
+				current_points.append( (m @ p.handle_left) * scale )
+				current_points.append( (m @ p.co)          * scale )
+
 
 				if len(current_points) != 0:
 					all_spline_islands.append(current_points)
