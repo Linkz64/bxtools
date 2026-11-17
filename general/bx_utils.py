@@ -13,14 +13,14 @@ from ..external.DXTDecompress import DXTBuffer
 templates_append_path = path.dirname(__file__)[:-7]+"general/templates.blend"
 
 class BXT:
-	def __init__(self, bpyself, context):
-		print(bpyself, context)
-	def info(bpyself, string):
-		bpyself.report({'INFO'}, string)
-	def warn(bpyself, string):
-		bpyself.report({'WARNING'}, string)
-	def error(bpyself, string):
-		bpyself.report({'ERROR'}, string)
+	def __init__(self, bpyself):
+		self.bpyself = bpyself
+	def info(self, string):
+		self.bpyself.report({'INFO'}, string)
+	def warn(self, string):
+		self.bpyself.report({'WARNING'}, string)
+	def error(self, string):
+		self.bpyself.report({'ERROR'}, string)
 
 	def popup(string, title="Error", icon='ERROR'):
 		def report(self, context):
