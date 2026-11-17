@@ -99,7 +99,7 @@ export or enable 'Override' to delete the JSON content")
 			if get_name:
 				names.append(obj.name)
 
-			for _si, spline_island in enumerate(all_spline_islands):
+			for spline_index, spline_island in enumerate(all_spline_islands):
 				segments = [] # split to segments of 4 points
 
 				for i in range(0, len(spline_island), 3):
@@ -121,7 +121,7 @@ export or enable 'Override' to delete the JSON content")
 					segments.append(spline_segments_json_obj)
 
 				spline_json_obj = {
-					"SplineName": obj.name + '.' + str(_si),
+					"SplineName": obj.name + '.' + str(spline_index),
 					"U0": 1,
 					"U1": 1,
 					"SplineStyle": int(obj.ssx2_SplineProps.type),
