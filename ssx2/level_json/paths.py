@@ -34,16 +34,16 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 
 	json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/' + extension + '.json'
 
-	objs_ai = []
-	roots_events = []
+	objects_ai = []
+	objects_element = []
 
 	for obj in all_objects:
-		if obj.ssx2_EmptyMode == 'PATH_AI' or obj.ssx2_CurveMode == 'PATH_AI':
-			objs_ai.append(obj)
-		elif obj.ssx2_EmptyMode == 'PATH_ELEMENTS' or obj.ssx2_CurveMode == 'PATH_ELEMENTS':
-			roots_events.append(obj)
+		if obj.ssx2_CurveMode == 'PATH_AI':
+			objects_ai.append(obj)
+		elif obj.ssx2_CurveMode == 'PATH_ELEMENTS':
+			objects_element.append(obj)
 
-	if len(objs_ai) == 0 and len(roots_events) == 0:
+	if len(objects_ai) == 0 and len(objects_element) == 0:
 		self.report({'ERROR'}, f"No paths found in '{col_main_name}' collection")
 		return {'CANCELLED'}
 
@@ -57,7 +57,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 	# General paths
 	# 
 	
-	for j, obj in enumerate(objs_ai):
+	for j, obj in enumerate(objects_ai):
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
 
@@ -111,7 +111,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 	# Element paths
 	# 
 
-	for j, obj in enumerate(roots_events):
+	for j, obj in enumerate(objects_element):
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
 
