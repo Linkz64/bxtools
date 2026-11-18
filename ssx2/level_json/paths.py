@@ -1,3 +1,4 @@
+import os
 import json
 import bpy
 
@@ -9,15 +10,17 @@ from bxtools.general.bx_utils import (
 def export_paths(bxt: BXT, indent: int) -> None | tuple:
 	print("Exporting Paths")
 
+	io = bpy.context.scene.ssx2_WorldImportExportProps
+
 	if io.exportPathsGeneral:
-		new_json = export_paths_by_category(bxt, indent, 'General')
+		new_json = export_by_category(bxt, indent, 'General')
 		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/AIP.json'
 
 		with open(json_export_path, 'w') as f:
 			json.dump(new_json, f, separators=(',', ':'), indent=indent)
 
 	if io.exportPathsShowoff:
-		new_json = export_paths_by_category(bxt, indent, 'Showoff')
+		new_json = export_by_category(bxt, indent, 'Showoff')
 		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/SOP.json'
 
 		with open(json_export_path, 'w') as f:
@@ -25,9 +28,8 @@ def export_paths(bxt: BXT, indent: int) -> None | tuple:
 
 	return ()
 
-def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
+def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 	col_main_name = "Paths " + category
-	extension = 'AIP' if category == 'General' else 'SOP'
 
 	new_json = {
 		"StartPosList": [],
@@ -37,7 +39,8 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 	objects_ai = []
 	objects_element = []
 
-	print(category, col_main_name, extension)
+
+	print(category, col_main_name, 'AIP' if category == 'General' else 'SOP')
 
 	col_main = bpy.data.collections.get(col_main_name)
 	if col_main is None:
@@ -50,8 +53,6 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 		bxt.error(f"No objects found in '{col_main_name}' collection")
 		return {'CANCELLED'}
 
-
-
 	for obj in all_objects:
 		if obj.ssx2_CurveMode == 'PATH_AI':
 			objects_ai.append(obj)
@@ -62,7 +63,6 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 		bxt.error(f"No paths found in '{col_main_name}' collection")
 		return {'CANCELLED'}
 
-	
 
 	# 
 	# General paths
@@ -72,7 +72,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
 
-		new_data = {
+		new_entry = {
 			"Name": obj.name,
 			"Type":  2,
 			"U1": 100,
@@ -86,17 +86,9 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			"PathEvents": []
 		}
 
-		spline_points = obj.data.splines[0].points
-
-		post_transform_points = []
-		for p in spline_points:
-			world_pos = m @ p.co.to_3d()
-			post_transform_points.append(world_pos * 100)
-
-		new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
-		
-		adjusted_points = adjust_path_points_linear(post_transform_points)
-		new_data["PathPoints"].extend(adjusted_points)
+		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
+		new_entry["PathPos"] = spline_points[0].to_tuple() 
+		new_entry["PathPoints"].extend(adjust_path_points_linear(spline_points))
 
 		for event in path_props.events:
 			temp_event = {
@@ -105,12 +97,13 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 				"EventStart":event.start * 100, # WorldScale
 				"EventEnd":event.end * 100, # WorldScale
 			}
-			new_data["PathEvents"].append(temp_event)
+			new_entry["PathEvents"].append(temp_event)
 
 		if path_props.start:
 			new_json["StartPosList"].append(j)
 
-		new_json["AIPaths"].append(new_data)
+		new_json["AIPaths"].append(new_entry)
+
 
 	# 
 	# Element paths
@@ -120,7 +113,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
 
-		new_data = {
+		new_entry = {
 			"Name": obj.name,
 			"Type":  1,
 			"U0": 0,
@@ -131,16 +124,9 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			"PathEvents": [],
 		}
 
-		spline_points = obj.data.splines[0].points
-
-		post_transform_points = []
-		for p in spline_points:
-			world_pos = m @ p.co.to_3d()
-			post_transform_points.append(world_pos * 100)
-
-		new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
-		adjusted_points = adjust_path_points_linear(post_transform_points)
-		new_data["PathPoints"].extend(adjusted_points)
+		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
+		new_entry["PathPos"] = spline_points[0].to_tuple() 
+		new_entry["PathPoints"].extend(adjust_path_points_linear(spline_points))
 
 		for event in path_props.events:
 			temp_event = {
@@ -149,8 +135,8 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 				"EventStart":event.start * 100, # WorldScale
 				"EventEnd":event.end * 100, # WorldScale
 			}
-			new_data["PathEvents"].append(temp_event)
+			new_entry["PathEvents"].append(temp_event)
 
-		new_json["RaceLines"].append(new_data)
+		new_json["RaceLines"].append(new_entry)
 
 	return new_json
