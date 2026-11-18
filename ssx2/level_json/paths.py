@@ -86,24 +86,17 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			"PathEvents": []
 		}
 
-		if obj.type == "EMPTY":
-			bxt.error("Empties Not supported")
-			return {'CANCELLED'}
+		spline_points = obj.data.splines[0].points
 
-			new_data["PathPos"] = tuple(post_transform_points), # WorldScale
-			new_data["PathPoints"] = [tuple(child.location * 100) for child in obj.children_recursive], # WorldScale
-		else:
-			spline_points = obj.data.splines[0].points
+		post_transform_points = []
+		for p in spline_points:
+			world_pos = m @ p.co.to_3d()
+			post_transform_points.append(world_pos * 100)
 
-			post_transform_points = []
-			for p in spline_points:
-				world_pos = m @ p.co.to_3d()
-				post_transform_points.append(world_pos * 100)
-
-			new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
-			
-			adjusted_points = adjust_path_points_linear(post_transform_points)
-			new_data["PathPoints"].extend(adjusted_points)
+		new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
+		
+		adjusted_points = adjust_path_points_linear(post_transform_points)
+		new_data["PathPoints"].extend(adjusted_points)
 
 		for event in path_props.events:
 			temp_event = {
