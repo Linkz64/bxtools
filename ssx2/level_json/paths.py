@@ -13,14 +13,22 @@ def export_paths(bxt: BXT, indent: int) -> None | tuple:
 	io = bpy.context.scene.ssx2_WorldImportExportProps
 
 	if io.exportPathsGeneral:
-		new_json = export_by_category(bxt, indent, 'General')
+		new_json = export_by_category(bxt, 'General')
+
+		if new_json is None:
+			return None
+
 		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/AIP.json'
 
 		with open(json_export_path, 'w') as f:
 			json.dump(new_json, f, separators=(',', ':'), indent=indent)
 
 	if io.exportPathsShowoff:
-		new_json = export_by_category(bxt, indent, 'Showoff')
+		new_json = export_by_category(bxt, 'Showoff')
+
+		if new_json is None:
+			return None
+
 		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/SOP.json'
 
 		with open(json_export_path, 'w') as f:
@@ -28,8 +36,8 @@ def export_paths(bxt: BXT, indent: int) -> None | tuple:
 
 	return ()
 
-def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
-	col_main_name = "Paths " + category
+def export_by_category(bxt: BXT, category: str) -> None | tuple:
+	collection_name = "Paths " + category
 
 	new_json = {
 		"StartPosList": [],
@@ -40,33 +48,27 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 	objects_element = []
 
 
-	print(category, col_main_name, 'AIP' if category == 'General' else 'SOP')
+	print(category, collection_name, 'AIP' if category == 'General' else 'SOP')
 
-	col_main = bpy.data.collections.get(col_main_name)
+	col_main = bpy.data.collections.get(collection_name)
 	if col_main is None:
-		bxt.error(f"'{col_main_name}' collection not found")
-		return {'CANCELLED'}
+		bxt.error(f"'{collection_name}' collection not found")
+		return None
 
-	all_objects = col_main.all_objects
-
-	if len(all_objects) == 0:
-		bxt.error(f"No objects found in '{col_main_name}' collection")
-		return {'CANCELLED'}
-
-	for obj in all_objects:
+	for obj in col_main.all_objects:
 		if obj.ssx2_CurveMode == 'PATH_AI':
 			objects_ai.append(obj)
 		elif obj.ssx2_CurveMode == 'PATH_ELEMENTS':
 			objects_element.append(obj)
 
 	if len(objects_ai) == 0 and len(objects_element) == 0:
-		bxt.error(f"No paths found in '{col_main_name}' collection")
-		return {'CANCELLED'}
+		bxt.error(f"No paths found in '{collection_name}' collection")
+		return None
 
 
-	# 
+	#
 	# General paths
-	# 
+	#
 	
 	for j, obj in enumerate(objects_ai):
 		path_props = obj.ssx2_PathProps
@@ -101,9 +103,9 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 		new_json["AIPaths"].append(new_entry)
 
 
-	# 
+	#
 	# Element paths
-	# 
+	#
 
 	for j, obj in enumerate(objects_element):
 		path_props = obj.ssx2_PathProps
