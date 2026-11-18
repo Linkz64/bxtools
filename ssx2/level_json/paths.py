@@ -71,6 +71,7 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 	for j, obj in enumerate(objects_ai):
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
+		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
 
 		new_entry = {
 			"Name": obj.name,
@@ -81,23 +82,18 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 			"U4": 101,
 			"U5": 4,
 			"Respawnable": int(path_props.reset),
-			"PathPos": (),
-			"PathPoints": [],
-			"PathEvents": []
-		}
-
-		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
-		new_entry["PathPos"] = spline_points[0].to_tuple() 
-		new_entry["PathPoints"].extend(adjust_path_points_linear(spline_points))
-
-		for event in path_props.events:
-			temp_event = {
+			"PathPos": spline_points[0].to_tuple() ,
+			"PathPoints": adjust_path_points_linear(spline_points),
+			"PathEvents": [	
+				{
 				"EventType":event.type_custom if event.type_enum == 'CUSTOM' else int(event.type_enum),
 				"EventValue":event.value,
 				"EventStart":event.start * 100, # WorldScale
 				"EventEnd":event.end * 100, # WorldScale
-			}
-			new_entry["PathEvents"].append(temp_event)
+				} 
+				for event in path_props.events
+			],
+		}
 
 		if path_props.start:
 			new_json["StartPosList"].append(j)
@@ -112,6 +108,7 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 	for j, obj in enumerate(objects_element):
 		path_props = obj.ssx2_PathProps
 		m = obj.matrix_world
+		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
 
 		new_entry = {
 			"Name": obj.name,
@@ -119,23 +116,18 @@ def export_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 			"U0": 0,
 			"U1": 4,
 			"U2": path_props.eventpaths_u2 * 100, # WorldScale
-			"PathPos": None,
-			"PathPoints": [],
-			"PathEvents": [],
-		}
-
-		spline_points = [(m @ p.co.to_3d()) * 100 for p in obj.data.splines[0].points] # WorldScale
-		new_entry["PathPos"] = spline_points[0].to_tuple() 
-		new_entry["PathPoints"].extend(adjust_path_points_linear(spline_points))
-
-		for event in path_props.events:
-			temp_event = {
+			"PathPos": spline_points[0].to_tuple() ,
+			"PathPoints": adjust_path_points_linear(spline_points),
+			"PathEvents": [	
+				{
 				"EventType":event.type_custom if event.type_enum == 'CUSTOM' else int(event.type_enum),
 				"EventValue":event.value,
 				"EventStart":event.start * 100, # WorldScale
 				"EventEnd":event.end * 100, # WorldScale
-			}
-			new_entry["PathEvents"].append(temp_event)
+				} 
+				for event in path_props.events
+			],
+		}
 
 		new_json["RaceLines"].append(new_entry)
 
