@@ -539,18 +539,6 @@ def double_quad_cage(raw): # essentially subdivides along v but only on 4 spline
 	yield temp_strip2
 
 
-def adjust_path_points(spline_points):
-	adjusted_points = [Vector(spline_points[1].co[:3]) - Vector(spline_points[0].co[:3])]
-
-	for j in range(2, len(spline_points)):
-		p = Vector(spline_points[j].co[:3])
-		prev = Vector(spline_points[j - 1].co[:3])
-
-		new_point = p - prev
-		adjusted_points.append(new_point)
-
-	return adjusted_points
-
 def adjust_path_points_linear(points):
 	adjusted_points = [(points[1] - points[0]).to_tuple()]
 
