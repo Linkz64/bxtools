@@ -10,32 +10,47 @@ def export_paths(bxt: BXT, indent: int) -> None | tuple:
 	print("Exporting Paths")
 
 	if io.exportPathsGeneral:
-		export_paths_by_category(bxt, indent, 'General')
-	if io.exportPathsShowoff:
-		export_paths_by_category(bxt, indent, 'Showoff')
+		new_json = export_paths_by_category(bxt, indent, 'General')
+		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/AIP.json'
 
+		with open(json_export_path, 'w') as f:
+			json.dump(new_json, f, separators=(',', ':'), indent=indent)
+
+	if io.exportPathsShowoff:
+		new_json = export_paths_by_category(bxt, indent, 'Showoff')
+		json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/SOP.json'
+
+		with open(json_export_path, 'w') as f:
+			json.dump(new_json, f, separators=(',', ':'), indent=indent)
+
+	return ()
 
 def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tuple:
 	col_main_name = "Paths " + category
 	extension = 'AIP' if category == 'General' else 'SOP'
 
+	new_json = {
+		"StartPosList": [],
+		"AIPaths": [],
+		"RaceLines": []
+	}
+	objects_ai = []
+	objects_element = []
+
 	print(category, col_main_name, extension)
 
 	col_main = bpy.data.collections.get(col_main_name)
 	if col_main is None:
-		self.report({'ERROR'}, f"'{col_main_name}' collection not found")
+		bxt.error(f"'{col_main_name}' collection not found")
 		return {'CANCELLED'}
 
 	all_objects = col_main.all_objects
 
 	if len(all_objects) == 0:
-		self.report({'ERROR'}, f"No objects found in '{col_main_name}' collection")
+		bxt.error(f"No objects found in '{col_main_name}' collection")
 		return {'CANCELLED'}
 
-	json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath)) + '/' + extension + '.json'
 
-	objects_ai = []
-	objects_element = []
 
 	for obj in all_objects:
 		if obj.ssx2_CurveMode == 'PATH_AI':
@@ -44,14 +59,10 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			objects_element.append(obj)
 
 	if len(objects_ai) == 0 and len(objects_element) == 0:
-		self.report({'ERROR'}, f"No paths found in '{col_main_name}' collection")
+		bxt.error(f"No paths found in '{col_main_name}' collection")
 		return {'CANCELLED'}
 
-	temp_json = {
-		"StartPosList": [],
-		"AIPaths": [],
-		"RaceLines": []
-	}
+	
 
 	# 
 	# General paths
@@ -76,7 +87,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 		}
 
 		if obj.type == "EMPTY":
-			self.report({'ERROR'}, "Empties Not supported")
+			bxt.error("Empties Not supported")
 			return {'CANCELLED'}
 
 			new_data["PathPos"] = tuple(post_transform_points), # WorldScale
@@ -90,6 +101,7 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 				post_transform_points.append(world_pos * 100)
 
 			new_data["PathPos"] = post_transform_points[0].to_tuple() # WorldScale
+			
 			adjusted_points = adjust_path_points_linear(post_transform_points)
 			new_data["PathPoints"].extend(adjusted_points)
 
@@ -103,9 +115,9 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			new_data["PathEvents"].append(temp_event)
 
 		if path_props.start:
-			temp_json["StartPosList"].append(j)
+			new_json["StartPosList"].append(j)
 
-		temp_json["AIPaths"].append(new_data)
+		new_json["AIPaths"].append(new_data)
 
 	# 
 	# Element paths
@@ -146,10 +158,6 @@ def export_paths_by_category(bxt: BXT, indent: int, category: str) -> None | tup
 			}
 			new_data["PathEvents"].append(temp_event)
 
-		temp_json["RaceLines"].append(new_data)
+		new_json["RaceLines"].append(new_data)
 
-	with open(json_export_path, 'w') as f:
-		if do_json_indend:
-			json.dump(temp_json, f, indent=2)
-		else:
-			json.dump(temp_json, f, separators=(',', ':'))
+	return new_json
