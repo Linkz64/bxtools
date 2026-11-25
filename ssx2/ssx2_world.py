@@ -2555,10 +2555,9 @@ class SSX2_OP_WorldExport(Operator):
 			to_create_for_lightmaps = [] # put the split cages here (4x4s)
 			# then create the objects
 
-			SURFACE_PATCH = 0
-			CONTROL_GRID = 1
-			SPLINE_CAGE = 2
-			BLENDER_ASSET = 3
+			T_SURFACE_PATCH = 0
+			T_CONTROL_GRID = 1
+			T_SPLINE_CAGE = 2
 
 			patch_collection = bpy.data.collections.get("Patches")
 
@@ -2576,15 +2575,19 @@ class SSX2_OP_WorldExport(Operator):
 					if inst_col is not None:
 						for sub_obj in inst_col.all_objects:
 							if sub_obj.ssx2_CurveMode == 'CAGE': # make it work on all patch types
-								patch_objects.append((BLENDER_ASSET, sub_obj, obj))
+								patch_objects.append((T_SPLINE_CAGE, sub_obj, obj))
+							elif sub_obj.type == 'SURFACE':
+								patch_objects.append((T_SURFACE_PATCH, sub_obj, obj))
+							elif sub_obj.ssx2_PatchProps.isControlGrid:
+								patch_objects.append((T_CONTROL_GRID, sub_obj, obj))
 							# with parent (0/1/2 sub_obj, obj)
 							# no parent (0/1/2, sub_obj, None) and do an is None check instead of == 3
 				elif obj.ssx2_CurveMode == 'CAGE':
-					patch_objects.append((SPLINE_CAGE, obj))
+					patch_objects.append((T_SPLINE_CAGE, obj))
 				elif obj.type == 'SURFACE':
-					patch_objects.append((SURFACE_PATCH, obj))
+					patch_objects.append((T_SURFACE_PATCH, obj))
 				elif obj.ssx2_PatchProps.isControlGrid:
-					patch_objects.append((CONTROL_GRID, obj))
+					patch_objects.append((T_CONTROL_GRID, obj))
 
 			if len(patch_objects) == 0:
 				self.report({'ERROR'}, "No patches found in 'Patches' collection")
@@ -2601,12 +2604,13 @@ class SSX2_OP_WorldExport(Operator):
 			temp_json['Patches'] = []
 
 
-			for obj in patch_objects:
-				obj_type = obj[0]
+			for obj_information in patch_objects:
+				obj_type = obj_information[0]
+				obj = obj_information[1]
 				
-				if obj_type == BLENDER_ASSET: # blender asset
-					inst_obj = obj[2]
-					obj = obj[1]
+				if len(obj_information) > 2: # blender asset
+					inst_obj = obj_information[2]
+					
 					obj_name = inst_obj.name + '_' + obj.name
 
 					# m = inst_obj.matrix_world # works alone but sub objects have to be applied
@@ -2619,14 +2623,13 @@ class SSX2_OP_WorldExport(Operator):
 
 					m = inst_obj.matrix_world @ m_a
 				else:
-					obj = obj[1]
 					obj_name = obj.name
 					m = obj.matrix_world
 
 				props = obj.ssx2_PatchProps
 				print(obj_name)
 
-				if obj_type == SPLINE_CAGE or obj_type == BLENDER_ASSET: # export spline cage
+				if obj_type == T_SPLINE_CAGE: # export spline cage
 					cage_nodes = None
 					for mod in obj.modifiers:
 						if mod.type == 'NODES' and mod.node_group:
@@ -2855,7 +2858,7 @@ class SSX2_OP_WorldExport(Operator):
 
 
 
-				elif obj_type == SURFACE_PATCH: # export surface patch
+				elif obj_type == T_SURFACE_PATCH: # export surface patch
 
 					patch_points = []
 					for spline in obj.data.splines:
@@ -2914,7 +2917,7 @@ class SSX2_OP_WorldExport(Operator):
 					}
 					temp_json['Patches'].append(patch_json_obj)
 
-				elif obj_type == CONTROL_GRID: # export control grid
+				elif obj_type == T_CONTROL_GRID: # export control grid
 					grid_points = []
 
 					for vtx in obj.data.vertices:
