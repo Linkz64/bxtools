@@ -3063,6 +3063,7 @@ class SSX2_OP_SelectModel(Operator):
 class SSX2_OP_ChooseMultitoolExe(Operator, ImportHelper):
 	bl_idname = "scene.ssx2_choose_multitool_exe"
 	bl_label = "Set Multitool Path"
+	bl_description = "Choose the path of your SSX Multitool executable"
 
 	filter_glob: StringProperty(default="*.exe", options={'HIDDEN'})
 

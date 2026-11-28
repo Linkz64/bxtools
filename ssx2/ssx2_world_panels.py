@@ -165,37 +165,30 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 
 	def draw(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
-		col = self.layout.column()
-		prop_split(col, io, 'exportFolderPath', 'Export Folder', spacing=0.4)
-
 		
+		col = self.layout.column()
+		col.operator(SSX2_OP_WorldExport.bl_idname, icon='EXPORT')
+		prop_split(col, io, 'exportFolderPath', 'Folder', spacing=0.2)
+
 		patches_box = col.box()
 		patches_box = patches_box.row()
-		patches_box_split = patches_box.split(factor=0.3)
-		patches_box_split.label(text="Patches")
-		patches_box_split.prop(io, "exportPatches", text="Patches")
-		patches_box_split.prop(io, "exportPatchesCages", text="Cages")
+		patches_box.prop(io, "exportPatches", text="Patches")
+		# patches_box.prop(io, "exportPatchesCages", text="Cages")
 
 		splines_box = col.box()
 		splines_box = splines_box.row()
-		splines_box_split = splines_box.split(factor=0.3)
-		splines_box_split.label(text="Splines")
-		splines_box_split.prop(io, "exportSplines", text="")
-		splines_box_split.prop(io, "exportSplinesOverride", text="Override")
+		splines_box.prop(io, "exportSplines", text="Splines")
+		splines_box.prop(io, "exportSplinesOverride", text="Override")
 
 		paths_box = col.box()
 		paths_box = paths_box.row()
-		paths_box_split = paths_box.split(factor=0.3)
-		paths_box_split.label(text="Paths")
-		paths_box_split.prop(io, "exportPathsGeneral", text="General")
-		paths_box_split.prop(io, "exportPathsShowoff", text="Showoff")
+		paths_box.prop(io, "exportPathsGeneral", text="Paths General")
+		paths_box.prop(io, "exportPathsShowoff", text="Paths Showoff")
 
 		instances_box = col.box()
 		instances_box = instances_box.row()
-		paths_box_split = instances_box.split(factor=0.3)
-		paths_box_split.label(text="Instances")
-		paths_box_split.prop(io, "exportInstances", text="")
-		paths_box_split.prop(io, "exportInstancesOverride", text="Override")
+		instances_box.prop(io, "exportInstances", text="Instances")
+		instances_box.prop(io, "exportInstancesOverride", text="Override")
 
 
 		row = col.row().split(factor=0.36)
@@ -203,9 +196,7 @@ class SSX2_WorldExportPanel(SSX2_Panel):
 		if io.exportAutoBuild:
 			row.operator(SSX2_OP_ChooseMultitoolExe.bl_idname, icon='FILEBROWSER')
 
-			
 
-		col.operator(SSX2_OP_WorldExport.bl_idname)
 
 
 ### SubPanels
