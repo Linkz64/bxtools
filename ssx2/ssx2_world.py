@@ -566,6 +566,8 @@ class SSX2_OP_WorldReloadNodeTrees(Operator):
 	def execute(self, context):
 		warn = False
 
+		bxt = Bxt(self)
+
 		cage_loft_appends = []
 		grid_tesselate_appends = []
 		path_line_appends = []
@@ -726,9 +728,9 @@ class SSX2_OP_WorldReloadNodeTrees(Operator):
 				obj.data.materials.append(mod["Input_7"])
 
 		if warn:
-			BXT.warn(f"Failed to append nodes from {templates_append_path}")
+			bxt.warn(f"Failed to append nodes from {templates_append_path}")
 		else:
-			BXT.info(self, "Reloaded Node Trees")
+			bxt.info("Reloaded Node Trees")
 		
 
 		return {'FINISHED'}
@@ -2534,7 +2536,7 @@ class SSX2_OP_WorldExport(Operator):
 					json.dump(json_data, f, separators=(',', ':'))
 
 
-		bxt = BXT(self)
+		bxt = Bxt(self)
 		indent = 2
 
 		if io.exportPathsGeneral or io.exportPathsShowoff:

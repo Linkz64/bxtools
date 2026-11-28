@@ -2,9 +2,9 @@ import os
 import json
 import bpy
 
-from bxtools.general.bx_utils import (calc_coefficients, BXT)
+from bxtools.general.bx_utils import (Bxt, calc_coefficients)
 
-def export_splines(bxt: BXT, indent: int) -> None | tuple:
+def export_splines(bxt: Bxt, indent: int) -> None | tuple:
 	print("Exporting Splines")
 
 	new_json = {}
@@ -154,7 +154,7 @@ export or add a spline")
 					overriden_indices.append(index)
 				except Exception:
 					print(Exception)
-					bxt.warn("BXT Error occurred. Skipping.")
+					bxt.warn("Bxt Error occurred. Skipping.")
 
 			for i, spline in enumerate(final_splines):
 				if i not in overriden_indices:

@@ -2,12 +2,9 @@ import os
 import json
 import bpy
 
-from bxtools.general.bx_utils import (
-	BXT,
-	adjust_path_points_linear,
-)
+from bxtools.general.bx_utils import (Bxt, adjust_path_points_linear)
 
-def export_paths(bxt: BXT, indent: int) -> None | tuple:
+def export_paths(bxt: Bxt, indent: int) -> None | tuple:
 	print("Exporting Paths")
 
 	io = bpy.context.scene.ssx2_WorldImportExportProps
@@ -36,7 +33,7 @@ def export_paths(bxt: BXT, indent: int) -> None | tuple:
 
 	return ()
 
-def export_by_category(bxt: BXT, category: str) -> None | tuple:
+def export_by_category(bxt: Bxt, category: str) -> None | tuple:
 	collection_name = "Paths " + category
 
 	new_json = {

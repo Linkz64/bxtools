@@ -12,7 +12,7 @@ from ..external.DXTDecompress import DXTBuffer
 
 templates_append_path = path.dirname(__file__)[:-7]+"general/templates.blend"
 
-class BXT:
+class Bxt:
 	def __init__(self, bpyself):
 		self.bpyself = bpyself
 	def info(self, string):

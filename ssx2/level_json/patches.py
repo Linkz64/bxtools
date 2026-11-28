@@ -6,14 +6,14 @@ from bpy.types import Object
 from mathutils import Matrix
 
 from bxtools.general.bx_utils import (
-	BXT,
+	Bxt,
 	get_custom_prop_vec4,
 	bezier_to_raw,
-	segment_spline
+	segment_spline,
 )
 from bxtools.ssx2.ssx2_constants import (patch_known_uvs, patch_tex_map_equiv_uvs)
 
-def export_patches(bxt: BXT, indent: int) -> None | tuple:
+def export_patches(bxt: Bxt, indent: int) -> None | tuple:
 	print("Exporting Patches")
 
 	# TODO: decide on what to do with cages and non 4x4 patches
@@ -107,7 +107,7 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 	with open(json_export_path, 'w') as f:
 		json.dump(new_json, f, separators=(',', ':'), indent=indent)
 
-def new_json_entry_spline_cage(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
+def new_json_entry_spline_cage(bxt: Bxt, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 
@@ -322,7 +322,7 @@ def new_json_entry_spline_cage(bxt: BXT, json_patches: list, obj: Object, obj_na
 
 	return True
 
-def new_json_entry_surface_patch(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
+def new_json_entry_surface_patch(bxt: Bxt, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 	patch_points = []
@@ -386,7 +386,7 @@ def new_json_entry_surface_patch(bxt: BXT, json_patches: list, obj: Object, obj_
 	
 	return True
 
-def new_json_entry_control_grid(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
+def new_json_entry_control_grid(bxt: Bxt, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 	grid_points = []

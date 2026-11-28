@@ -307,6 +307,7 @@ class SSX2_OP_PatchUVTransform(bpy.types.Operator):
 
 	def execute(self, context):
 		objs = bpy.context.selected_objects
+		bxt = Bxt(self)
 		patches = []
 
 		for obj in objs:
@@ -318,7 +319,7 @@ class SSX2_OP_PatchUVTransform(bpy.types.Operator):
 				patches.append(obj)
 
 		if len(patches) == 0:
-			BXT.warn(self, "No patches selected")
+			bxt.warn("No patches selected")
 			return {'CANCELLED'}
 
 		rotate_rl_enum = {'3': '1', '1': '4', '2': '3', '4': '2', '0': '6', '7': '5', '5': '0', '6': '7'}
