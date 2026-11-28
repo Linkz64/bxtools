@@ -1,17 +1,26 @@
 import os
 import json
 import bpy
+
+from bpy.types import Object
 from mathutils import Matrix
 
-from bxtools.general.bx_utils import (BXT, get_custom_prop_vec4)
+from bxtools.general.bx_utils import (
+	BXT,
+	get_custom_prop_vec4,
+	bezier_to_raw,
+	segment_spline
+)
 from bxtools.ssx2.ssx2_constants import (patch_known_uvs, patch_tex_map_equiv_uvs)
 
 def export_patches(bxt: BXT, indent: int) -> None | tuple:
 	print("Exporting Patches")
 
-	do_lightmaps = False
-	to_create_for_lightmaps = [] # put the split cages here (4x4s)
-	# then create the objects
+	# TODO: decide on what to do with cages and non 4x4 patches
+	# when it comes to lightmapping
+
+	new_json = {}
+	new_json['Patches'] = []
 
 	T_SURFACE_PATCH = 0
 	T_CONTROL_GRID = 1
@@ -56,9 +65,6 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 		bxt.error(f"'Patches.json' not found.\n{json_export_path}")
 		return None
 
-	new_json = {}
-	new_json['Patches'] = []
-
 
 	for obj_information in patch_objects:
 		obj_type = obj_information[0]
@@ -86,26 +92,22 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 		print(obj_name)
 
 		if obj_type == T_SPLINE_CAGE:
-			json_patch_entry = new_json_entry_spline_cage(bxt, obj, obj_name, m)
+			new_entry = new_json_entry_spline_cage(bxt, new_json['Patches'], obj, obj_name, m)
 
 		elif obj_type == T_SURFACE_PATCH:
-			json_patch_entry = new_json_entry_surface_patch(bxt, obj, obj_name, m)
+			new_entry = new_json_entry_surface_patch(bxt, new_json['Patches'], obj, obj_name, m)
 
 		elif obj_type == T_CONTROL_GRID:
-			json_patch_entry = new_json_entry_control_grid(bxt, obj, obj_name, m)
+			new_entry = new_json_entry_control_grid(bxt, new_json['Patches'], obj, obj_name, m)
 
-
-		if json_patch_entry is None:
+		if new_entry is None:
 			return None
-
-		new_json['Patches'].append(json_patch_entry)
-
 
 
 	with open(json_export_path, 'w') as f:
 		json.dump(new_json, f, separators=(',', ':'), indent=indent)
 
-def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m: Matrix):
+def new_json_entry_spline_cage(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 
@@ -315,14 +317,12 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 			"TexturePath": tex,
 			"LightmapID": lightmap_id
 		}
-		new_json['Patches'].append(patch_json_obj)
 
-		if do_lightmaps:
-			to_create_for_lightmaps.append((obj, export_counts['patch_segments']))
+		json_patches.append(patch_json_obj)
 
-		export_counts['patch_segments'] += 1
+	return True
 
-def new_json_entry_surface_patch(bxt: BXT, obj: bpy.types.Object, obj_name: str, m: Matrix):
+def new_json_entry_surface_patch(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 	patch_points = []
@@ -381,10 +381,12 @@ def new_json_entry_surface_patch(bxt: BXT, obj: bpy.types.Object, obj_name: str,
 		"TexturePath": tex,
 		"LightmapID": lightmap_id
 	}
-	
-	return patch_json_obj
 
-def new_json_entry_control_grid(bxt: BXT, obj: bpy.types.Object, obj_name: str, m: Matrix):
+	json_patches.append(patch_json_obj)
+	
+	return True
+
+def new_json_entry_control_grid(bxt: BXT, json_patches: list, obj: Object, obj_name: str, m: Matrix):
 	props = obj.ssx2_PatchProps
 	scale = bpy.context.scene.bx_WorldScale
 	grid_points = []
@@ -440,6 +442,8 @@ def new_json_entry_control_grid(bxt: BXT, obj: bpy.types.Object, obj_name: str, 
 		"LightmapID": lightmap_id
 	}
 
-	return patch_json_obj
+	json_patches.append(patch_json_obj)
+
+	return True
 
 
