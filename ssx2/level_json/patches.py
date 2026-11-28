@@ -7,7 +7,7 @@ from bxtools.general.bx_utils import (BXT)
 def export_patches(bxt: BXT, indent: int) -> None | tuple:
 	print("Exporting Patches")
 
-	do_lightmaps = True
+	do_lightmaps = False
 	to_create_for_lightmaps = [] # put the split cages here (4x4s)
 	# then create the objects
 
@@ -56,8 +56,8 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 		self.report({'ERROR'}, f"'Patches.json' not found.\n{json_export_path}")
 		return {'CANCELLED'}
 
-	temp_json = {}
-	temp_json['Patches'] = []
+	new_json = {}
+	new_json['Patches'] = []
 
 
 	for obj_information in patch_objects:
@@ -299,17 +299,12 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 					"TexturePath": tex,
 					"LightmapID": lightmap_id
 				}
-				temp_json['Patches'].append(patch_json_obj)
+				new_json['Patches'].append(patch_json_obj)
 
 				if do_lightmaps:
 					to_create_for_lightmaps.append((obj, export_counts['patch_segments']))
 
 				export_counts['patch_segments'] += 1
-
-
-
-
-
 
 
 
@@ -371,7 +366,7 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 				"TexturePath": tex,
 				"LightmapID": lightmap_id
 			}
-			temp_json['Patches'].append(patch_json_obj)
+			new_json['Patches'].append(patch_json_obj)
 
 		elif obj_type == T_CONTROL_GRID: # export control grid
 			grid_points = []
@@ -429,32 +424,9 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 
 			# print(patch_json_obj)
 
-			temp_json['Patches'].append(patch_json_obj)
-
-		else:
-			print("oops")
-			return {'CANCELLED'}
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
+			new_json['Patches'].append(patch_json_obj)
 
 
 
 	with open(json_export_path, 'w') as f:
-		if do_json_indend:
-			json.dump(temp_json, f, indent=2)
-		else:
-			json.dump(temp_json, f)
-
-	# ENDOF Export Patches
+		json.dump(new_json, f, separators=(',', ':'), indent=indent)
