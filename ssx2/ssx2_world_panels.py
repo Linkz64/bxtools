@@ -86,7 +86,8 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 	def draw(self, context):
 		io = context.scene.ssx2_WorldImportExportProps
 		col = self.layout.column()
-		prop_split(col, io, 'importFolderPath', "Import Folder", spacing=0.4)
+		col.operator(SSX2_OP_WorldImport.bl_idname, icon='IMPORT')
+		prop_split(col, io, 'importFolderPath', "Folder", spacing=0.2)
 		
 		if context.scene.bx_PlatformChoice != 'ICE':
 			col_row = col.row()
@@ -151,9 +152,6 @@ class SSX2_WorldImportPanel(SSX2_Panel):
 		box_row.label(icon='BLANK1')
 		box_row.prop(io, "importLights", text="Lights (Experimental)")
 
-
-		# IMPORT BUTTON
-		col.operator(SSX2_OP_WorldImport.bl_idname)
 
 class SSX2_WorldExportPanel(SSX2_Panel):
 	bl_idname = 'SSX2_PT_world_export'
