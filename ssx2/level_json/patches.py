@@ -19,25 +19,22 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 	patch_collection = bpy.data.collections.get("Patches")
 
 	if patch_collection is None:
-		self.report({'ERROR'}, "'Patches' collection not found")
-		return {'CANCELLED'}
+		bxt.error("'Patches' collection not found")
+		return None
 
 	patch_objects = []
 
 	for obj in patch_collection.all_objects:
-		#inst_col = None
-		if obj.instance_type == 'COLLECTION': # already an EMPTY only property
+		if obj.instance_type == 'COLLECTION':
 			inst_col = obj.instance_collection
 			if inst_col is not None:
 				for sub_obj in inst_col.all_objects:
-					if sub_obj.ssx2_CurveMode == 'CAGE': # make it work on all patch types
+					if sub_obj.ssx2_CurveMode == 'CAGE':
 						patch_objects.append((T_SPLINE_CAGE, sub_obj, obj))
 					elif sub_obj.type == 'SURFACE':
 						patch_objects.append((T_SURFACE_PATCH, sub_obj, obj))
 					elif sub_obj.ssx2_PatchProps.isControlGrid:
 						patch_objects.append((T_CONTROL_GRID, sub_obj, obj))
-					# with parent (0/1/2 sub_obj, obj)
-					# no parent (0/1/2, sub_obj, None) and do an is None check instead of == 3
 		elif obj.ssx2_CurveMode == 'CAGE':
 			patch_objects.append((T_SPLINE_CAGE, obj))
 		elif obj.type == 'SURFACE':
@@ -46,15 +43,15 @@ def export_patches(bxt: BXT, indent: int) -> None | tuple:
 			patch_objects.append((T_CONTROL_GRID, obj))
 
 	if len(patch_objects) == 0:
-		self.report({'ERROR'}, "No patches found in 'Patches' collection")
-		return {'CANCELLED'}
+		bxt.error("No patches found in 'Patches' collection")
+		return None
 
 	json_export_path = os.path.abspath(bpy.path.abspath(io.exportFolderPath))+'/Patches.json'
 	print(json_export_path)
 
 	if not os.path.isfile(json_export_path):
-		self.report({'ERROR'}, f"'Patches.json' not found.\n{json_export_path}")
-		return {'CANCELLED'}
+		bxt.error(f"'Patches.json' not found.\n{json_export_path}")
+		return None
 
 	new_json = {}
 	new_json['Patches'] = []
@@ -116,7 +113,7 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 				break
 
 	if cage_nodes is None:
-		self.report({'ERROR'}, f"Missing modifier in {obj_name}")
+		bxt.error(f"Missing modifier in {obj_name}")
 		return None
 
 	double_v = mod["Input_6"]
@@ -137,23 +134,23 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 		length = len(raw[0])
 		
 		if length != len(raw[1]):
-			self.report({'ERROR'}, f"Number of points must match on both splines {obj_name}")
+			bxt.error(f"Number of points must match on both splines {obj_name}")
 			bpy.ops.object.mode_set(mode="OBJECT")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif length < 4:
-			self.report({'ERROR'}, f"Not enough bezier points in {obj_name}")
+			bxt.error(f"Not enough bezier points in {obj_name}")
 			bpy.ops.object.mode_set(mode="OBJECT")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif len(raw) == 0:
-			self.report({'ERROR'}, f"No bezier points in {obj_name}")
+			bxt.error(f"No bezier points in {obj_name}")
 			bpy.ops.object.mode_set(mode="OBJECT")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 
 		u2 = []
 		u3 = []
@@ -187,20 +184,20 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 		lengths = [len(raw[0]), len(raw[1]), len(raw[2]), len(raw[3])]
 		
 		if len(raw[0]) < 4:
-			self.report({'ERROR'}, f"Not enough bezier points in {obj_name}")
+			bxt.error(f"Not enough bezier points in {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif len(raw) == 0:
-			self.report({'ERROR'}, f"No bezier points in {obj_name}")
+			bxt.error(f"No bezier points in {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif sum(lengths) / 4 != lengths[0]:
-			self.report({'ERROR'}, f"Number of points must match on all splines {obj_name}")
+			bxt.error(f"Number of points must match on all splines {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 
 		if double_v:
 			doubled = double_quad_cage(raw)
@@ -219,20 +216,20 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 		lengths = [len(raw[0]), len(raw[1]), len(raw[2]), len(raw[3]), len(raw[4]), len(raw[5])]
 		
 		if len(raw[0]) < 4:
-			self.report({'ERROR'}, f"Not enough bezier points in {obj_name}")
+			bxt.error(f"Not enough bezier points in {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif len(raw) == 0:
-			self.report({'ERROR'}, f"No bezier points in {obj_name}")
+			bxt.error(f"No bezier points in {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 		elif sum(lengths) / 6 != lengths[0]:
-			self.report({'ERROR'}, f"Number of points must match on all splines {obj_name}")
+			bxt.error(f"Number of points must match on all splines {obj_name}")
 			bpy.ops.object.select_all(action='DESELECT')
 			set_active(obj)
-			return {'CANCELLED'}
+			return None
 
 		temp_strip1 = raw[0:3]
 		temp_strip2 = raw[3:6]
@@ -258,7 +255,7 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 			new_patches.extend(segment_spline(temp_strip1) + segment_spline(temp_strip2))
 		
 	else:
-		self.report({'ERROR'}, f"{obj_name} must have 2, 4 or 6 splines. Skipping.")
+		bxt.error(f"{obj_name} must have 2, 4 or 6 splines. Skipping.")
 		return None
 
 	tex = "0000.png"
@@ -274,7 +271,7 @@ def new_json_entry_spline_cage(bxt: BXT, obj: bpy.types.Object, obj_name: str, m
 					# print(img.filepath_from_user())
 					# print(img.filepath_raw)
 				else:
-					self.report({'WARNING'}, f"{img.name} is not a valid PNG")
+					bxt.warn(f"{img.name} is not a valid PNG")
 
 
 	#patch_uvs = patch_known_uvs[patch_tex_map_equiv_uvs[int(props.texMapPreset)]].copy()
@@ -356,7 +353,7 @@ def new_json_entry_surface_patch(bxt: BXT, obj: bpy.types.Object, obj_name: str,
 					if img.file_format == 'PNG' and img.source == 'FILE':
 						png_folder, tex = os.path.split(img.filepath_from_user())
 					else:
-						self.report({'WARNING'}, f"{img.name} is not a valid PNG")
+						bxt.warn(f"{img.name} is not a valid PNG")
 
 	if 'lightmap_uvs' in obj.keys():
 		lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
@@ -414,7 +411,7 @@ def new_json_entry_control_grid(bxt: BXT, obj: bpy.types.Object, obj_name: str, 
 					if img.file_format == 'PNG' and img.source == 'FILE':
 						png_folder, tex = os.path.split(img.filepath_from_user())
 					else:
-						self.report({'WARNING'}, f"{img.name} is not a valid PNG")
+						bxt.warn(f"{img.name} is not a valid PNG")
 
 	if 'lightmap_uvs' in obj.keys(): # and ('lightmap_id' in obj.keys())
 		lightmap_uvs = get_custom_prop_vec4(obj, 'lightmap_uvs')
